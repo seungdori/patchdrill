@@ -103,6 +103,16 @@ export function readAddedLines(options: GitDiffOptions): AddedLine[] {
   return lines;
 }
 
+export function readFilePair(options: GitDiffOptions, path: string): { before?: string; after?: string } {
+  const root = gitRoot(options.cwd);
+  const before = readBefore(root, options, path);
+  const after = readAfter(root, options, path);
+  return {
+    ...(before !== undefined ? { before } : {}),
+    ...(after !== undefined ? { after } : {})
+  };
+}
+
 function mergeDiff(
   entries: Map<string, RawDiffEntry>,
   cwd: string,
@@ -135,6 +145,29 @@ function safeGit(cwd: string, args: string[]): string {
     return runGit(cwd, args);
   } catch {
     return "";
+  }
+}
+
+function readBefore(root: string, options: GitDiffOptions, path: string): string | undefined {
+  if (options.base) return safeGitShow(root, `${options.base}:${path}`);
+  if (hasHead(root)) return safeGitShow(root, `HEAD:${path}`);
+  return undefined;
+}
+
+function readAfter(root: string, options: GitDiffOptions, path: string): string | undefined {
+  if (options.base) return safeGitShow(root, `${options.head ?? "HEAD"}:${path}`);
+  try {
+    return readFileSync(join(root, path), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function safeGitShow(cwd: string, ref: string): string | undefined {
+  try {
+    return runGit(cwd, ["show", ref]);
+  } catch {
+    return undefined;
   }
 }
 

@@ -21,6 +21,7 @@ describe("report", () => {
       addedLines: 5,
       projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
       affectedPackages: [],
+      dependencyChanges: [],
       findings: [
         {
           ruleId: "file.high-impact-area",

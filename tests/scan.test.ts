@@ -137,6 +137,37 @@ rules:
     expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api"]);
     expect(report.commandPlan.map((command) => command.command)).toEqual(["npm --workspace @acme/api run test", "npm --workspace @acme/api run build"]);
   });
+
+  it("includes dependency changes in reports", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(join(root, "package.json"), JSON.stringify({ dependencies: { react: "^18.2.0" } }, null, 2));
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ dependencies: { react: "^19.0.0", yaml: "^2.0.0" } }, null, 2));
+
+    const report = await scan({ cwd: root });
+
+    expect(report.dependencyChanges).toContainEqual({
+      file: "package.json",
+      packageName: "react",
+      dependencyType: "dependencies",
+      changeType: "updated",
+      before: "^18.2.0",
+      after: "^19.0.0"
+    });
+    expect(report.dependencyChanges).toContainEqual({
+      file: "package.json",
+      packageName: "yaml",
+      dependencyType: "dependencies",
+      changeType: "added",
+      after: "^2.0.0"
+    });
+  });
 });
 
 function git(cwd: string, args: string[]): string {

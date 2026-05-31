@@ -23,6 +23,7 @@ npx patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node workspaces and targets changed packages instead of blindly running only root-level commands.
+- Explains package.json dependency additions, removals, and version updates instead of only saying "lockfile changed."
 
 ## What It Does
 
@@ -155,6 +156,7 @@ The current deterministic rules look for:
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
 - Dependency lockfile changes.
+- package.json dependency additions, removals, and updates.
 - Source changes without test changes.
 - Large line deltas and binary files.
 - Failed verification commands.
@@ -243,6 +245,10 @@ For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_PO
 
 PatchDrill includes a release workflow for npm trusted publishing and provenance. Configure the package as a trusted publisher in npm, then publish from a GitHub Release. See [docs/RELEASE.md](docs/RELEASE.md).
 
+## Dependency Review
+
+PatchDrill summarizes dependency changes from changed `package.json` files and lists the package, dependency section, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
+
 ## Design Principles
 
 - Deterministic first. No model call is required to get a useful answer.
@@ -257,7 +263,7 @@ PatchDrill includes a release workflow for npm trusted publishing and provenance
 - PR comment mode.
 - Workspace dependency graph expansion.
 - Language-aware test selection.
-- Dependency diff enrichment for npm, Cargo, Go, and Python lockfiles.
+- Dependency diff enrichment for npm lockfiles, Cargo, Go, and Python.
 - Optional LLM summary mode that never replaces deterministic findings.
 
 ## Contributing

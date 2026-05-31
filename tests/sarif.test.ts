@@ -21,6 +21,7 @@ describe("renderSarif", () => {
       addedLines: 1,
       projectSignals: [],
       affectedPackages: [],
+      dependencyChanges: [],
       findings: [
         {
           ruleId: "agent.prompt-injection",

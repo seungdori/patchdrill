@@ -52,6 +52,17 @@ export interface WorkspacePackage {
   scripts: Record<string, string>;
 }
 
+export type DependencyChangeType = "added" | "removed" | "updated";
+
+export interface DependencyChange {
+  file: string;
+  packageName: string;
+  dependencyType: "dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies";
+  changeType: DependencyChangeType;
+  before?: string;
+  after?: string;
+}
+
 export interface CommandPlan {
   id: string;
   label: string;
@@ -124,6 +135,7 @@ export interface PatchReport {
   addedLines: number;
   projectSignals: ProjectSignal[];
   affectedPackages: WorkspacePackage[];
+  dependencyChanges: DependencyChange[];
   policy?: {
     path: string;
     ignoredPaths: string[];

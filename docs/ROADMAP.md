@@ -2,7 +2,7 @@
 
 ## Near Term
 
-- Dependency diff enrichment for lockfiles.
+- Dependency diff enrichment for npm lockfiles, Cargo, Go, and Python.
 - PR comment mode.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
@@ -29,6 +29,7 @@
 - CodeQL, OpenSSF Scorecard, and Dependabot repository posture.
 - Direct Node workspace package targeting.
 - npm trusted publishing and provenance release workflow.
+- package.json dependency diff summaries.
 
 ## Contribution Targets
 

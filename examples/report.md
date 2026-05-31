@@ -27,6 +27,13 @@ Generated: 2026-06-01T00:00:00.000Z
 | src/auth/session.test.ts | modified | +39 / -4 |
 | pnpm-lock.yaml | modified | +5 / -0 |
 
+## Dependency Changes
+
+| File | Type | Package | Change | Before | After |
+| --- | --- | --- | --- | --- | --- |
+| package.json | dependencies | react | updated | ^18.2.0 | ^19.0.0 |
+| package.json | dependencies | yaml | added |  | ^2.0.0 |
+
 ## Findings
 
 | Severity | Rule | Finding | Location | Remediation |

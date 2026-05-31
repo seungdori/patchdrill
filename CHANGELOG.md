@@ -10,3 +10,4 @@
 - Added SARIF partial fingerprints, CodeQL, OpenSSF Scorecard, and Dependabot configuration.
 - Split CI gating into explicit `--fail-on` severity and `--max-risk` score thresholds.
 - Added Node workspace affected-package targeting and release workflow for npm provenance.
+- Added package.json dependency diff summaries to Markdown and JSON reports.

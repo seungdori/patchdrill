@@ -75,6 +75,21 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
+  if (report.dependencyChanges.length > 0) {
+    lines.push("## Dependency Changes");
+    lines.push("");
+    lines.push("| File | Type | Package | Change | Before | After |");
+    lines.push("| --- | --- | --- | --- | --- | --- |");
+    for (const change of report.dependencyChanges) {
+      lines.push(
+        `| ${escapePipe(change.file)} | ${change.dependencyType} | ${escapePipe(change.packageName)} | ${change.changeType} | ${escapePipe(change.before ?? "")} | ${escapePipe(
+          change.after ?? ""
+        )} |`
+      );
+    }
+    lines.push("");
+  }
+
   lines.push("## Changed Files");
   lines.push("");
   if (report.changedFiles.length === 0) {

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { analyzeDependencyChanges } from "./dependency.js";
 import { gitRoot, readAddedLines, readChangedFiles } from "./git.js";
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
@@ -12,20 +13,18 @@ import type { PatchReport, ScanOptions } from "./types.js";
 export async function scan(options: ScanOptions): Promise<PatchReport> {
   const root = gitRoot(options.cwd);
   const loadedPolicy = loadPolicy(root, options.configPath);
-  const rawChangedFiles = readChangedFiles({
+  const gitOptions = {
     cwd: root,
     ...(options.base ? { base: options.base } : {}),
     ...(options.head ? { head: options.head } : {})
-  });
-  const rawAddedLines = readAddedLines({
-    cwd: root,
-    ...(options.base ? { base: options.base } : {}),
-    ...(options.head ? { head: options.head } : {})
-  });
+  };
+  const rawChangedFiles = readChangedFiles(gitOptions);
+  const rawAddedLines = readAddedLines(gitOptions);
   const changedFiles = filterIgnoredFiles(rawChangedFiles, loadedPolicy.policy);
   const addedLines = rawAddedLines.filter((line) => !matchesAnyPath(line.file, loadedPolicy.policy.ignoredPaths));
   const projectSignals = discoverProjectSignals(root);
   const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
+  const dependencyChanges = analyzeDependencyChanges(gitOptions, changedFiles);
   const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals), loadedPolicy.policy);
   const commandResults = options.run
     ? await runCommandPlan(commandPlan, {
@@ -60,6 +59,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     addedLines: addedLines.length,
     projectSignals,
     affectedPackages,
+    dependencyChanges,
     ...(loadedPolicy.path
       ? {
           policy: {
