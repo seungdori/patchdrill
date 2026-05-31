@@ -340,6 +340,85 @@ yaml@^2.0.0:
     ]);
   });
 
+  it("reports bun.lock additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-bun-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeBunLock(
+      root,
+      `
+{
+  "lockfileVersion": 0,
+  "packages": {
+    "@scope/pkg": ["@scope/pkg@npm:1.0.0", {}, "scope-old"],
+    "react": ["react@npm:18.2.0", {}, "react-old"],
+    "zod": ["zod@npm:3.0.0", {}, "zod-old"],
+  },
+}
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeBunLock(
+      root,
+      `
+{
+  "lockfileVersion": 0,
+  "packages": {
+    "@scope/pkg": ["@scope/pkg@npm:1.1.0", {}, "scope-new"],
+    "react": ["react@npm:19.0.0", {}, "react-new"],
+    "yaml": ["yaml@npm:2.0.0", {}, "yaml-new"],
+  },
+}
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "bun.lock", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "bun.lock",
+        packageName: "@scope/pkg",
+        packagePath: "@scope/pkg",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "1.0.0",
+        after: "1.1.0"
+      },
+      {
+        file: "bun.lock",
+        packageName: "react",
+        packagePath: "react",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "18.2.0",
+        after: "19.0.0"
+      },
+      {
+        file: "bun.lock",
+        packageName: "yaml",
+        packagePath: "yaml",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "2.0.0"
+      },
+      {
+        file: "bun.lock",
+        packageName: "zod",
+        packagePath: "zod",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "3.0.0"
+      }
+    ]);
+  });
+
   it("reports go.sum additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-go-sum-"));
     tempDirs.push(root);
@@ -688,6 +767,10 @@ function writePnpmLock(root: string, contents: string): void {
 
 function writeYarnLock(root: string, contents: string): void {
   writeFileSync(join(root, "yarn.lock"), contents.trimStart());
+}
+
+function writeBunLock(root: string, contents: string): void {
+  writeFileSync(join(root, "bun.lock"), contents.trimStart());
 }
 
 function writeGoSum(root: string, contents: string): void {

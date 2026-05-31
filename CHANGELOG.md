@@ -32,3 +32,4 @@
 - Added `requirements.txt` dependency diff summaries.
 - Added `poetry.lock` dependency diff summaries.
 - Added `Pipfile.lock` dependency diff summaries.
+- Added `bun.lock` dependency diff summaries.

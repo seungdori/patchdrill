@@ -55,6 +55,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("bun.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseBunLock(pair.before);
+    const after = parseBunLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("go.sum"))) {
     const pair = readFilePair(options, file.path);
     const before = parseGoSum(pair.before);
@@ -331,6 +338,23 @@ function parseYarnLock(value: string | undefined): Map<string, LockPackage> | un
   return packages.size > 0 ? packages : undefined;
 }
 
+function parseBunLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = parseYaml(value) as { packages?: unknown };
+    if (!isRecord(parsed.packages)) return undefined;
+    const packages = new Map<string, LockPackage>();
+    for (const [packagePath, entry] of Object.entries(parsed.packages)) {
+      const version = readBunPackageVersion(entry);
+      if (!packagePath || !version) continue;
+      packages.set(packagePath, { name: packagePath, path: packagePath, version });
+    }
+    return packages.size > 0 ? packages : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function parseGoSum(value: string | undefined): Map<string, LockPackage> | undefined {
   if (!value) return undefined;
   const packages = new Map<string, LockPackage>();
@@ -536,6 +560,16 @@ function parseYarnDescriptor(descriptor: string): { name: string } | undefined {
   if (separator <= 0) return undefined;
   const name = key.slice(0, separator);
   return name ? { name } : undefined;
+}
+
+function readBunPackageVersion(value: unknown): string | undefined {
+  const resolution = Array.isArray(value) && typeof value[0] === "string" ? value[0] : typeof value === "string" ? value : undefined;
+  if (!resolution) return undefined;
+  const npmVersion = /@npm:([^,\s]+)/.exec(resolution);
+  if (npmVersion?.[1]) return npmVersion[1];
+  const separator = resolution.startsWith("@") ? resolution.indexOf("@", resolution.indexOf("/") + 1) : resolution.lastIndexOf("@");
+  if (separator <= 0) return resolution;
+  return resolution.slice(separator + 1) || resolution;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -2,7 +2,7 @@
 
 ## Near Term
 
-- Dependency diff enrichment for Bun lockfiles.
+- Binary `bun.lockb` diff guidance for legacy Bun projects.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
 - Native affected-task integration for Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
@@ -39,6 +39,7 @@
 - `requirements.txt` dependency diff summaries.
 - `poetry.lock` dependency diff summaries.
 - `Pipfile.lock` dependency diff summaries.
+- `bun.lock` dependency diff summaries.
 - CODEOWNERS owner hints for changed files.
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.
