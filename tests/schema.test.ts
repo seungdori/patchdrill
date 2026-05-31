@@ -90,6 +90,15 @@ describe("schemas", () => {
           changeType: "updated",
           before: "^18.2.0",
           after: "^19.0.0"
+        },
+        {
+          file: "package-lock.json",
+          packageName: "react",
+          packagePath: "node_modules/react",
+          dependencyType: "lockfile",
+          changeType: "updated",
+          before: "18.2.0",
+          after: "19.0.0"
         }
       ],
       policy: {

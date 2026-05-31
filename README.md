@@ -268,7 +268,7 @@ PatchDrill includes a release workflow for npm trusted publishing and provenance
 
 ## Dependency Review
 
-PatchDrill summarizes dependency changes from changed `package.json` files and lists the package, dependency section, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
+PatchDrill summarizes dependency changes from changed `package.json` and npm `package-lock.json` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
 
 ## Design Principles
 

@@ -78,11 +78,13 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.dependencyChanges.length > 0) {
     lines.push("## Dependency Changes");
     lines.push("");
-    lines.push("| File | Type | Package | Change | Before | After |");
-    lines.push("| --- | --- | --- | --- | --- | --- |");
+    lines.push("| File | Type | Package | Path | Change | Before | After |");
+    lines.push("| --- | --- | --- | --- | --- | --- | --- |");
     for (const change of report.dependencyChanges) {
       lines.push(
-        `| ${escapePipe(change.file)} | ${change.dependencyType} | ${escapePipe(change.packageName)} | ${change.changeType} | ${escapePipe(change.before ?? "")} | ${escapePipe(
+        `| ${escapePipe(change.file)} | ${change.dependencyType} | ${escapePipe(change.packageName)} | ${escapePipe(change.packagePath ?? "")} | ${
+          change.changeType
+        } | ${escapePipe(change.before ?? "")} | ${escapePipe(
           change.after ?? ""
         )} |`
       );

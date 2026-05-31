@@ -58,8 +58,9 @@ export type DependencyChangeType = "added" | "removed" | "updated";
 export interface DependencyChange {
   file: string;
   packageName: string;
-  dependencyType: "dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies";
+  dependencyType: "dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies" | "lockfile";
   changeType: DependencyChangeType;
+  packagePath?: string;
   before?: string;
   after?: string;
 }

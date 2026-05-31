@@ -248,11 +248,14 @@
         },
         "dependencyType": {
           "type": "string",
-          "enum": ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]
+          "enum": ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies", "lockfile"]
         },
         "changeType": {
           "type": "string",
           "enum": ["added", "removed", "updated"]
+        },
+        "packagePath": {
+          "type": "string"
         },
         "before": {
           "type": "string"

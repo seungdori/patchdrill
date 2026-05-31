@@ -53,10 +53,84 @@ describe("analyzeDependencyChanges", () => {
       { file: "package.json", packageName: "zod", dependencyType: "dependencies", changeType: "removed", before: "^3.0.0" }
     ]);
   });
+
+  it("reports npm package-lock additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePackageLock(root, {
+      lockfileVersion: 3,
+      packages: {
+        "": {
+          dependencies: {
+            react: "^18.2.0",
+            zod: "^3.0.0"
+          }
+        },
+        "node_modules/react": { version: "18.2.0" },
+        "node_modules/zod": { version: "3.0.0" }
+      }
+    });
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePackageLock(root, {
+      lockfileVersion: 3,
+      packages: {
+        "": {
+          dependencies: {
+            react: "^19.0.0",
+            yaml: "^2.0.0"
+          }
+        },
+        "node_modules/react": { version: "19.0.0" },
+        "node_modules/yaml": { version: "2.0.0" }
+      }
+    });
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "package-lock.json", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "package-lock.json",
+        packageName: "react",
+        packagePath: "node_modules/react",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "18.2.0",
+        after: "19.0.0"
+      },
+      {
+        file: "package-lock.json",
+        packageName: "yaml",
+        packagePath: "node_modules/yaml",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "2.0.0"
+      },
+      {
+        file: "package-lock.json",
+        packageName: "zod",
+        packagePath: "node_modules/zod",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "3.0.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
   writeFileSync(join(root, "package.json"), JSON.stringify(contents, null, 2));
+}
+
+function writePackageLock(root: string, contents: unknown): void {
+  writeFileSync(join(root, "package-lock.json"), JSON.stringify(contents, null, 2));
 }
 
 function git(cwd: string, args: string[]): string {
