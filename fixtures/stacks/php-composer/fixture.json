@@ -1,0 +1,31 @@
+{
+  "name": "php-composer",
+  "expectedEcosystems": ["php"],
+  "expectedCommands": ["composer test"],
+  "baseFiles": [
+    {
+      "path": "composer.json",
+      "lines": [
+        "{",
+        "  \"scripts\": {",
+        "    \"test\": \"phpunit\"",
+        "  },",
+        "  \"require\": {",
+        "    \"php\": \">=8.2\"",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "path": "src/Service.php",
+      "lines": ["<?php", "final class Service {", "    public function ok(): bool { return true; }", "}"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/Service.php",
+      "lines": ["<?php", "final class Service {", "    public function ok(): bool { return false; }", "}"]
+    }
+  ]
+}
+

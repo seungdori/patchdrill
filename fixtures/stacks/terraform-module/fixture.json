@@ -1,0 +1,17 @@
+{
+  "name": "terraform-module",
+  "expectedEcosystems": ["terraform"],
+  "expectedCommands": ["terraform fmt -check && terraform validate"],
+  "baseFiles": [
+    {
+      "path": "main.tf",
+      "lines": ["resource \"null_resource\" \"example\" {", "  triggers = {", "    value = \"initial\"", "  }", "}"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "main.tf",
+      "lines": ["resource \"null_resource\" \"example\" {", "  triggers = {", "    value = \"changed\"", "  }", "}"]
+    }
+  ]
+}

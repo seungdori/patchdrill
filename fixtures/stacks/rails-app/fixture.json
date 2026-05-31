@@ -1,0 +1,22 @@
+{
+  "name": "rails-app",
+  "expectedEcosystems": ["ruby"],
+  "expectedCommands": ["bundle exec rake test"],
+  "baseFiles": [
+    {
+      "path": "Gemfile",
+      "lines": ["source \"https://rubygems.org\"", "gem \"rails\", \"~> 7.2\""]
+    },
+    {
+      "path": "app/models/user.rb",
+      "lines": ["class User", "  def active?", "    true", "  end", "end"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/models/user.rb",
+      "lines": ["class User", "  def active?", "    false", "  end", "end"]
+    }
+  ]
+}
+
