@@ -18,9 +18,9 @@ describe("init", () => {
 
     expect(workflow).toContain("pull-requests: write");
     expect(workflow).toContain("security-events: write");
-    expect(workflow).toContain("actions/github-script@v9");
-    expect(workflow).toContain("PATCHDRILL_MARKER");
-    expect(workflow).toContain("github.rest.issues.updateComment");
+    expect(workflow).toContain("patchdrill/patchdrill@v0");
+    expect(workflow).toContain('pr-comment: "true"');
+    expect(workflow).toContain("steps.patchdrill.outputs.report-sarif");
     expect(workflow).toContain("github/codeql-action/upload-sarif@v3");
     expect(workflow).toContain("actions/upload-artifact@v4");
   });
