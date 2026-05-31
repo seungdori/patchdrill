@@ -37,6 +37,9 @@ jobs:
       - name: Run PatchDrill
         run: |
           npx patchdrill scan --base origin/\${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
+      - name: Add Step Summary
+        if: always()
+        run: cat patchdrill-report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()

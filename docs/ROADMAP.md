@@ -2,12 +2,12 @@
 
 ## Near Term
 
-- Monorepo package targeting for npm workspaces, pnpm, Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
 - Dependency diff enrichment for lockfiles.
 - PR comment mode.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
-- Signed provenance for npm releases.
+- Workspace dependency graph expansion for downstream package testing.
+- Native affected-task integration for Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
 
 ## Later
 
@@ -27,6 +27,8 @@
 - Agent-control and MCP configuration risk rules.
 - SARIF partial fingerprints for stable GitHub code scanning alerts.
 - CodeQL, OpenSSF Scorecard, and Dependabot repository posture.
+- Direct Node workspace package targeting.
+- npm trusted publishing and provenance release workflow.
 
 ## Contribution Targets
 

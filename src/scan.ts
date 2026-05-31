@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { gitRoot, readAddedLines, readChangedFiles } from "./git.js";
-import { planCommands } from "./planner.js";
+import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
 import { discoverProjectSignals } from "./project.js";
 import { renderMarkdown, renderSarif } from "./report.js";
@@ -25,6 +25,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const changedFiles = filterIgnoredFiles(rawChangedFiles, loadedPolicy.policy);
   const addedLines = rawAddedLines.filter((line) => !matchesAnyPath(line.file, loadedPolicy.policy.ignoredPaths));
   const projectSignals = discoverProjectSignals(root);
+  const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
   const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals), loadedPolicy.policy);
   const commandResults = options.run
     ? await runCommandPlan(commandPlan, {
@@ -58,6 +59,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     changedFiles,
     addedLines: addedLines.length,
     projectSignals,
+    affectedPackages,
     ...(loadedPolicy.path
       ? {
           policy: {

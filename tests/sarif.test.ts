@@ -20,6 +20,7 @@ describe("renderSarif", () => {
       changedFiles: [{ path: "src/auth.ts", status: "modified", additions: 1, deletions: 0, binary: false }],
       addedLines: 1,
       projectSignals: [],
+      affectedPackages: [],
       findings: [
         {
           ruleId: "agent.prompt-injection",

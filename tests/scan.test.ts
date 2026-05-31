@@ -98,6 +98,45 @@ rules:
       requiredCommandCount: 1
     });
   });
+
+  it("detects Node workspaces and reports affected packages", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify(
+        {
+          private: true,
+          workspaces: ["packages/*"]
+        },
+        null,
+        2
+      )
+    );
+    mkdirSync(join(root, "packages", "api", "src"), { recursive: true });
+    mkdirSync(join(root, "packages", "web", "src"), { recursive: true });
+    writeFileSync(
+      join(root, "packages", "api", "package.json"),
+      JSON.stringify({ name: "@acme/api", scripts: { test: "node --test", build: "tsc -p tsconfig.json" } }, null, 2)
+    );
+    writeFileSync(join(root, "packages", "api", "src", "index.ts"), "export const api = true;\n");
+    writeFileSync(join(root, "packages", "web", "package.json"), JSON.stringify({ name: "@acme/web", scripts: { test: "node --test" } }, null, 2));
+    writeFileSync(join(root, "packages", "web", "src", "index.ts"), "export const web = true;\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "packages", "api", "src", "index.ts"), "export const api = 'changed';\n");
+
+    const report = await scan({ cwd: root });
+
+    expect(report.projectSignals[0]?.workspacePackages?.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api", "@acme/web"]);
+    expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api"]);
+    expect(report.commandPlan.map((command) => command.command)).toEqual(["npm --workspace @acme/api run test", "npm --workspace @acme/api run build"]);
+  });
 });
 
 function git(cwd: string, args: string[]): string {

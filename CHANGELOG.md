@@ -9,3 +9,4 @@
 - Added agent-control, MCP configuration, GitHub Actions privilege, and destructive agent-instruction rules.
 - Added SARIF partial fingerprints, CodeQL, OpenSSF Scorecard, and Dependabot configuration.
 - Split CI gating into explicit `--fail-on` severity and `--max-risk` score thresholds.
+- Added Node workspace affected-package targeting and release workflow for npm provenance.

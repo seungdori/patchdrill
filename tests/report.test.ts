@@ -20,6 +20,7 @@ describe("report", () => {
       changedFiles: [{ path: "src/auth.ts", status: "modified", additions: 5, deletions: 1, binary: false }],
       addedLines: 5,
       projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
+      affectedPackages: [],
       findings: [
         {
           ruleId: "file.high-impact-area",

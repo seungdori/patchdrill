@@ -34,6 +34,10 @@ inputs:
     description: SARIF report output path.
     required: false
     default: patchdrill.sarif
+  step-summary:
+    description: Append the Markdown report to the GitHub Actions step summary.
+    required: false
+    default: "true"
 outputs:
   report-json:
     description: Path to the generated JSON report.
@@ -51,6 +55,7 @@ runs:
       with:
         node-version: 22
     - name: Run PatchDrill
+      id: run
       shell: bash
       run: |
         RUN_FLAG=""
@@ -61,6 +66,7 @@ runs:
         if [ -n "${{ inputs.config }}" ]; then
           CONFIG_FLAG="--config ${{ inputs.config }}"
         fi
+        set +e
         npx patchdrill scan \
           --base "${{ inputs.base }}" \
           --markdown "${{ inputs.markdown }}" \
@@ -70,6 +76,16 @@ runs:
           --max-risk "${{ inputs.max-risk }}" \
           $CONFIG_FLAG \
           $RUN_FLAG
+        STATUS=$?
+        echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+        exit 0
+    - name: Write step summary
+      if: inputs.step-summary == 'true'
+      shell: bash
+      run: |
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "${{ inputs.markdown }}" ]; then
+          cat "${{ inputs.markdown }}" >> "$GITHUB_STEP_SUMMARY"
+        fi
     - name: Export report paths
       id: paths
       shell: bash
@@ -77,3 +93,7 @@ runs:
         echo "json=${{ inputs.json }}" >> "$GITHUB_OUTPUT"
         echo "markdown=${{ inputs.markdown }}" >> "$GITHUB_OUTPUT"
         echo "sarif=${{ inputs.sarif }}" >> "$GITHUB_OUTPUT"
+    - name: Fail on PatchDrill gate
+      if: steps.run.outputs.status != '0'
+      shell: bash
+      run: exit "${{ steps.run.outputs.status }}"

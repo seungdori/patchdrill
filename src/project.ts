@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ProjectSignal } from "./types.js";
+import { parse as parseYaml } from "yaml";
+import type { ProjectSignal, WorkspacePackage } from "./types.js";
 
 export function discoverProjectSignals(root: string): ProjectSignal[] {
   const signals: ProjectSignal[] = [];
@@ -11,7 +12,8 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       ecosystem: "node",
       manifestPath: "package.json",
       packageManager: detectNodePackageManager(root),
-      scripts: readPackageScripts(root)
+      scripts: readPackageScripts(root),
+      workspacePackages: discoverNodeWorkspacePackages(root)
     });
   }
 
@@ -68,14 +70,102 @@ function detectNodePackageManager(root: string): string {
 }
 
 function readPackageScripts(root: string): Record<string, string> {
+  return readPackageJson(root).scripts ?? {};
+}
+
+function readPackageJson(root: string): { name?: string; scripts?: Record<string, string>; workspaces?: unknown } {
   try {
     const parsed = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+      name?: string;
       scripts?: Record<string, string>;
+      workspaces?: unknown;
     };
-    return parsed.scripts ?? {};
+    return parsed;
   } catch {
     return {};
   }
+}
+
+function discoverNodeWorkspacePackages(root: string): WorkspacePackage[] {
+  const patterns = readWorkspacePatterns(root);
+  if (patterns.length === 0) return [];
+  const packages = new Map<string, { name: string; path: string; scripts: Record<string, string> }>();
+
+  for (const pattern of patterns) {
+    for (const packagePath of expandWorkspacePattern(root, pattern)) {
+      const manifest = readPackageJson(join(root, packagePath));
+      if (!manifest.name) continue;
+      packages.set(packagePath, {
+        name: manifest.name,
+        path: packagePath,
+        scripts: manifest.scripts ?? {}
+      });
+    }
+  }
+
+  return [...packages.values()].sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function readWorkspacePatterns(root: string): string[] {
+  const packageJson = readPackageJson(root);
+  const patterns = new Set<string>();
+  const workspaces = packageJson.workspaces;
+  if (Array.isArray(workspaces)) {
+    for (const pattern of workspaces) if (typeof pattern === "string") patterns.add(pattern);
+  } else if (isRecord(workspaces) && Array.isArray(workspaces.packages)) {
+    for (const pattern of workspaces.packages) if (typeof pattern === "string") patterns.add(pattern);
+  }
+
+  if (exists(root, "pnpm-workspace.yaml")) {
+    try {
+      const parsed = parseYaml(readFileSync(join(root, "pnpm-workspace.yaml"), "utf8")) as { packages?: unknown };
+      if (Array.isArray(parsed.packages)) {
+        for (const pattern of parsed.packages) if (typeof pattern === "string") patterns.add(pattern);
+      }
+    } catch {
+      // Ignore malformed workspace metadata; normal project detection still works.
+    }
+  }
+
+  return [...patterns].filter((pattern) => !pattern.startsWith("!"));
+}
+
+function expandWorkspacePattern(root: string, pattern: string): string[] {
+  const normalized = pattern.replace(/^\.\//, "").replace(/\/$/, "");
+  if (!normalized.includes("*")) return exists(root, join(normalized, "package.json")) ? [normalized] : [];
+  const prefix = normalized.split("*", 1)[0]?.replace(/\/$/, "") ?? "";
+  const base = prefix || ".";
+  return walkForPackageJson(join(root, base), root, normalized.includes("**") ? 5 : 1);
+}
+
+function walkForPackageJson(directory: string, root: string, maxDepth: number, depth = 0): string[] {
+  if (depth > maxDepth) return [];
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const results: string[] = [];
+    if (entries.some((entry) => entry.isFile() && entry.name === "package.json")) {
+      results.push(relativePath(root, directory));
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) continue;
+      results.push(...walkForPackageJson(join(directory, entry.name), root, maxDepth, depth + 1));
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+function shouldSkipDirectory(name: string): boolean {
+  return ["node_modules", ".git", "dist", "coverage", ".next", "build"].includes(name);
+}
+
+function relativePath(root: string, path: string): string {
+  return path.slice(root.length).replace(/^\//, "") || ".";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function hasFileWithExtension(root: string, extension: string, maxDepth: number): boolean {

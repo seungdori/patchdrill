@@ -22,6 +22,7 @@ npx patchdrill scan --base origin/main --run \
 - Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
+- Understands Node workspaces and targets changed packages instead of blindly running only root-level commands.
 
 ## What It Does
 
@@ -140,6 +141,8 @@ PatchDrill detects project shape from repo manifests:
 | Docker | `Dockerfile`, Compose files | `docker build .` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 
+For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for affected packages. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
+
 ## Risk Model
 
 PatchDrill scores a patch from 0 to 100. Higher is riskier.
@@ -236,6 +239,10 @@ See [examples/report.md](examples/report.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 
+## Release Provenance
+
+PatchDrill includes a release workflow for npm trusted publishing and provenance. Configure the package as a trusted publisher in npm, then publish from a GitHub Release. See [docs/RELEASE.md](docs/RELEASE.md).
+
 ## Design Principles
 
 - Deterministic first. No model call is required to get a useful answer.
@@ -248,7 +255,7 @@ For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_PO
 ## Roadmap
 
 - PR comment mode.
-- Monorepo package targeting.
+- Workspace dependency graph expansion.
 - Language-aware test selection.
 - Dependency diff enrichment for npm, Cargo, Go, and Python lockfiles.
 - Optional LLM summary mode that never replaces deterministic findings.

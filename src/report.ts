@@ -64,6 +64,17 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
+  if (report.affectedPackages.length > 0) {
+    lines.push("## Affected Workspace Packages");
+    lines.push("");
+    lines.push("| Package | Path |");
+    lines.push("| --- | --- |");
+    for (const workspacePackage of report.affectedPackages) {
+      lines.push(`| ${escapePipe(workspacePackage.name)} | ${escapePipe(workspacePackage.path)} |`);
+    }
+    lines.push("");
+  }
+
   lines.push("## Changed Files");
   lines.push("");
   if (report.changedFiles.length === 0) {
@@ -101,10 +112,12 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.commandPlan.length === 0) {
     lines.push("No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests.");
   } else {
-    lines.push("| Required | Command | Reason |");
-    lines.push("| --- | --- | --- |");
+    lines.push("| Required | Package | Command | Reason |");
+    lines.push("| --- | --- | --- | --- |");
     for (const command of report.commandPlan) {
-      lines.push(`| ${command.required ? "yes" : "no"} | \`${escapeBackticks(command.command)}\` | ${escapePipe(command.reason)} |`);
+      lines.push(
+        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? "")} | \`${escapeBackticks(command.command)}\` | ${escapePipe(command.reason)} |`
+      );
     }
   }
   lines.push("");

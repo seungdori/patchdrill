@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { ChangedFile, CommandPlan, ProjectSignal } from "./types.js";
+import type { ChangedFile, CommandPlan, ProjectSignal, WorkspacePackage } from "./types.js";
 
 export function planCommands(root: string, changedFiles: ChangedFile[], signals: ProjectSignal[]): CommandPlan[] {
   const plans: CommandPlan[] = [];
@@ -8,7 +8,8 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
 
   for (const signal of signals) {
     if (signal.ecosystem === "node" && touchesNode(paths)) {
-      addNodePlans(plans, signal);
+      const workspacePlanCount = addNodeWorkspacePlans(plans, paths, signal);
+      if (workspacePlanCount === 0) addNodePlans(plans, signal);
     }
     if (signal.ecosystem === "python" && touchesPython(paths, root)) {
       pushUnique(plans, {
@@ -140,6 +141,18 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   return plans;
 }
 
+export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signals: ProjectSignal[]): WorkspacePackage[] {
+  const affected = new Map<string, WorkspacePackage>();
+  const paths = changedFiles.map((file) => file.path);
+  for (const signal of signals) {
+    if (signal.ecosystem !== "node") continue;
+    for (const workspacePackage of affectedPackagesForSignal(paths, signal)) {
+      affected.set(workspacePackage.path, workspacePackage);
+    }
+  }
+  return [...affected.values()].sort((a, b) => a.path.localeCompare(b.path));
+}
+
 function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
   const scripts = signal.scripts ?? {};
   for (const script of ["typecheck", "lint", "test", "build"]) {
@@ -155,12 +168,54 @@ function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
   }
 }
 
+function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
+  const affectedPackages = affectedPackagesForSignal(paths, signal);
+  let added = 0;
+  for (const workspacePackage of affectedPackages) {
+    for (const script of ["typecheck", "lint", "test", "build"]) {
+      if (!workspacePackage.scripts[script]) continue;
+      const plan: CommandPlan = {
+        id: `node-workspace-${slug(workspacePackage.name)}-${script}`,
+        label: `${workspacePackage.name} ${script}`,
+        command: workspaceRun(signal.packageManager ?? "npm", workspacePackage.name, script),
+        reason: `${workspacePackage.name} changed under ${workspacePackage.path}, and its package.json defines "${script}".`,
+        ecosystem: "node",
+        required: script === "test" || script === "typecheck" || script === "build",
+        packageName: workspacePackage.name,
+        packagePath: workspacePackage.path
+      };
+      const before = plans.length;
+      pushUnique(plans, plan);
+      if (plans.length > before) added += 1;
+    }
+  }
+  return added;
+}
+
+function affectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
+  const workspacePackages = signal.workspacePackages ?? [];
+  if (workspacePackages.length === 0) return [];
+  const rootWideChange = paths.some((path) =>
+    ["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "pnpm-workspace.yaml", "turbo.json", "nx.json"].includes(path)
+  );
+  if (rootWideChange) return workspacePackages;
+  return workspacePackages.filter((workspacePackage) => paths.some((path) => path === workspacePackage.path || path.startsWith(`${workspacePackage.path}/`)));
+}
+
 function nodeRun(packageManager: string, script: string): string {
   if (packageManager === "npm") return `npm run ${script}`;
   if (packageManager === "yarn") return `yarn ${script}`;
   if (packageManager === "pnpm") return `pnpm ${script}`;
   if (packageManager === "bun") return `bun run ${script}`;
   return `${packageManager} run ${script}`;
+}
+
+function workspaceRun(packageManager: string, packageName: string, script: string): string {
+  const quotedName = quoteShell(packageName);
+  if (packageManager === "pnpm") return `pnpm --filter ${quotedName} run ${script}`;
+  if (packageManager === "yarn") return `yarn workspace ${quotedName} ${script}`;
+  if (packageManager === "bun") return `bun --filter ${quotedName} run ${script}`;
+  return `npm --workspace ${quotedName} run ${script}`;
 }
 
 function touchesNode(paths: string[]): boolean {
@@ -201,4 +256,13 @@ function touches(paths: string[], tokens: string[]): boolean {
 function pushUnique(plans: CommandPlan[], plan: CommandPlan): void {
   if (plans.some((existing) => existing.id === plan.id)) return;
   plans.push(plan);
+}
+
+function quoteShell(value: string): string {
+  if (/^[A-Za-z0-9_./@-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "package";
 }

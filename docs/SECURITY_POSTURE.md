@@ -11,6 +11,7 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 | CodeQL | `.github/workflows/codeql.yml` | Adds GitHub-native static analysis for the TypeScript codebase. |
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Tracks open-source security posture and uploads SARIF results. |
 | Dependabot | `.github/dependabot.yml` | Keeps npm and GitHub Actions dependencies current. |
+| Release provenance | `.github/workflows/release.yml` | Publishes through npm trusted publishing and provenance. |
 
 ## Repository Rules To Enable On GitHub
 
@@ -25,5 +26,6 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 
 - Run `npm pack --dry-run` before publishing.
 - Review the tarball file list before every release.
+- Publish from GitHub Actions trusted publishing with provenance.
 - Keep generated reports out of git through `.gitignore`.
 - Avoid storing any real secret-like fixture in tests; synthesize test values at runtime.

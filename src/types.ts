@@ -43,6 +43,13 @@ export interface ProjectSignal {
   manifestPath: string;
   packageManager?: string;
   scripts?: Record<string, string>;
+  workspacePackages?: WorkspacePackage[];
+}
+
+export interface WorkspacePackage {
+  name: string;
+  path: string;
+  scripts: Record<string, string>;
 }
 
 export interface CommandPlan {
@@ -52,6 +59,8 @@ export interface CommandPlan {
   reason: string;
   ecosystem: ProjectSignal["ecosystem"] | "general";
   required: boolean;
+  packageName?: string;
+  packagePath?: string;
 }
 
 export interface CommandResult {
@@ -114,6 +123,7 @@ export interface PatchReport {
   changedFiles: ChangedFile[];
   addedLines: number;
   projectSignals: ProjectSignal[];
+  affectedPackages: WorkspacePackage[];
   policy?: {
     path: string;
     ignoredPaths: string[];
