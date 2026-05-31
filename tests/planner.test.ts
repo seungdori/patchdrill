@@ -237,4 +237,40 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.packageName)).toEqual(["core-lib", "core-lib", "api-server", "api-server"]);
     expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["core-lib", "api-server"]);
   });
+
+  it("targets affected Go workspace modules and downstream dependents", () => {
+    const files: ChangedFile[] = [
+      { path: "modules/core/core.go", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "go",
+        manifestPath: "go.work",
+        workspacePackages: [
+          {
+            name: "example.com/core",
+            path: "modules/core",
+            scripts: {}
+          },
+          {
+            name: "example.com/api",
+            path: "modules/api",
+            scripts: {},
+            dependencies: ["example.com/core"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "go test ./modules/core/...",
+      "go vet ./modules/core/...",
+      "go test ./modules/api/...",
+      "go vet ./modules/api/..."
+    ]);
+    expect(commands.map((command) => command.packageName)).toEqual(["example.com/core", "example.com/core", "example.com/api", "example.com/api"]);
+    expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["example.com/core", "example.com/api"]);
+  });
 });

@@ -22,7 +22,7 @@ npx patchdrill scan --base origin/main --run \
 - Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
-- Understands Node and Cargo workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
+- Understands Node, Cargo, and Go workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
@@ -179,7 +179,7 @@ PatchDrill detects project shape from repo manifests:
 | Node | `package.json`, lockfiles, scripts | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` |
 | Python | `pyproject.toml`, `requirements.txt`, `setup.py` | `python -m pytest`, `python -m compileall .` |
 | Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
-| Go | `go.mod` | `go test ./...`, `go vet ./...` |
+| Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `./mvnw test`, `./gradlew test` |
 | .NET | `global.json`, project files | `dotnet test` |
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
@@ -189,6 +189,8 @@ PatchDrill detects project shape from repo manifests:
 For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for directly changed packages and downstream dependents. When `turbo.json` or `nx.json` is present, it plans native task-runner commands such as `pnpm exec turbo run test --filter=@acme/api` or `npx nx run api:test`. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
 
 For Cargo workspaces, PatchDrill reads `[workspace].members`, crate names, and workspace-internal dependencies, then emits `cargo test -p crate --all-targets` and optional `cargo clippy -p crate --all-targets -- -D warnings` for changed crates and downstream dependent crates.
+
+For Go workspaces, PatchDrill reads `go.work` `use` entries, module names, and workspace-internal `require` dependencies, then emits `go test ./module/...` and optional `go vet ./module/...` for changed modules and downstream dependent modules.
 
 ## Risk Model
 

@@ -36,7 +36,13 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       workspacePackages: discoverCargoWorkspacePackages(root)
     });
   }
-  if (exists(root, "go.mod")) add({ ecosystem: "go", manifestPath: "go.mod" });
+  if (exists(root, "go.mod") || exists(root, "go.work")) {
+    add({
+      ecosystem: "go",
+      manifestPath: firstExisting(root, ["go.work", "go.mod"]) ?? "go",
+      workspacePackages: discoverGoWorkspacePackages(root)
+    });
+  }
   if (exists(root, "pom.xml") || exists(root, "build.gradle") || exists(root, "build.gradle.kts")) {
     add({
       ecosystem: "java",
@@ -279,6 +285,118 @@ function readTomlStringArray(value: string): string[] {
     if (item) strings.push(item);
   }
   return strings;
+}
+
+function discoverGoWorkspacePackages(root: string): WorkspacePackage[] {
+  let workspace = "";
+  try {
+    workspace = readFileSync(join(root, "go.work"), "utf8");
+  } catch {
+    return [];
+  }
+  const modules = readGoWorkspaceModules(workspace);
+  if (modules.length === 0) return [];
+  const packages = new Map<string, WorkspacePackage>();
+
+  for (const modulePath of modules) {
+    const manifest = readGoModuleManifest(join(root, modulePath));
+    if (!manifest.name) continue;
+    const workspacePackage: WorkspacePackage = {
+      name: manifest.name,
+      path: modulePath,
+      scripts: {}
+    };
+    if (manifest.dependencies.length > 0) workspacePackage.dependencies = manifest.dependencies;
+    packages.set(modulePath, workspacePackage);
+  }
+
+  const workspaceNames = new Set([...packages.values()].map((workspacePackage) => workspacePackage.name));
+  return [...packages.values()]
+    .map((workspacePackage) => {
+      const dependencies = workspacePackage.dependencies?.filter((dependency) => workspaceNames.has(dependency)) ?? [];
+      if (dependencies.length === 0) {
+        const { dependencies: _dependencies, ...withoutDependencies } = workspacePackage;
+        return withoutDependencies;
+      }
+      return { ...workspacePackage, dependencies };
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function readGoWorkspaceModules(workspace: string): string[] {
+  const modules: string[] = [];
+  let inUseBlock = false;
+  for (const rawLine of workspace.split(/\r?\n/)) {
+    const line = stripGoComment(rawLine).trim();
+    if (!line) continue;
+    if (/^use\s*\($/.test(line)) {
+      inUseBlock = true;
+      continue;
+    }
+    if (inUseBlock && line === ")") {
+      inUseBlock = false;
+      continue;
+    }
+    if (inUseBlock) {
+      const modulePath = normalizeGoWorkspacePath(line);
+      if (modulePath) modules.push(modulePath);
+      continue;
+    }
+    if (line.startsWith("use ")) {
+      const modulePath = normalizeGoWorkspacePath(line.slice(4).trim());
+      if (modulePath) modules.push(modulePath);
+    }
+  }
+  return [...new Set(modules)].sort();
+}
+
+function readGoModuleManifest(moduleRoot: string): { name?: string; dependencies: string[] } {
+  try {
+    const manifest = readFileSync(join(moduleRoot, "go.mod"), "utf8");
+    return {
+      ...readGoModuleName(manifest),
+      dependencies: readGoRequireNames(manifest)
+    };
+  } catch {
+    return { dependencies: [] };
+  }
+}
+
+function readGoModuleName(manifest: string): { name?: string } {
+  const match = /^module\s+(\S+)/m.exec(manifest);
+  return match?.[1] ? { name: match[1] } : {};
+}
+
+function readGoRequireNames(manifest: string): string[] {
+  const dependencies = new Set<string>();
+  let inRequireBlock = false;
+  for (const rawLine of manifest.split(/\r?\n/)) {
+    const line = stripGoComment(rawLine).trim();
+    if (!line) continue;
+    if (/^require\s*\($/.test(line)) {
+      inRequireBlock = true;
+      continue;
+    }
+    if (inRequireBlock && line === ")") {
+      inRequireBlock = false;
+      continue;
+    }
+    const requireLine = inRequireBlock ? line : line.startsWith("require ") ? line.slice(8).trim() : "";
+    if (!requireLine) continue;
+    const dependency = requireLine.split(/\s+/, 1)[0];
+    if (dependency) dependencies.add(dependency);
+  }
+  return [...dependencies].sort();
+}
+
+function normalizeGoWorkspacePath(value: string): string | undefined {
+  const normalized = value.replace(/^["']|["']$/g, "").replace(/^\.\//, "").replace(/\/$/, "");
+  if (!normalized) return undefined;
+  return normalized === "." ? "." : normalized;
+}
+
+function stripGoComment(value: string): string {
+  return value.replace(/\s*\/\/.*$/, "");
 }
 
 function readPackageDependencyNames(manifest: ReturnType<typeof readPackageJson>): string[] {

@@ -50,23 +50,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         });
       }
     }
-    if (signal.ecosystem === "go" && touches(paths, [".go", "go.mod", "go.sum"])) {
-      pushUnique(plans, {
-        id: "go-tests",
-        label: "Go tests",
-        command: "go test ./...",
-        reason: "Go source or module metadata changed.",
-        ecosystem: "go",
-        required: true
-      });
-      pushUnique(plans, {
-        id: "go-vet",
-        label: "Go vet",
-        command: "go vet ./...",
-        reason: "Static checks catch common Go regressions.",
-        ecosystem: "go",
-        required: false
-      });
+    if (signal.ecosystem === "go" && touches(paths, [".go", "go.mod", "go.sum", "go.work", "go.work.sum"])) {
+      const workspacePlanCount = addGoWorkspacePlans(plans, paths, signal);
+      if (workspacePlanCount === 0) addGoPlans(plans);
     }
     if (signal.ecosystem === "java" && touchesJava(paths, root)) {
       pushUnique(plans, {
@@ -171,6 +157,25 @@ function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
   }
 }
 
+function addGoPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "go-tests",
+    label: "Go tests",
+    command: "go test ./...",
+    reason: "Go source or module metadata changed.",
+    ecosystem: "go",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "go-vet",
+    label: "Go vet",
+    command: "go vet ./...",
+    reason: "Static checks catch common Go regressions.",
+    ecosystem: "go",
+    required: false
+  });
+}
+
 function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
   const affectedPackages = affectedPackagesForSignal(paths, signal, touchesRootWorkspaceMetadata(paths));
   const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
@@ -215,6 +220,54 @@ function addCargoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: P
     }
   }
   return added;
+}
+
+function addGoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
+  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesGoRootMetadata(paths));
+  const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
+  const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
+  const rootWideChange = touchesGoRootMetadata(paths);
+  let added = 0;
+  for (const workspacePackage of affectedPackages) {
+    for (const command of goWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange)) {
+      const before = plans.length;
+      pushUnique(plans, command);
+      if (plans.length > before) added += 1;
+    }
+  }
+  return added;
+}
+
+function goWorkspaceCommands(
+  workspacePackage: WorkspacePackage,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): CommandPlan[] {
+  const pattern = goWorkspacePattern(workspacePackage.path);
+  const reason = goWorkspaceReason(workspacePackage, directlyAffected, affectedNames, rootWideChange);
+  return [
+    {
+      id: `go-workspace-${slug(workspacePackage.name)}-tests`,
+      label: `${workspacePackage.name} Go tests`,
+      command: `go test ${pattern}`,
+      reason,
+      ecosystem: "go",
+      required: true,
+      packageName: workspacePackage.name,
+      packagePath: workspacePackage.path
+    },
+    {
+      id: `go-workspace-${slug(workspacePackage.name)}-vet`,
+      label: `${workspacePackage.name} Go vet`,
+      command: `go vet ${pattern}`,
+      reason: `${reason} Go workspace changes should pass static checks before merge.`,
+      ecosystem: "go",
+      required: false,
+      packageName: workspacePackage.name,
+      packagePath: workspacePackage.path
+    }
+  ];
 }
 
 function rustWorkspaceCommands(
@@ -368,6 +421,22 @@ function cargoWorkspaceReason(
   return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace crate"}.`;
 }
 
+function goWorkspaceReason(
+  workspacePackage: WorkspacePackage,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): string {
+  if (rootWideChange) {
+    return `Go workspace metadata changed, and ${workspacePackage.name} is a workspace module.`;
+  }
+  if (directlyAffected.has(workspacePackage.path)) {
+    return `${workspacePackage.name} changed under ${workspacePackage.path}.`;
+  }
+  const upstream = workspacePackage.dependencies?.find((dependency) => affectedNames.has(dependency));
+  return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace module"}.`;
+}
+
 function touchesRootWorkspaceMetadata(paths: string[]): boolean {
   return paths.some((path) =>
     ["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "pnpm-workspace.yaml", "turbo.json", "nx.json"].includes(path)
@@ -378,8 +447,13 @@ function touchesCargoRootMetadata(paths: string[]): boolean {
   return paths.some((path) => path === "Cargo.toml" || path === "Cargo.lock");
 }
 
+function touchesGoRootMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === "go.work" || path === "go.work.sum");
+}
+
 function rootWideMetadataChange(paths: string[], signal: ProjectSignal): boolean {
   if (signal.ecosystem === "rust") return touchesCargoRootMetadata(paths);
+  if (signal.ecosystem === "go") return touchesGoRootMetadata(paths);
   return touchesRootWorkspaceMetadata(paths);
 }
 
@@ -410,6 +484,10 @@ function packageManagerExec(packageManager: string, binary: string): string {
   if (packageManager === "yarn") return `yarn ${binary}`;
   if (packageManager === "bun") return `bunx ${binary}`;
   return `npx ${binary}`;
+}
+
+function goWorkspacePattern(packagePath: string): string {
+  return packagePath === "." ? "./..." : `./${packagePath}/...`;
 }
 
 function touchesNode(paths: string[]): boolean {

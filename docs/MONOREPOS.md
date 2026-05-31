@@ -1,6 +1,6 @@
 # Monorepo Targeting
 
-PatchDrill detects Node and Cargo workspaces and reports the affected packages for a diff.
+PatchDrill detects Node, Cargo, and Go workspaces and reports the affected packages for a diff.
 
 Supported Node workspace metadata:
 
@@ -42,10 +42,20 @@ PatchDrill reads `[workspace].members` from root `Cargo.toml`, expands member gl
 | Downstream dependent crate | `cargo test -p api-server --all-targets` |
 | Optional lint plan | `cargo clippy -p core-lib --all-targets -- -D warnings` |
 
+## Go Workspaces
+
+PatchDrill reads `go.work` `use` entries, each module's `module` path, and workspace-internal `require` dependencies. A change under `modules/core` marks that module as affected and also marks downstream workspace modules that require it.
+
+| Change | Example command |
+| --- | --- |
+| Direct module change | `go test ./modules/core/...` |
+| Downstream dependent module | `go test ./modules/api/...` |
+| Optional static check | `go vet ./modules/core/...` |
+
 ## Why This Matters
 
 Large repositories need targeted evidence. Running only root commands can hide which package proved the change, while running every package wastes CI time. PatchDrill keeps the plan explicit: affected package, command, and reason appear in Markdown and JSON reports.
 
 ## Current Scope
 
-PatchDrill builds workspace impact from package manifests, then hands Node task execution to Turborepo or Nx when those runners are detected. Native affected integration for Go modules and Pants remains a roadmap item.
+PatchDrill builds workspace impact from package manifests, then hands Node task execution to Turborepo or Nx when those runners are detected. Native affected integration for Pants remains a roadmap item.

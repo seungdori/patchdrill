@@ -244,6 +244,68 @@ core-lib = { path = "../core" }
     ]);
   });
 
+  it("detects Go workspaces and targets affected modules", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "go.work"),
+      `
+go 1.22
+
+use (
+  ./modules/core
+  ./modules/api
+)
+`
+    );
+    mkdirSync(join(root, "modules", "core"), { recursive: true });
+    mkdirSync(join(root, "modules", "api"), { recursive: true });
+    writeFileSync(
+      join(root, "modules", "core", "go.mod"),
+      `
+module example.com/core
+
+go 1.22
+`
+    );
+    writeFileSync(join(root, "modules", "core", "core.go"), "package core\n\nfunc OK() bool { return true }\n");
+    writeFileSync(
+      join(root, "modules", "api", "go.mod"),
+      `
+module example.com/api
+
+go 1.22
+
+require example.com/core v0.0.0
+
+replace example.com/core => ../core
+`
+    );
+    writeFileSync(join(root, "modules", "api", "api.go"), "package api\n\nimport \"example.com/core\"\n\nfunc OK() bool { return core.OK() }\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "modules", "core", "core.go"), "package core\n\nfunc OK() bool { return false }\n");
+
+    const report = await scan({ cwd: root });
+
+    expect(report.projectSignals.find((signal) => signal.ecosystem === "go")?.workspacePackages?.map((workspacePackage) => workspacePackage.name)).toEqual([
+      "example.com/api",
+      "example.com/core"
+    ]);
+    expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["example.com/core", "example.com/api"]);
+    expect(report.commandPlan.map((command) => command.command)).toEqual([
+      "go test ./modules/core/...",
+      "go vet ./modules/core/...",
+      "go test ./modules/api/...",
+      "go vet ./modules/api/..."
+    ]);
+  });
+
   it("includes dependency changes in reports", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

@@ -45,3 +45,4 @@
 - Added migration guidance when legacy binary `bun.lockb` lockfiles change.
 - Added built-in `regulated` and `agentic` policy packs for `patchdrill init`.
 - Added Cargo workspace task planning for affected crates and downstream dependents.
+- Added Go workspace task planning for affected modules and downstream dependents.
