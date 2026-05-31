@@ -2,7 +2,7 @@
 
 ## Near Term
 
-- Dependency diff enrichment for Cargo, Go, Python, pnpm, Yarn, and Bun lockfiles.
+- Dependency diff enrichment for Cargo, Go, Python, Yarn, and Bun lockfiles.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
 - Native affected-task integration for Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
@@ -32,6 +32,7 @@
 - JSON Schemas for policy and report contracts.
 - Workspace dependency graph expansion for downstream package testing.
 - npm `package-lock.json` dependency diff summaries.
+- `pnpm-lock.yaml` dependency diff summaries.
 - CODEOWNERS owner hints for changed files.
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.

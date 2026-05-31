@@ -1,5 +1,6 @@
 import { readFilePair, type GitDiffOptions } from "./git.js";
 import type { ChangedFile, DependencyChange } from "./types.js";
+import { parse as parseYaml } from "yaml";
 
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
@@ -25,7 +26,14 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const before = parsePackageLock(pair.before);
     const after = parsePackageLock(pair.after);
     if (!before && !after) continue;
-    changes.push(...diffPackageLock(file.path, before ?? new Map(), after ?? new Map()));
+    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pnpm-lock.yaml"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parsePnpmLock(pair.before);
+    const after = parsePnpmLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffPnpmLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
@@ -64,7 +72,7 @@ function parsePackageJson(value: string | undefined): PackageJson | undefined {
   }
 }
 
-function diffPackageLock(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
+function diffLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
   const changes: DependencyChange[] = [];
   const paths = new Set([...before.keys(), ...after.keys()]);
   for (const packagePath of paths) {
@@ -105,6 +113,50 @@ function diffPackageLock(file: string, before: Map<string, LockPackage>, after: 
   return changes;
 }
 
+function diffPnpmLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
+  const changes: DependencyChange[] = [];
+  const beforeByName = groupLockPackagesByName(before);
+  const afterByName = groupLockPackagesByName(after);
+  const names = new Set([...beforeByName.keys(), ...afterByName.keys()]);
+  const fallbackBefore = new Map<string, LockPackage>();
+  const fallbackAfter = new Map<string, LockPackage>();
+
+  for (const name of names) {
+    const beforePackages = beforeByName.get(name) ?? [];
+    const afterPackages = afterByName.get(name) ?? [];
+    if (beforePackages.length === 1 && afterPackages.length === 1) {
+      const beforePackage = beforePackages[0];
+      const afterPackage = afterPackages[0];
+      if (!beforePackage || !afterPackage || beforePackage.version === afterPackage.version) continue;
+      changes.push({
+        file,
+        packageName: name,
+        packagePath: `${beforePackage.path} -> ${afterPackage.path}`,
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: beforePackage.version,
+        after: afterPackage.version
+      });
+      continue;
+    }
+    for (const item of beforePackages) fallbackBefore.set(item.path, item);
+    for (const item of afterPackages) fallbackAfter.set(item.path, item);
+  }
+
+  changes.push(...diffLockPackages(file, fallbackBefore, fallbackAfter));
+  return changes;
+}
+
+function groupLockPackagesByName(packages: Map<string, LockPackage>): Map<string, LockPackage[]> {
+  const grouped = new Map<string, LockPackage[]>();
+  for (const item of packages.values()) {
+    const group = grouped.get(item.name) ?? [];
+    group.push(item);
+    grouped.set(item.name, group);
+  }
+  return grouped;
+}
+
 function parsePackageLock(value: string | undefined): Map<string, LockPackage> | undefined {
   if (!value) return undefined;
   try {
@@ -121,6 +173,28 @@ function parsePackageLock(value: string | undefined): Map<string, LockPackage> |
       return packages;
     }
     return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePnpmLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = parseYaml(value) as { packages?: unknown };
+    if (!isRecord(parsed.packages)) return undefined;
+    const packages = new Map<string, LockPackage>();
+    for (const [packagePath, entry] of Object.entries(parsed.packages)) {
+      if (!isRecord(entry)) continue;
+      const parsedKey = parsePnpmPackageKey(packagePath);
+      if (!parsedKey) continue;
+      packages.set(packagePath, {
+        name: parsedKey.name,
+        path: packagePath,
+        version: parsedKey.version
+      });
+    }
+    return packages;
   } catch {
     return undefined;
   }
@@ -157,4 +231,18 @@ function packageNameFromLockPath(packagePath: string): string | undefined {
   const parts = tail.split("/");
   if (parts[0]?.startsWith("@")) return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : undefined;
   return parts[0];
+}
+
+function parsePnpmPackageKey(rawKey: string): { name: string; version: string } | undefined {
+  const key = rawKey.replace(/^\//, "");
+  const separator = key.startsWith("@") ? key.indexOf("@", key.indexOf("/") + 1) : key.indexOf("@");
+  if (separator <= 0) return undefined;
+  const name = key.slice(0, separator);
+  const version = key.slice(separator + 1).split("(")[0]?.split("_")[0];
+  if (!name || !version) return undefined;
+  return { name, version };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

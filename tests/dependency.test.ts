@@ -123,6 +123,85 @@ describe("analyzeDependencyChanges", () => {
       }
     ]);
   });
+
+  it("reports pnpm lockfile additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-pnpm-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePnpmLock(
+      root,
+      `
+lockfileVersion: '9.0'
+packages:
+  '@scope/pkg@1.0.0':
+    resolution: {integrity: sha512-scope-old}
+  react@18.2.0:
+    resolution: {integrity: sha512-react-old}
+  /zod@3.0.0:
+    resolution: {integrity: sha512-zod-old}
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePnpmLock(
+      root,
+      `
+lockfileVersion: '9.0'
+packages:
+  '@scope/pkg@1.1.0':
+    resolution: {integrity: sha512-scope-new}
+  react@19.0.0:
+    resolution: {integrity: sha512-react-new}
+  yaml@2.0.0:
+    resolution: {integrity: sha512-yaml-new}
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "pnpm-lock.yaml", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "pnpm-lock.yaml",
+        packageName: "@scope/pkg",
+        packagePath: "@scope/pkg@1.0.0 -> @scope/pkg@1.1.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "1.0.0",
+        after: "1.1.0"
+      },
+      {
+        file: "pnpm-lock.yaml",
+        packageName: "react",
+        packagePath: "react@18.2.0 -> react@19.0.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "18.2.0",
+        after: "19.0.0"
+      },
+      {
+        file: "pnpm-lock.yaml",
+        packageName: "yaml",
+        packagePath: "yaml@2.0.0",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "2.0.0"
+      },
+      {
+        file: "pnpm-lock.yaml",
+        packageName: "zod",
+        packagePath: "/zod@3.0.0",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "3.0.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
@@ -131,6 +210,10 @@ function writePackage(root: string, contents: unknown): void {
 
 function writePackageLock(root: string, contents: unknown): void {
   writeFileSync(join(root, "package-lock.json"), JSON.stringify(contents, null, 2));
+}
+
+function writePnpmLock(root: string, contents: string): void {
+  writeFileSync(join(root, "pnpm-lock.yaml"), contents.trimStart());
 }
 
 function git(cwd: string, args: string[]): string {

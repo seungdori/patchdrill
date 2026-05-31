@@ -25,3 +25,4 @@
 - Refreshed the example report to cover current Markdown sections.
 - Added GitHub issue forms and a pull request template for contributor intake.
 - Added `schemaVersion` to JSON and Markdown reports.
+- Added `pnpm-lock.yaml` dependency diff summaries.
