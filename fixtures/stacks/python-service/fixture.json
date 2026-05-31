@@ -1,0 +1,21 @@
+{
+  "name": "python-service",
+  "expectedEcosystems": ["python"],
+  "expectedCommands": ["python -m pytest", "python -m compileall ."],
+  "baseFiles": [
+    {
+      "path": "requirements.txt",
+      "lines": ["fastapi==0.110.0", "pytest==8.0.0"]
+    },
+    {
+      "path": "app/main.py",
+      "lines": ["def ok():", "    return True"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/main.py",
+      "lines": ["def ok():", "    return False"]
+    }
+  ]
+}

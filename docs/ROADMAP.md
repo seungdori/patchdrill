@@ -2,7 +2,7 @@
 
 ## Near Term
 
-- First-party fixtures for the top 20 open-source stacks.
+- Expand first-party fixtures toward the top 20 open-source stacks.
 - Native affected-task integration for Pants.
 
 ## Later
@@ -55,6 +55,7 @@
 - Organization policy packs for regulated and agentic-code teams.
 - Cargo workspace task plans for affected crates and downstream dependents.
 - Go workspace task plans for affected modules and downstream dependents.
+- First-party stack fixture harness covering Node/Turborepo, Cargo, Go, and Python services.
 
 ## Contribution Targets
 

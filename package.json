@@ -11,6 +11,7 @@
     "schemas",
     "docs",
     "examples",
+    "fixtures",
     ".patchdrill.yml",
     "README.md",
     "LICENSE",

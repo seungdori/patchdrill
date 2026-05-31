@@ -1,0 +1,48 @@
+{
+  "name": "cargo-workspace",
+  "expectedEcosystems": ["rust"],
+  "expectedAffectedPackages": ["core-lib", "api-server"],
+  "expectedCommands": [
+    "cargo test -p core-lib --all-targets",
+    "cargo clippy -p core-lib --all-targets -- -D warnings",
+    "cargo test -p api-server --all-targets",
+    "cargo clippy -p api-server --all-targets -- -D warnings"
+  ],
+  "baseFiles": [
+    {
+      "path": "Cargo.toml",
+      "lines": ["[workspace]", "members = [\"crates/*\"]"]
+    },
+    {
+      "path": "crates/core/Cargo.toml",
+      "lines": ["[package]", "name = \"core-lib\"", "version = \"0.1.0\"", "edition = \"2021\""]
+    },
+    {
+      "path": "crates/core/src/lib.rs",
+      "lines": ["pub fn core() -> bool { true }"]
+    },
+    {
+      "path": "crates/api/Cargo.toml",
+      "lines": [
+        "[package]",
+        "name = \"api-server\"",
+        "version = \"0.1.0\"",
+        "edition = \"2021\"",
+        "",
+        "[dependencies]",
+        "core-lib = { path = \"../core\" }"
+      ]
+    },
+    {
+      "path": "crates/api/src/lib.rs",
+      "lines": ["pub fn api() -> bool { core_lib::core() }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "crates/core/src/lib.rs",
+      "lines": ["pub fn core() -> bool { false }"]
+    }
+  ]
+}
+

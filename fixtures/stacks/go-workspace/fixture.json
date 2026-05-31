@@ -1,0 +1,48 @@
+{
+  "name": "go-workspace",
+  "expectedEcosystems": ["go"],
+  "expectedAffectedPackages": ["example.com/core", "example.com/api"],
+  "expectedCommands": [
+    "go test ./modules/core/...",
+    "go vet ./modules/core/...",
+    "go test ./modules/api/...",
+    "go vet ./modules/api/..."
+  ],
+  "baseFiles": [
+    {
+      "path": "go.work",
+      "lines": ["go 1.22", "", "use (", "  ./modules/core", "  ./modules/api", ")"]
+    },
+    {
+      "path": "modules/core/go.mod",
+      "lines": ["module example.com/core", "", "go 1.22"]
+    },
+    {
+      "path": "modules/core/core.go",
+      "lines": ["package core", "", "func OK() bool { return true }"]
+    },
+    {
+      "path": "modules/api/go.mod",
+      "lines": [
+        "module example.com/api",
+        "",
+        "go 1.22",
+        "",
+        "require example.com/core v0.0.0",
+        "",
+        "replace example.com/core => ../core"
+      ]
+    },
+    {
+      "path": "modules/api/api.go",
+      "lines": ["package api", "", "import \"example.com/core\"", "", "func OK() bool { return core.OK() }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "modules/core/core.go",
+      "lines": ["package core", "", "func OK() bool { return false }"]
+    }
+  ]
+}
+

@@ -1,0 +1,39 @@
+{
+  "name": "node-turbo-workspace",
+  "expectedEcosystems": ["node"],
+  "expectedAffectedPackages": ["@acme/api"],
+  "expectedCommands": ["npx turbo run test --filter=@acme/api"],
+  "baseFiles": [
+    {
+      "path": "package.json",
+      "lines": [
+        "{",
+        "  \"private\": true,",
+        "  \"workspaces\": [\"packages/*\"],",
+        "  \"devDependencies\": {",
+        "    \"turbo\": \"^2.0.0\"",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "path": "turbo.json",
+      "lines": ["{", "  \"tasks\": {", "    \"test\": {}", "  }", "}"]
+    },
+    {
+      "path": "packages/api/package.json",
+      "lines": ["{", "  \"name\": \"@acme/api\",", "  \"scripts\": {", "    \"test\": \"vitest run\"", "  }", "}"]
+    },
+    {
+      "path": "packages/api/src/index.ts",
+      "lines": ["export const api = true;"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "packages/api/src/index.ts",
+      "lines": ["export const api = 'changed';"]
+    }
+  ]
+}
+
