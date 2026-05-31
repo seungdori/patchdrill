@@ -17,3 +17,4 @@
 - Added npm `package-lock.json` dependency diff summaries.
 - Added CODEOWNERS owner hints for changed files.
 - Added baseline comparison against previous JSON reports.
+- Added `--max-risk-delta` gating for baseline regressions.

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gitRoot } from "./git.js";
 import { writeGitHubWorkflow } from "./init.js";
-import { renderMarkdown, shouldFail } from "./report.js";
+import { renderMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { Severity } from "./types.js";
@@ -52,6 +52,7 @@ async function main(): Promise<void> {
 async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliFailOn = typeof parsed.flags["fail-on"] === "string" ? readSeverity(parsed.flags["fail-on"], "critical") : undefined;
   const cliMaxRisk = typeof parsed.flags["max-risk"] === "string" ? readMaxRisk(parsed.flags["max-risk"]) : undefined;
+  const cliMaxRiskDelta = typeof parsed.flags["max-risk-delta"] === "string" ? readMaxRiskDelta(parsed.flags["max-risk-delta"]) : undefined;
   const report = await scan({
     cwd: process.cwd(),
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
@@ -65,7 +66,11 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {})
   });
 
-  const gateOptions = { failOn: cliFailOn ?? report.policy?.failOn ?? "critical", maxRisk: cliMaxRisk ?? report.policy?.maxRisk ?? 69 };
+  const gateOptions = {
+    failOn: cliFailOn ?? report.policy?.failOn ?? "critical",
+    maxRisk: cliMaxRisk ?? report.policy?.maxRisk ?? 69,
+    ...(cliMaxRiskDelta !== undefined ? { maxRiskDelta: cliMaxRiskDelta } : {})
+  };
   if (!parsed.flags.quiet) {
     console.log(renderConsoleSummary(report, gateOptions));
     if (!parsed.flags.markdown) {
@@ -119,12 +124,12 @@ function schemaCommand(parsed: ParsedArgs): void {
   console.log(schema.trimEnd());
 }
 
-function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: { failOn: Severity; maxRisk: number }): string {
+function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
   const required = report.commandPlan.filter((command) => command.required);
   const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
   const lines = [
     `PatchDrill Gate ${gateStatus} - assessment ${report.summary.status.toUpperCase()}, risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
-    `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}`,
+    `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}${gateOptions.maxRiskDelta !== undefined ? `, max-risk-delta ${gateOptions.maxRiskDelta}` : ""}`,
     `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
     `Required commands: ${required.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
     `Added lines inspected: ${report.addedLines}`
@@ -177,7 +182,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "output"].includes(flag);
+  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "max-risk-delta", "output"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -195,6 +200,17 @@ function readMaxRisk(value: string): number {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
     throw new Error(`Invalid max risk "${value}". Expected an integer from 0 to 100.`);
+  }
+  return parsed;
+}
+
+function readMaxRiskDelta(value: string): number {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`Invalid max risk delta "${value}". Expected an integer from 0 to 100.`);
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    throw new Error(`Invalid max risk delta "${value}". Expected an integer from 0 to 100.`);
   }
   return parsed;
 }
@@ -230,6 +246,8 @@ Options:
   --sarif <path>      Write a SARIF report for GitHub code scanning
   --fail-on <level>   Fail when findings meet severity: info, low, medium, high, critical
   --max-risk <score>  Fail when risk score is above 0-100 threshold, default 69
+  --max-risk-delta <score>
+                      Fail when baseline risk increase is above this threshold
   --quiet             Only use exit code, no console report
   --list              List schemas when used with schema
   --output <path>     Write a schema to a file when used with schema

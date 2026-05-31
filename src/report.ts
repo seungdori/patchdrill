@@ -12,11 +12,13 @@ const severityRank: Record<Severity, number> = {
 export interface GateOptions {
   failOn: Severity;
   maxRisk: number;
+  maxRiskDelta?: number;
 }
 
 export function shouldFail(report: PatchReport, options: GateOptions): boolean {
   if (report.summary.failedCommandCount > 0) return true;
   if (report.summary.riskScore > options.maxRisk) return true;
+  if (options.maxRiskDelta !== undefined && report.baseline && report.baseline.riskDelta > options.maxRiskDelta) return true;
   const threshold = severityRank[options.failOn];
   return report.findings.some((finding) => severityRank[finding.severity] >= threshold);
 }

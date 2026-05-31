@@ -117,7 +117,7 @@ patchdrill schema report > patchdrill-report.schema.json
 Compare against a previous report:
 
 ```bash
-patchdrill scan --baseline previous-patchdrill-report.json --json patchdrill-report.json
+patchdrill scan --baseline previous-patchdrill-report.json --max-risk-delta 0 --json patchdrill-report.json
 ```
 
 Add a GitHub Actions workflow:
@@ -149,6 +149,7 @@ Options:
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
+| `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. |
 | `--quiet` | Only use exit code. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema to a file when used with `patchdrill schema`. |

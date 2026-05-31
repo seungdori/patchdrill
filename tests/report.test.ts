@@ -49,5 +49,24 @@ describe("report", () => {
     expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
     expect(shouldFail(report, { failOn: "critical", maxRisk: 30 })).toBe(true);
+    expect(
+      shouldFail(
+        {
+          ...report,
+          baseline: {
+            path: "baseline.json",
+            previousStatus: "pass",
+            currentStatus: "warn",
+            previousRiskScore: 10,
+            currentRiskScore: 40,
+            riskDelta: 30,
+            newFindingCount: 1,
+            resolvedFindingCount: 0,
+            unchangedFindingCount: 0
+          }
+        },
+        { failOn: "critical", maxRisk: 100, maxRiskDelta: 0 }
+      )
+    ).toBe(true);
   });
 });
