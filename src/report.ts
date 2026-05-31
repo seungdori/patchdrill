@@ -31,7 +31,18 @@ export function renderMarkdown(report: PatchReport): string {
   lines.push(`- Additions / deletions: +${report.summary.additions} / -${report.summary.deletions}`);
   lines.push(`- Required verification commands: ${report.summary.requiredCommandCount}`);
   lines.push(`- Failed verification commands: ${report.summary.failedCommandCount}`);
+  lines.push(`- Added lines inspected: ${report.addedLines}`);
   lines.push("");
+
+  if (report.policy) {
+    lines.push("## Policy");
+    lines.push("");
+    lines.push(`- Config: ${report.policy.path}`);
+    lines.push(`- Ignored path patterns: ${report.policy.ignoredPaths.length}`);
+    lines.push(`- Policy rules: ${report.policy.ruleCount}`);
+    lines.push(`- Policy commands: ${report.policy.requiredCommandCount} required, ${report.policy.optionalCommandCount} optional`);
+    lines.push("");
+  }
 
   if (report.projectSignals.length > 0) {
     lines.push("## Project Signals");
@@ -63,11 +74,12 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.findings.length === 0) {
     lines.push("No risk findings.");
   } else {
-    lines.push("| Severity | Finding | File | Remediation |");
-    lines.push("| --- | --- | --- | --- |");
+    lines.push("| Severity | Rule | Finding | Location | Remediation |");
+    lines.push("| --- | --- | --- | --- | --- |");
     for (const finding of report.findings) {
+      const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "";
       lines.push(
-        `| ${finding.severity} | ${escapePipe(finding.title)}: ${escapePipe(finding.detail)} | ${escapePipe(finding.file ?? "")} | ${escapePipe(
+        `| ${finding.severity} | ${escapePipe(finding.ruleId ?? "")} | ${escapePipe(finding.title)}: ${escapePipe(finding.detail)} | ${escapePipe(location)} | ${escapePipe(
           finding.remediation ?? ""
         )} |`
       );
@@ -121,10 +133,94 @@ export function renderMarkdown(report: PatchReport): string {
   return `${lines.join("\n")}\n`;
 }
 
+export function renderSarif(report: PatchReport): string {
+  const rules = new Map<string, { id: string; name: string; shortDescription: { text: string }; help?: { text: string }; properties: Record<string, unknown> }>();
+  const results = report.findings
+    .filter((finding) => finding.file)
+    .map((finding) => {
+      const ruleId = finding.ruleId ?? slug(finding.title);
+      rules.set(ruleId, {
+        id: ruleId,
+        name: finding.title,
+        shortDescription: { text: finding.title },
+        ...(finding.remediation ? { help: { text: finding.remediation } } : {}),
+        properties: {
+          severity: finding.severity,
+          tags: finding.tags ?? []
+        }
+      });
+      return {
+        ruleId,
+        level: sarifLevel(finding.severity),
+        message: {
+          text: `${finding.title}: ${finding.detail}${finding.remediation ? ` Remediation: ${finding.remediation}` : ""}`
+        },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: {
+                uri: finding.file
+              },
+              region: {
+                startLine: finding.line ?? 1
+              }
+            }
+          }
+        ],
+        properties: {
+          severity: finding.severity,
+          tags: finding.tags ?? []
+        }
+      };
+    });
+
+  return `${JSON.stringify(
+    {
+      version: "2.1.0",
+      $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+      runs: [
+        {
+          tool: {
+            driver: {
+              name: "PatchDrill",
+              informationUri: "https://github.com/patchdrill/patchdrill",
+              rules: [...rules.values()]
+            }
+          },
+          invocations: [
+            {
+              executionSuccessful: report.summary.failedCommandCount === 0,
+              properties: {
+                status: report.summary.status,
+                riskScore: report.summary.riskScore,
+                confidenceScore: report.summary.confidenceScore
+              }
+            }
+          ],
+          results
+        }
+      ]
+    },
+    null,
+    2
+  )}\n`;
+}
+
+function sarifLevel(severity: Severity): "error" | "warning" | "note" | "none" {
+  if (severity === "critical" || severity === "high") return "error";
+  if (severity === "medium") return "warning";
+  if (severity === "low" || severity === "info") return "note";
+  return "none";
+}
+
 function escapePipe(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 function escapeBackticks(value: string): string {
   return value.replaceAll("`", "\\`");
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "patchdrill-finding";
 }

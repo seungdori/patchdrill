@@ -20,6 +20,7 @@ node dist/cli.js scan
 ## Adding Rules
 
 Risk rules live in `src/risk.ts`. Command inference lives in `src/planner.ts`. Project detection lives in `src/project.ts`.
+Policy loading lives in `src/policy.ts`. SARIF and Markdown rendering live in `src/report.ts`.
 
 When adding a rule:
 
@@ -27,6 +28,7 @@ When adding a rule:
 2. Keep findings explainable.
 3. Prefer a specific path pattern over a broad one.
 4. Avoid network calls in deterministic scan mode.
+5. Do not include secret-like literal values in fixtures unless they are deliberately synthetic and covered by tests that ensure reports do not echo them.
 
 ## Pull Request Checklist
 

@@ -20,6 +20,12 @@ export interface ChangedFile {
   binary: boolean;
 }
 
+export interface AddedLine {
+  file: string;
+  line: number;
+  content: string;
+}
+
 export interface ProjectSignal {
   ecosystem:
     | "node"
@@ -58,11 +64,33 @@ export interface CommandResult {
 }
 
 export interface RiskFinding {
+  ruleId?: string;
   severity: Severity;
   title: string;
   detail: string;
   file?: string;
+  line?: number;
   remediation?: string;
+  tags?: string[];
+}
+
+export interface PolicyRule {
+  id: string;
+  title: string;
+  severity: Severity;
+  path?: string | string[];
+  detail?: string;
+  remediation?: string;
+  weight?: number;
+  tags?: string[];
+}
+
+export interface PatchPolicy {
+  ignoredPaths: string[];
+  failOn?: Severity;
+  rules: PolicyRule[];
+  requiredCommands: CommandPlan[];
+  optionalCommands: CommandPlan[];
 }
 
 export interface PatchSummary {
@@ -83,7 +111,16 @@ export interface PatchReport {
   head?: string;
   summary: PatchSummary;
   changedFiles: ChangedFile[];
+  addedLines: number;
   projectSignals: ProjectSignal[];
+  policy?: {
+    path: string;
+    ignoredPaths: string[];
+    failOn?: Severity;
+    ruleCount: number;
+    requiredCommandCount: number;
+    optionalCommandCount: number;
+  };
   findings: RiskFinding[];
   commandPlan: CommandPlan[];
   commandResults: CommandResult[];
@@ -95,7 +132,9 @@ export interface ScanOptions {
   head?: string;
   run?: boolean;
   failOn?: Severity;
+  configPath?: string;
   markdownPath?: string;
   jsonPath?: string;
+  sarifPath?: string;
   maxOutputChars?: number;
 }

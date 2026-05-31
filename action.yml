@@ -10,17 +10,36 @@ inputs:
     description: Severity threshold that should fail the action.
     required: false
     default: high
+  config:
+    description: Optional PatchDrill policy path.
+    required: false
+    default: ""
   run:
     description: Execute required verification commands.
     required: false
     default: "false"
+  markdown:
+    description: Markdown report output path.
+    required: false
+    default: patchdrill-report.md
+  json:
+    description: JSON report output path.
+    required: false
+    default: patchdrill-report.json
+  sarif:
+    description: SARIF report output path.
+    required: false
+    default: patchdrill.sarif
 outputs:
   report-json:
     description: Path to the generated JSON report.
-    value: patchdrill-report.json
+    value: ${{ steps.paths.outputs.json }}
   report-markdown:
     description: Path to the generated Markdown report.
-    value: patchdrill-report.md
+    value: ${{ steps.paths.outputs.markdown }}
+  report-sarif:
+    description: Path to the generated SARIF report.
+    value: ${{ steps.paths.outputs.sarif }}
 runs:
   using: composite
   steps:
@@ -34,9 +53,22 @@ runs:
         if [ "${{ inputs.run }}" = "true" ]; then
           RUN_FLAG="--run"
         fi
+        CONFIG_FLAG=""
+        if [ -n "${{ inputs.config }}" ]; then
+          CONFIG_FLAG="--config ${{ inputs.config }}"
+        fi
         npx patchdrill scan \
           --base "${{ inputs.base }}" \
-          --markdown patchdrill-report.md \
-          --json patchdrill-report.json \
+          --markdown "${{ inputs.markdown }}" \
+          --json "${{ inputs.json }}" \
+          --sarif "${{ inputs.sarif }}" \
           --fail-on "${{ inputs.fail-on }}" \
+          $CONFIG_FLAG \
           $RUN_FLAG
+    - name: Export report paths
+      id: paths
+      shell: bash
+      run: |
+        echo "json=${{ inputs.json }}" >> "$GITHUB_OUTPUT"
+        echo "markdown=${{ inputs.markdown }}" >> "$GITHUB_OUTPUT"
+        echo "sarif=${{ inputs.sarif }}" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,32 @@
+failOn: critical
+
+ignoredPaths:
+  - node_modules/**
+  - dist/**
+  - coverage/**
+  - .patchdrill/**
+
+requiredCommands:
+  - id: full-quality-gate
+    label: Full quality gate
+    command: npm run check
+    reason: PatchDrill must typecheck and pass its deterministic test suite before release.
+
+optionalCommands:
+  - id: package-dry-run
+    label: Package dry run
+    command: npm pack --dry-run
+    reason: Confirms the npm tarball contains the expected CLI, docs, action, and examples.
+
+rules:
+  - id: risk-engine-review
+    title: Risk engine changed
+    severity: medium
+    path:
+      - src/risk.ts
+      - src/policy.ts
+    detail: Risk or policy logic changed, so reviewers should inspect false-positive and false-negative behavior.
+    remediation: Add targeted tests for every new scoring rule or policy behavior.
+    tags:
+      - risk-model
+      - review

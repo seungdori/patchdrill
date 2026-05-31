@@ -22,6 +22,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 
 jobs:
   patchdrill:
@@ -35,7 +36,12 @@ jobs:
           node-version: 22
       - name: Run PatchDrill
         run: |
-          npx patchdrill scan --base origin/\${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --fail-on high
+          npx patchdrill scan --base origin/\${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: patchdrill.sarif
       - name: Upload PatchDrill report
         uses: actions/upload-artifact@v4
         if: always()
@@ -44,5 +50,6 @@ jobs:
           path: |
             patchdrill-report.md
             patchdrill-report.json
+            patchdrill.sarif
 `;
 }

@@ -37,6 +37,8 @@ Show:
 - Missing test-change finding.
 - Inferred commands from `package.json`.
 - Report artifact.
+- SARIF upload in GitHub code scanning.
+- `.patchdrill.yml` policy rule that requires owner review for a sensitive path.
 
 ## Star Hooks
 
@@ -44,4 +46,5 @@ Show:
 - "Evidence over vibes."
 - "Works before your CI bill grows."
 - "Review the plan before running commands."
-- "Markdown for humans, JSON for bots."
+- "Markdown for humans, JSON for bots, SARIF for GitHub."
+- "Detects prompt-injection strings before agents ingest them."

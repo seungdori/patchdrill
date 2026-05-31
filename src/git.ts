@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ChangedFile, FileStatus } from "./types.js";
+import type { AddedLine, ChangedFile, FileStatus } from "./types.js";
 
 export interface GitDiffOptions {
   cwd: string;
@@ -85,6 +85,24 @@ export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
+export function readAddedLines(options: GitDiffOptions): AddedLine[] {
+  const root = gitRoot(options.cwd);
+  const lines: AddedLine[] = [];
+
+  if (options.base) {
+    const range = `${options.base}...${options.head ?? "HEAD"}`;
+    lines.push(...parseAddedLines(runGit(root, ["diff", "--unified=0", "--no-ext-diff", range])));
+  } else if (hasHead(root)) {
+    lines.push(...parseAddedLines(safeGit(root, ["diff", "--unified=0", "--no-ext-diff"])));
+    lines.push(...parseAddedLines(safeGit(root, ["diff", "--cached", "--unified=0", "--no-ext-diff"])));
+    lines.push(...readUntrackedAddedLines(root));
+  } else {
+    lines.push(...readUntrackedAddedLines(root));
+  }
+
+  return lines;
+}
+
 function mergeDiff(
   entries: Map<string, RawDiffEntry>,
   cwd: string,
@@ -148,6 +166,62 @@ function statUntrackedFile(path: string): Pick<RawDiffEntry, "additions" | "bina
   } catch {
     return { additions: 0, binary: false };
   }
+}
+
+function readUntrackedAddedLines(cwd: string): AddedLine[] {
+  const output = safeGit(cwd, ["ls-files", "--others", "--exclude-standard"]);
+  const lines: AddedLine[] = [];
+  for (const path of output.split("\n").map((line) => line.trim()).filter(Boolean)) {
+    const fullPath = join(cwd, path);
+    if (!existsSync(fullPath)) continue;
+    try {
+      const data = readFileSync(fullPath);
+      const sample = data.subarray(0, Math.min(data.length, 8000));
+      if (sample.includes(0)) continue;
+      const text = data.toString("utf8");
+      const fileLines = text.split("\n");
+      fileLines.forEach((content, index) => {
+        if (index === fileLines.length - 1 && content === "") return;
+        lines.push({ file: path, line: index + 1, content });
+      });
+    } catch {
+      // Ignore unreadable untracked files. The file-level scanner still reports them.
+    }
+  }
+  return lines;
+}
+
+function parseAddedLines(diff: string): AddedLine[] {
+  const lines: AddedLine[] = [];
+  let currentFile: string | undefined;
+  let nextLine = 0;
+
+  for (const rawLine of diff.split("\n")) {
+    if (rawLine.startsWith("+++ ")) {
+      const file = rawLine.slice(4).trim();
+      currentFile = file === "/dev/null" ? undefined : stripGitPrefix(file);
+      continue;
+    }
+    if (rawLine.startsWith("@@")) {
+      const match = /\+(\d+)(?:,\d+)?/.exec(rawLine);
+      nextLine = match?.[1] ? Number.parseInt(match[1], 10) : 0;
+      continue;
+    }
+    if (!currentFile || nextLine <= 0) continue;
+    if (rawLine.startsWith("+") && !rawLine.startsWith("+++")) {
+      lines.push({ file: currentFile, line: nextLine, content: rawLine.slice(1) });
+      nextLine += 1;
+    } else if (rawLine.startsWith(" ") || rawLine.startsWith("\\")) {
+      nextLine += 1;
+    }
+  }
+
+  return lines;
+}
+
+function stripGitPrefix(path: string): string {
+  if (path.startsWith("a/") || path.startsWith("b/")) return path.slice(2);
+  return path;
 }
 
 function parseNameStatus(output: string): Array<Pick<RawDiffEntry, "path" | "previousPath" | "status">> {

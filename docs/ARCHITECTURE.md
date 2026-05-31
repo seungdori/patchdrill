@@ -5,24 +5,28 @@ PatchDrill is split into deterministic modules:
 | Module | Responsibility |
 | --- | --- |
 | `src/git.ts` | Reads changed files from git ranges, staged changes, unstaged changes, and untracked files. |
+| `src/policy.ts` | Loads `.patchdrill.yml/json`, filters ignored paths, and merges repo-specific commands/rules. |
 | `src/project.ts` | Discovers ecosystem signals from manifests. |
 | `src/planner.ts` | Turns changed files and project signals into a verification command plan. |
 | `src/risk.ts` | Scores the patch and emits explainable findings. |
 | `src/runner.ts` | Executes required commands when `--run` is set. |
-| `src/report.ts` | Renders Markdown and evaluates fail thresholds. |
+| `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
 | `src/cli.ts` | Parses arguments and handles user output. |
 
 ## Pipeline
 
 ```text
-git diff -> changed files -> project signals -> command plan
+git diff -> changed files + added lines -> policy filters
+                       |                  |
+                       v                  v
+              project signals -> verification command plan
                                       |
                                       v
                            optional command runner
                                       |
                                       v
-                         risk assessment + reports
+                    risk assessment -> Markdown / JSON / SARIF
 ```
 
 ## Non-Goals

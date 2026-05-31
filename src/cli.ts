@@ -45,15 +45,17 @@ async function main(): Promise<void> {
 }
 
 async function scanCommand(parsed: ParsedArgs): Promise<void> {
-  const failOn = readSeverity(parsed.flags["fail-on"], "critical");
+  const cliFailOn = typeof parsed.flags["fail-on"] === "string" ? readSeverity(parsed.flags["fail-on"], "critical") : undefined;
   const report = await scan({
     cwd: process.cwd(),
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
     ...(typeof parsed.flags.head === "string" ? { head: parsed.flags.head } : {}),
+    ...(typeof parsed.flags.config === "string" ? { configPath: parsed.flags.config } : {}),
     run: Boolean(parsed.flags.run),
-    failOn,
+    ...(cliFailOn ? { failOn: cliFailOn } : {}),
     ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
-    ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {})
+    ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {}),
+    ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {})
   });
 
   if (!parsed.flags.quiet) {
@@ -64,7 +66,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     }
   }
 
-  if (shouldFail(report, failOn)) {
+  if (shouldFail(report, cliFailOn ?? report.policy?.failOn ?? "critical")) {
     process.exitCode = 1;
   }
 }
@@ -82,10 +84,10 @@ function explainCommand(): void {
 2. Discover repo ecosystems from manifests.
 3. Infer the commands that should prove the patch.
 4. Score risk from changed areas, dependency files, infra, secrets, size, and command results.
-5. Emit Markdown and JSON evidence for PR review or CI artifacts.
+5. Emit Markdown, JSON, and SARIF evidence for PR review or CI artifacts.
 
 Typical use:
-  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json
+  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif
 `);
 }
 
@@ -94,7 +96,8 @@ function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>): string 
   const lines = [
     `PatchDrill ${report.summary.status.toUpperCase()} - risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
     `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
-    `Required commands: ${required.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`
+    `Required commands: ${required.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
+    `Added lines inspected: ${report.addedLines}`
   ];
   if (report.findings.length > 0) {
     lines.push("Top findings:");
@@ -144,7 +147,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "markdown", "json", "fail-on"].includes(flag);
+  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -177,9 +180,11 @@ Usage:
 Options:
   --base <ref>        Compare against a base ref, for example origin/main
   --head <ref>        Head ref when using --base, default HEAD
+  --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --run               Execute required inferred verification commands
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
+  --sarif <path>      Write a SARIF report for GitHub code scanning
   --fail-on <level>   Fail when findings meet severity: info, low, medium, high, critical
   --quiet             Only use exit code, no console report
   --version           Print version

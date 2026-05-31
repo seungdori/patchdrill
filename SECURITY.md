@@ -20,6 +20,8 @@ PatchDrill has two modes:
 
 Do not use `--run` on untrusted repositories until you have reviewed the verification plan.
 
+PatchDrill omits matched secret values from findings and SARIF messages. File names and line numbers can still be sensitive in private repositories, so treat generated reports as internal artifacts unless reviewed.
+
 ## Data Handling
 
 PatchDrill does not send source code or reports to a network service. Reports are written only to paths you request.

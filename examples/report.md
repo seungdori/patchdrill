@@ -11,6 +11,7 @@ Generated: 2026-06-01T00:00:00.000Z
 - Additions / deletions: +84 / -12
 - Required verification commands: 2
 - Failed verification commands: 0
+- Added lines inspected: 84
 
 ## Project Signals
 
@@ -28,10 +29,10 @@ Generated: 2026-06-01T00:00:00.000Z
 
 ## Findings
 
-| Severity | Finding | File | Remediation |
-| --- | --- | --- | --- |
-| high | High-impact product area changed: Authentication, billing, migrations, or security changes need stronger regression proof. | src/auth/session.ts | Add targeted tests and include manual verification notes in the PR. |
-| medium | Dependency lockfile changed: Dependency graph changes can introduce supply-chain, licensing, or runtime regressions. | pnpm-lock.yaml | Review direct and transitive dependency changes before merge. |
+| Severity | Rule | Finding | Location | Remediation |
+| --- | --- | --- | --- | --- |
+| high | file.high-impact-area | High-impact product area changed: Authentication, billing, migrations, or security changes need stronger regression proof. | src/auth/session.ts | Add targeted tests and include manual verification notes in the PR. |
+| medium | file.lockfile | Dependency lockfile changed: Dependency graph changes can introduce supply-chain, licensing, or runtime regressions. | pnpm-lock.yaml | Review direct and transitive dependency changes before merge. |
 
 ## Verification Plan
 

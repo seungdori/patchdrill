@@ -2,12 +2,13 @@
 
 PatchDrill is a local-first CI drill for proving that AI-generated and human patches are safe before merge.
 
-AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits a Markdown/JSON evidence report that reviewers can inspect.
+AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, and SARIF evidence that reviewers and CI systems can inspect.
 
 ```bash
 npx patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
+  --sarif patchdrill.sarif \
   --fail-on high
 ```
 
@@ -15,9 +16,10 @@ npx patchdrill scan --base origin/main --run \
 
 - Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, go, Maven, Gradle, dotnet, Terraform, Docker.
 - No LLM required. The core is deterministic, offline, and reviewable.
-- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, and missing test changes.
+- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
-- Emits portable evidence: Markdown for humans, JSON for bots and dashboards.
+- Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
+- Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 
 ## What It Does
 
@@ -34,6 +36,7 @@ Example summary:
 PatchDrill WARN - risk 42/100, confidence 58/100
 Changed files: 4, +121/-18
 Required commands: 3
+Added lines inspected: 121
 Top findings:
 - [high] High-impact product area changed (src/auth/session.ts)
 - [medium] Source changed without test changes
@@ -80,7 +83,14 @@ Write reports:
 ```bash
 patchdrill scan --base origin/main \
   --markdown patchdrill-report.md \
-  --json patchdrill-report.json
+  --json patchdrill-report.json \
+  --sarif patchdrill.sarif
+```
+
+Use policy-as-code:
+
+```bash
+patchdrill scan --config .patchdrill.yml
 ```
 
 Add a GitHub Actions workflow:
@@ -103,9 +113,11 @@ Options:
 | --- | --- |
 | `--base <ref>` | Compare against a base ref, for example `origin/main`. |
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
+| `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--run` | Execute required inferred verification commands. |
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
+| `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
 | `--quiet` | Only use exit code. |
 
@@ -132,14 +144,41 @@ PatchDrill scores a patch from 0 to 100. Higher is riskier.
 The current deterministic rules look for:
 
 - Secret-bearing files such as `.env` and private keys.
+- Secret-looking values added inside the diff, including private keys and common token formats.
+- Prompt-injection instructions added to agent-visible files such as `AGENTS.md`, issue templates, and Markdown docs.
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
 - Dependency lockfile changes.
 - Source changes without test changes.
 - Large line deltas and binary files.
 - Failed verification commands.
+- Custom policy rules from `.patchdrill.yml`.
 
 The risk model is intentionally explainable. Every score increase is represented as a finding in the report.
+
+## Policy-As-Code
+
+PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` from the repository root.
+
+```yaml
+failOn: high
+
+ignoredPaths:
+  - generated/**
+
+requiredCommands:
+  - id: contract-tests
+    command: npm run test:contracts
+    reason: API surfaces changed.
+
+rules:
+  - id: payments-owner-review
+    title: Payments owner review required
+    severity: critical
+    path: src/payments/**
+```
+
+See [docs/POLICY.md](docs/POLICY.md).
 
 ## GitHub Actions
 
@@ -160,6 +199,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 
 jobs:
   patchdrill:
@@ -171,7 +211,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --fail-on high
+      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: patchdrill.sarif
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -179,11 +223,13 @@ jobs:
           path: |
             patchdrill-report.md
             patchdrill-report.json
+            patchdrill.sarif
 ```
 
 ## Example Report
 
 See [examples/report.md](examples/report.md).
+For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 
 ## Design Principles
 
@@ -195,9 +241,7 @@ See [examples/report.md](examples/report.md).
 
 ## Roadmap
 
-- SARIF output for GitHub code scanning.
 - PR comment mode.
-- Policy file support for organization-specific path rules.
 - Monorepo package targeting.
 - Language-aware test selection.
 - Dependency diff enrichment for npm, Cargo, Go, and Python lockfiles.

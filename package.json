@@ -10,6 +10,7 @@
     "dist",
     "docs",
     "examples",
+    ".patchdrill.yml",
     "README.md",
     "LICENSE",
     "action.yml",
@@ -42,5 +43,8 @@
     "@types/node": "^24.0.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   }
 }
