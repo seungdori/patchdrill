@@ -11,3 +11,4 @@
 - Split CI gating into explicit `--fail-on` severity and `--max-risk` score thresholds.
 - Added Node workspace affected-package targeting and release workflow for npm provenance.
 - Added package.json dependency diff summaries to Markdown and JSON reports.
+- Added pull request comment upsert mode to the GitHub Action and generated workflow.

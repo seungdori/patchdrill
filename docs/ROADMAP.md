@@ -3,7 +3,6 @@
 ## Near Term
 
 - Dependency diff enrichment for npm lockfiles, Cargo, Go, and Python.
-- PR comment mode.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
 - Workspace dependency graph expansion for downstream package testing.
@@ -30,6 +29,7 @@
 - Direct Node workspace package targeting.
 - npm trusted publishing and provenance release workflow.
 - package.json dependency diff summaries.
+- Pull request comment upsert mode for the GitHub Action.
 
 ## Contribution Targets
 

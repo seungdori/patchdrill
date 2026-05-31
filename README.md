@@ -91,6 +91,15 @@ patchdrill scan --base origin/main \
   --sarif patchdrill.sarif
 ```
 
+Use the GitHub Action with PR comments:
+
+```yaml
+- uses: your-org/patchdrill@v0
+  with:
+    base: origin/${{ github.base_ref }}
+    pr-comment: "true"
+```
+
 Use policy-as-code:
 
 ```bash
@@ -240,6 +249,7 @@ jobs:
 See [examples/report.md](examples/report.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
+For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
 
 ## Release Provenance
 
@@ -260,7 +270,6 @@ PatchDrill summarizes dependency changes from changed `package.json` files and l
 
 ## Roadmap
 
-- PR comment mode.
 - Workspace dependency graph expansion.
 - Language-aware test selection.
 - Dependency diff enrichment for npm lockfiles, Cargo, Go, and Python.
