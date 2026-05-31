@@ -61,6 +61,18 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
+  if (report.baseline) {
+    lines.push("## Baseline");
+    lines.push("");
+    lines.push(`- Baseline report: ${report.baseline.path}`);
+    if (report.baseline.previousStatus) lines.push(`- Status: ${report.baseline.previousStatus} -> ${report.baseline.currentStatus}`);
+    if (report.baseline.previousRiskScore !== undefined) {
+      lines.push(`- Risk: ${report.baseline.previousRiskScore}/100 -> ${report.baseline.currentRiskScore}/100 (${formatDelta(report.baseline.riskDelta)})`);
+    }
+    lines.push(`- Findings: ${report.baseline.newFindingCount} new, ${report.baseline.resolvedFindingCount} resolved, ${report.baseline.unchangedFindingCount} unchanged`);
+    lines.push("");
+  }
+
   if (report.projectSignals.length > 0) {
     lines.push("## Project Signals");
     lines.push("");
@@ -269,6 +281,10 @@ function escapePipe(value: string): string {
 
 function escapeBackticks(value: string): string {
   return value.replaceAll("`", "\\`");
+}
+
+function formatDelta(value: number): string {
+  return value > 0 ? `+${value}` : `${value}`;
 }
 
 function slug(value: string): string {

@@ -18,6 +18,10 @@ inputs:
     description: Optional PatchDrill policy path.
     required: false
     default: ""
+  baseline:
+    description: Optional previous PatchDrill JSON report to compare against.
+    required: false
+    default: ""
   run:
     description: Execute required verification commands.
     required: false
@@ -74,6 +78,10 @@ runs:
         if [ -n "${{ inputs.config }}" ]; then
           CONFIG_FLAG="--config ${{ inputs.config }}"
         fi
+        BASELINE_FLAG=""
+        if [ -n "${{ inputs.baseline }}" ]; then
+          BASELINE_FLAG="--baseline ${{ inputs.baseline }}"
+        fi
         set +e
         npx patchdrill scan \
           --base "${{ inputs.base }}" \
@@ -83,6 +91,7 @@ runs:
           --fail-on "${{ inputs.fail-on }}" \
           --max-risk "${{ inputs.max-risk }}" \
           $CONFIG_FLAG \
+          $BASELINE_FLAG \
           $RUN_FLAG
         STATUS=$?
         echo "status=$STATUS" >> "$GITHUB_OUTPUT"

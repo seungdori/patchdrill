@@ -33,6 +33,7 @@
 - Workspace dependency graph expansion for downstream package testing.
 - npm `package-lock.json` dependency diff summaries.
 - CODEOWNERS owner hints for changed files.
+- Baseline comparison against previous JSON reports.
 
 ## Contribution Targets
 

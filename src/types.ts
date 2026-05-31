@@ -152,6 +152,17 @@ export interface PatchReport {
     path: string;
     ruleCount: number;
   };
+  baseline?: {
+    path: string;
+    previousStatus?: PatchStatus;
+    currentStatus: PatchStatus;
+    previousRiskScore?: number;
+    currentRiskScore: number;
+    riskDelta: number;
+    newFindingCount: number;
+    resolvedFindingCount: number;
+    unchangedFindingCount: number;
+  };
   findings: RiskFinding[];
   commandPlan: CommandPlan[];
   commandResults: CommandResult[];
@@ -164,6 +175,7 @@ export interface ScanOptions {
   run?: boolean;
   failOn?: Severity;
   configPath?: string;
+  baselinePath?: string;
   markdownPath?: string;
   jsonPath?: string;
   sarifPath?: string;

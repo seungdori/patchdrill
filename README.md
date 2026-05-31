@@ -114,6 +114,12 @@ patchdrill schema policy > patchdrill-policy.schema.json
 patchdrill schema report > patchdrill-report.schema.json
 ```
 
+Compare against a previous report:
+
+```bash
+patchdrill scan --baseline previous-patchdrill-report.json --json patchdrill-report.json
+```
+
 Add a GitHub Actions workflow:
 
 ```bash
@@ -136,6 +142,7 @@ Options:
 | `--base <ref>` | Compare against a base ref, for example `origin/main`. |
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
+| `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
 | `--run` | Execute required inferred verification commands. |
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
@@ -263,6 +270,7 @@ For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_PO
 For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
 For machine-readable schemas, see [docs/SCHEMAS.md](docs/SCHEMAS.md).
 For owner hints, see [docs/CODEOWNERS.md](docs/CODEOWNERS.md).
+For risk deltas, see [docs/BASELINES.md](docs/BASELINES.md).
 
 ## Release Provenance
 

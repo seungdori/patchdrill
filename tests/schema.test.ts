@@ -115,6 +115,17 @@ describe("schemas", () => {
         path: ".github/CODEOWNERS",
         ruleCount: 2
       },
+      baseline: {
+        path: "previous-report.json",
+        previousStatus: "warn",
+        currentStatus: "warn",
+        previousRiskScore: 35,
+        currentRiskScore: 42,
+        riskDelta: 7,
+        newFindingCount: 1,
+        resolvedFindingCount: 0,
+        unchangedFindingCount: 1
+      },
       findings: [
         {
           ruleId: "risk.high-impact",

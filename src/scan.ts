@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { compareBaseline } from "./baseline.js";
 import { annotateCodeOwners, loadCodeOwners } from "./codeowners.js";
 import { analyzeDependencyChanges } from "./dependency.js";
 import { gitRoot, readAddedLines, readChangedFiles } from "./git.js";
@@ -41,6 +42,15 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const additions = changedFiles.reduce((sum, file) => sum + file.additions, 0);
   const deletions = changedFiles.reduce((sum, file) => sum + file.deletions, 0);
   const failedCommandCount = commandResults.filter((result) => result.exitCode !== 0).length;
+  const baseline = options.baselinePath
+    ? compareBaseline(root, options.baselinePath, {
+        summary: {
+          status: assessment.status,
+          riskScore: assessment.riskScore
+        },
+        findings: assessment.findings
+      })
+    : undefined;
 
   const report: PatchReport = {
     generatedAt: new Date().toISOString(),
@@ -83,6 +93,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
           }
         }
       : {}),
+    ...(baseline ? { baseline } : {}),
     findings: assessment.findings,
     commandPlan,
     commandResults

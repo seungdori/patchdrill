@@ -69,6 +69,9 @@
     "codeOwners": {
       "$ref": "#/$defs/codeOwners"
     },
+    "baseline": {
+      "$ref": "#/$defs/baseline"
+    },
     "findings": {
       "type": "array",
       "items": {
@@ -354,6 +357,57 @@
           "type": "string"
         },
         "ruleCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "currentStatus",
+        "currentRiskScore",
+        "riskDelta",
+        "newFindingCount",
+        "resolvedFindingCount",
+        "unchangedFindingCount"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "previousStatus": {
+          "$ref": "#/$defs/patchStatus"
+        },
+        "currentStatus": {
+          "$ref": "#/$defs/patchStatus"
+        },
+        "previousRiskScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "currentRiskScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "riskDelta": {
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "newFindingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolvedFindingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unchangedFindingCount": {
           "type": "integer",
           "minimum": 0
         }

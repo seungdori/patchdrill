@@ -57,6 +57,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
     ...(typeof parsed.flags.head === "string" ? { head: parsed.flags.head } : {}),
     ...(typeof parsed.flags.config === "string" ? { configPath: parsed.flags.config } : {}),
+    ...(typeof parsed.flags.baseline === "string" ? { baselinePath: parsed.flags.baseline } : {}),
     run: Boolean(parsed.flags.run),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
     ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
@@ -176,7 +177,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on", "max-risk", "output"].includes(flag);
+  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "output"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -222,6 +223,7 @@ Options:
   --base <ref>        Compare against a base ref, for example origin/main
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
+  --baseline <path>   Compare against a previous PatchDrill JSON report
   --run               Execute required inferred verification commands
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
