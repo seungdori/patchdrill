@@ -27,3 +27,4 @@
 - Added `schemaVersion` to JSON and Markdown reports.
 - Added `pnpm-lock.yaml` dependency diff summaries.
 - Added `yarn.lock` dependency diff summaries.
+- Added `go.sum` dependency diff summaries.

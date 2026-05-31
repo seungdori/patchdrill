@@ -33,14 +33,21 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const before = parsePnpmLock(pair.before);
     const after = parsePnpmLock(pair.after);
     if (!before && !after) continue;
-    changes.push(...diffPnpmLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("yarn.lock"))) {
     const pair = readFilePair(options, file.path);
     const before = parseYarnLock(pair.before);
     const after = parseYarnLock(pair.after);
     if (!before && !after) continue;
-    changes.push(...diffPnpmLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("go.sum"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGoSum(pair.before);
+    const after = parseGoSum(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
@@ -120,7 +127,7 @@ function diffLockPackages(file: string, before: Map<string, LockPackage>, after:
   return changes;
 }
 
-function diffPnpmLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
+function diffNameVersionLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
   const changes: DependencyChange[] = [];
   const beforeByName = groupLockPackagesByName(before);
   const afterByName = groupLockPackagesByName(after);
@@ -232,6 +239,19 @@ function parseYarnLock(value: string | undefined): Map<string, LockPackage> | un
     descriptor = undefined;
   }
 
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseGoSum(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, LockPackage>();
+  for (const rawLine of value.split(/\r?\n/)) {
+    const [name, rawVersion] = rawLine.trim().split(/\s+/, 3);
+    if (!name || !rawVersion) continue;
+    const version = rawVersion.replace(/\/go\.mod$/, "");
+    const path = `${name}@${version}`;
+    packages.set(path, { name, path, version });
+  }
   return packages.size > 0 ? packages : undefined;
 }
 

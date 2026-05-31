@@ -277,6 +277,69 @@ yaml@^2.0.0:
       }
     ]);
   });
+
+  it("reports go.sum additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-go-sum-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGoSum(
+      root,
+      `
+github.com/acme/old v0.1.0 h1:old
+github.com/acme/old v0.1.0/go.mod h1:oldmod
+github.com/gin-gonic/gin v1.9.0 h1:ginold
+github.com/gin-gonic/gin v1.9.0/go.mod h1:ginoldmod
+golang.org/x/crypto v0.20.0 h1:cryptoold
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGoSum(
+      root,
+      `
+github.com/gin-gonic/gin v1.10.0 h1:ginnew
+github.com/gin-gonic/gin v1.10.0/go.mod h1:ginnewmod
+golang.org/x/crypto v0.20.0 h1:cryptoold
+golang.org/x/sync v0.7.0 h1:syncnew
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "go.sum", status: "modified", additions: 4, deletions: 5, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "go.sum",
+        packageName: "github.com/acme/old",
+        packagePath: "github.com/acme/old@v0.1.0",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "v0.1.0"
+      },
+      {
+        file: "go.sum",
+        packageName: "github.com/gin-gonic/gin",
+        packagePath: "github.com/gin-gonic/gin@v1.9.0 -> github.com/gin-gonic/gin@v1.10.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "v1.9.0",
+        after: "v1.10.0"
+      },
+      {
+        file: "go.sum",
+        packageName: "golang.org/x/sync",
+        packagePath: "golang.org/x/sync@v0.7.0",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "v0.7.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
@@ -293,6 +356,10 @@ function writePnpmLock(root: string, contents: string): void {
 
 function writeYarnLock(root: string, contents: string): void {
   writeFileSync(join(root, "yarn.lock"), contents.trimStart());
+}
+
+function writeGoSum(root: string, contents: string): void {
+  writeFileSync(join(root, "go.sum"), contents.trimStart());
 }
 
 function git(cwd: string, args: string[]): string {
