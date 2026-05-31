@@ -30,22 +30,25 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       });
     }
     if (signal.ecosystem === "rust" && touches(paths, [".rs", "Cargo.toml", "Cargo.lock"])) {
-      pushUnique(plans, {
-        id: "rust-tests",
-        label: "Rust tests",
-        command: "cargo test --all-targets",
-        reason: "Rust source or Cargo metadata changed.",
-        ecosystem: "rust",
-        required: true
-      });
-      pushUnique(plans, {
-        id: "rust-clippy",
-        label: "Rust clippy",
-        command: "cargo clippy --all-targets -- -D warnings",
-        reason: "Rust changes should pass linting before merge.",
-        ecosystem: "rust",
-        required: false
-      });
+      const workspacePlanCount = addCargoWorkspacePlans(plans, paths, signal);
+      if (workspacePlanCount === 0) {
+        pushUnique(plans, {
+          id: "rust-tests",
+          label: "Rust tests",
+          command: "cargo test --all-targets",
+          reason: "Rust source or Cargo metadata changed.",
+          ecosystem: "rust",
+          required: true
+        });
+        pushUnique(plans, {
+          id: "rust-clippy",
+          label: "Rust clippy",
+          command: "cargo clippy --all-targets -- -D warnings",
+          reason: "Rust changes should pass linting before merge.",
+          ecosystem: "rust",
+          required: false
+        });
+      }
     }
     if (signal.ecosystem === "go" && touches(paths, [".go", "go.mod", "go.sum"])) {
       pushUnique(plans, {
@@ -145,8 +148,8 @@ export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signa
   const affected = new Map<string, WorkspacePackage>();
   const paths = changedFiles.map((file) => file.path);
   for (const signal of signals) {
-    if (signal.ecosystem !== "node") continue;
-    for (const workspacePackage of affectedPackagesForSignal(paths, signal)) {
+    if (!signal.workspacePackages || signal.workspacePackages.length === 0) continue;
+    for (const workspacePackage of affectedPackagesForSignal(paths, signal, rootWideMetadataChange(paths, signal))) {
       affected.set(workspacePackage.path, workspacePackage);
     }
   }
@@ -169,7 +172,7 @@ function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
 }
 
 function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
-  const affectedPackages = affectedPackagesForSignal(paths, signal);
+  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesRootWorkspaceMetadata(paths));
   const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
   const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
   const rootWideChange = touchesRootWorkspaceMetadata(paths);
@@ -196,6 +199,54 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
     }
   }
   return added;
+}
+
+function addCargoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
+  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesCargoRootMetadata(paths));
+  const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
+  const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
+  const rootWideChange = touchesCargoRootMetadata(paths);
+  let added = 0;
+  for (const workspacePackage of affectedPackages) {
+    for (const command of rustWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange)) {
+      const before = plans.length;
+      pushUnique(plans, command);
+      if (plans.length > before) added += 1;
+    }
+  }
+  return added;
+}
+
+function rustWorkspaceCommands(
+  workspacePackage: WorkspacePackage,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): CommandPlan[] {
+  const packageName = quoteShell(workspacePackage.name);
+  const reason = cargoWorkspaceReason(workspacePackage, directlyAffected, affectedNames, rootWideChange);
+  return [
+    {
+      id: `rust-workspace-${slug(workspacePackage.name)}-tests`,
+      label: `${workspacePackage.name} Rust tests`,
+      command: `cargo test -p ${packageName} --all-targets`,
+      reason,
+      ecosystem: "rust",
+      required: true,
+      packageName: workspacePackage.name,
+      packagePath: workspacePackage.path
+    },
+    {
+      id: `rust-workspace-${slug(workspacePackage.name)}-clippy`,
+      label: `${workspacePackage.name} Rust clippy`,
+      command: `cargo clippy -p ${packageName} --all-targets -- -D warnings`,
+      reason: `${reason} Rust workspace changes should pass linting before merge.`,
+      ecosystem: "rust",
+      required: false,
+      packageName: workspacePackage.name,
+      packagePath: workspacePackage.path
+    }
+  ];
 }
 
 function addNodeTaskRunnerPlans(
@@ -235,10 +286,9 @@ function workspaceSupportsTask(workspacePackage: WorkspacePackage, script: strin
   return taskRunner === "nx" && Boolean(workspacePackage.targets?.includes(script));
 }
 
-function affectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
+function affectedPackagesForSignal(paths: string[], signal: ProjectSignal, rootWideChange: boolean): WorkspacePackage[] {
   const workspacePackages = signal.workspacePackages ?? [];
   if (workspacePackages.length === 0) return [];
-  const rootWideChange = touchesRootWorkspaceMetadata(paths);
   if (rootWideChange) return workspacePackages;
   return includeDownstreamDependents(directlyAffectedPackagesForSignal(paths, signal), workspacePackages);
 }
@@ -302,10 +352,35 @@ function workspaceTaskRunnerReason(
   return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace package"}, and ${taskDefinition}.`;
 }
 
+function cargoWorkspaceReason(
+  workspacePackage: WorkspacePackage,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): string {
+  if (rootWideChange) {
+    return `Cargo workspace metadata changed, and ${workspacePackage.name} is a workspace member.`;
+  }
+  if (directlyAffected.has(workspacePackage.path)) {
+    return `${workspacePackage.name} changed under ${workspacePackage.path}.`;
+  }
+  const upstream = workspacePackage.dependencies?.find((dependency) => affectedNames.has(dependency));
+  return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace crate"}.`;
+}
+
 function touchesRootWorkspaceMetadata(paths: string[]): boolean {
   return paths.some((path) =>
     ["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "pnpm-workspace.yaml", "turbo.json", "nx.json"].includes(path)
   );
+}
+
+function touchesCargoRootMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === "Cargo.toml" || path === "Cargo.lock");
+}
+
+function rootWideMetadataChange(paths: string[], signal: ProjectSignal): boolean {
+  if (signal.ecosystem === "rust") return touchesCargoRootMetadata(paths);
+  return touchesRootWorkspaceMetadata(paths);
 }
 
 function nodeRun(packageManager: string, script: string): string {

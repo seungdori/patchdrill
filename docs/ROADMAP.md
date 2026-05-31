@@ -3,7 +3,7 @@
 ## Near Term
 
 - First-party fixtures for the top 20 open-source stacks.
-- Native affected-task integration for Cargo workspaces, Go modules, and Pants.
+- Native affected-task integration for Go modules and Pants.
 
 ## Later
 
@@ -53,6 +53,7 @@
 - Native Turborepo and Nx task-runner plans for affected Node workspaces.
 - Binary `bun.lockb` migration guidance for legacy Bun projects.
 - Organization policy packs for regulated and agentic-code teams.
+- Cargo workspace task plans for affected crates and downstream dependents.
 
 ## Contribution Targets
 

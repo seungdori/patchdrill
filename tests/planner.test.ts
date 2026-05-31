@@ -201,4 +201,40 @@ describe("planCommands", () => {
       '@acme/api changed under packages/api, and project.json defines target "build". PatchDrill detected nx and will use its task graph.'
     ]);
   });
+
+  it("targets affected Cargo workspace crates and downstream dependents", () => {
+    const files: ChangedFile[] = [
+      { path: "crates/core/src/lib.rs", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "rust",
+        manifestPath: "Cargo.toml",
+        workspacePackages: [
+          {
+            name: "core-lib",
+            path: "crates/core",
+            scripts: {}
+          },
+          {
+            name: "api-server",
+            path: "crates/api",
+            scripts: {},
+            dependencies: ["core-lib"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "cargo test -p core-lib --all-targets",
+      "cargo clippy -p core-lib --all-targets -- -D warnings",
+      "cargo test -p api-server --all-targets",
+      "cargo clippy -p api-server --all-targets -- -D warnings"
+    ]);
+    expect(commands.map((command) => command.packageName)).toEqual(["core-lib", "core-lib", "api-server", "api-server"]);
+    expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["core-lib", "api-server"]);
+  });
 });

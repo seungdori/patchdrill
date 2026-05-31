@@ -29,7 +29,13 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
 
-  if (exists(root, "Cargo.toml")) add({ ecosystem: "rust", manifestPath: "Cargo.toml" });
+  if (exists(root, "Cargo.toml")) {
+    add({
+      ecosystem: "rust",
+      manifestPath: "Cargo.toml",
+      workspacePackages: discoverCargoWorkspacePackages(root)
+    });
+  }
   if (exists(root, "go.mod")) add({ ecosystem: "go", manifestPath: "go.mod" });
   if (exists(root, "pom.xml") || exists(root, "build.gradle") || exists(root, "build.gradle.kts")) {
     add({
@@ -166,6 +172,115 @@ function readProjectMetadata(packageRoot: string): { name?: string; targets: str
   }
 }
 
+function discoverCargoWorkspacePackages(root: string): WorkspacePackage[] {
+  let rootManifest = "";
+  try {
+    rootManifest = readFileSync(join(root, "Cargo.toml"), "utf8");
+  } catch {
+    return [];
+  }
+  const members = readCargoWorkspaceMembers(rootManifest);
+  if (members.length === 0) return [];
+  const packages = new Map<string, WorkspacePackage>();
+
+  for (const pattern of members) {
+    for (const packagePath of expandWorkspacePattern(root, pattern, "Cargo.toml")) {
+      const manifest = readCargoManifest(join(root, packagePath));
+      if (!manifest.name) continue;
+      const workspacePackage: WorkspacePackage = {
+        name: manifest.name,
+        path: packagePath,
+        scripts: {}
+      };
+      if (manifest.dependencies.length > 0) workspacePackage.dependencies = manifest.dependencies;
+      packages.set(packagePath, workspacePackage);
+    }
+  }
+
+  const workspaceNames = new Set([...packages.values()].map((workspacePackage) => workspacePackage.name));
+  return [...packages.values()]
+    .map((workspacePackage) => {
+      const dependencies = workspacePackage.dependencies?.filter((dependency) => workspaceNames.has(dependency)) ?? [];
+      if (dependencies.length === 0) {
+        const { dependencies: _dependencies, ...withoutDependencies } = workspacePackage;
+        return withoutDependencies;
+      }
+      return { ...workspacePackage, dependencies };
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function readCargoWorkspaceMembers(manifest: string): string[] {
+  const workspaceSection = readTomlSection(manifest, "workspace");
+  if (!workspaceSection) return [];
+  const match = /^members\s*=\s*\[([\s\S]*?)\]/m.exec(workspaceSection);
+  if (!match?.[1]) return [];
+  return readTomlStringArray(match[1]).filter((member) => !member.startsWith("!"));
+}
+
+function readCargoManifest(packageRoot: string): { name?: string; dependencies: string[] } {
+  try {
+    const manifest = readFileSync(join(packageRoot, "Cargo.toml"), "utf8");
+    return {
+      ...readCargoPackageName(manifest),
+      dependencies: readCargoDependencyNames(manifest)
+    };
+  } catch {
+    return { dependencies: [] };
+  }
+}
+
+function readCargoPackageName(manifest: string): { name?: string } {
+  const packageSection = readTomlSection(manifest, "package");
+  const match = packageSection ? /^name\s*=\s*["']([^"']+)["']/m.exec(packageSection) : undefined;
+  return match?.[1] ? { name: match[1] } : {};
+}
+
+function readCargoDependencyNames(manifest: string): string[] {
+  const dependencies = new Set<string>();
+  let inDependencySection = false;
+  for (const rawLine of manifest.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const section = /^\[([^\]]+)\]$/.exec(line);
+    if (section?.[1]) {
+      inDependencySection = section[1] === "dependencies" || section[1] === "dev-dependencies" || section[1] === "build-dependencies" || section[1].endsWith(".dependencies");
+      continue;
+    }
+    if (!inDependencySection) continue;
+    const match = /^["']?([A-Za-z0-9_.-]+)["']?\s*=/.exec(line);
+    if (match?.[1]) dependencies.add(match[1]);
+  }
+  return [...dependencies].sort();
+}
+
+function readTomlSection(manifest: string, sectionName: string): string | undefined {
+  const lines = manifest.split(/\r?\n/);
+  const sectionLines: string[] = [];
+  let inSection = false;
+  for (const line of lines) {
+    const section = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    if (section?.[1]) {
+      if (inSection) break;
+      inSection = section[1] === sectionName;
+      continue;
+    }
+    if (inSection) sectionLines.push(line);
+  }
+  return sectionLines.length > 0 ? sectionLines.join("\n") : undefined;
+}
+
+function readTomlStringArray(value: string): string[] {
+  const strings: string[] = [];
+  const pattern = /"([^"]+)"|'([^']+)'/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(value)) !== null) {
+    const item = match[1] ?? match[2];
+    if (item) strings.push(item);
+  }
+  return strings;
+}
+
 function readPackageDependencyNames(manifest: ReturnType<typeof readPackageJson>): string[] {
   const dependencies = new Set<string>();
   for (const section of [manifest.dependencies, manifest.devDependencies, manifest.peerDependencies, manifest.optionalDependencies]) {
@@ -199,25 +314,25 @@ function readWorkspacePatterns(root: string): string[] {
   return [...patterns].filter((pattern) => !pattern.startsWith("!"));
 }
 
-function expandWorkspacePattern(root: string, pattern: string): string[] {
+function expandWorkspacePattern(root: string, pattern: string, manifestName = "package.json"): string[] {
   const normalized = pattern.replace(/^\.\//, "").replace(/\/$/, "");
-  if (!normalized.includes("*")) return exists(root, join(normalized, "package.json")) ? [normalized] : [];
+  if (!normalized.includes("*")) return exists(root, join(normalized, manifestName)) ? [normalized] : [];
   const prefix = normalized.split("*", 1)[0]?.replace(/\/$/, "") ?? "";
   const base = prefix || ".";
-  return walkForPackageJson(join(root, base), root, normalized.includes("**") ? 5 : 1);
+  return walkForManifest(join(root, base), root, manifestName, normalized.includes("**") ? 5 : 1);
 }
 
-function walkForPackageJson(directory: string, root: string, maxDepth: number, depth = 0): string[] {
+function walkForManifest(directory: string, root: string, manifestName: string, maxDepth: number, depth = 0): string[] {
   if (depth > maxDepth) return [];
   try {
     const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
     const results: string[] = [];
-    if (entries.some((entry) => entry.isFile() && entry.name === "package.json")) {
+    if (entries.some((entry) => entry.isFile() && entry.name === manifestName)) {
       results.push(relativePath(root, directory));
     }
     for (const entry of entries) {
       if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) continue;
-      results.push(...walkForPackageJson(join(directory, entry.name), root, maxDepth, depth + 1));
+      results.push(...walkForManifest(join(directory, entry.name), root, manifestName, maxDepth, depth + 1));
     }
     return results;
   } catch {

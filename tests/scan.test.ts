@@ -185,6 +185,65 @@ rules:
     expect(report.commandPlan.map((command) => command.command)).toEqual(["npx turbo run test --filter=@acme/api"]);
   });
 
+  it("detects Cargo workspaces and targets affected crates", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "Cargo.toml"),
+      `
+[workspace]
+members = ["crates/*"]
+`
+    );
+    mkdirSync(join(root, "crates", "core", "src"), { recursive: true });
+    mkdirSync(join(root, "crates", "api", "src"), { recursive: true });
+    writeFileSync(
+      join(root, "crates", "core", "Cargo.toml"),
+      `
+[package]
+name = "core-lib"
+version = "0.1.0"
+edition = "2021"
+`
+    );
+    writeFileSync(join(root, "crates", "core", "src", "lib.rs"), "pub fn core() -> bool { true }\n");
+    writeFileSync(
+      join(root, "crates", "api", "Cargo.toml"),
+      `
+[package]
+name = "api-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core-lib = { path = "../core" }
+`
+    );
+    writeFileSync(join(root, "crates", "api", "src", "lib.rs"), "pub fn api() -> bool { core_lib::core() }\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "crates", "core", "src", "lib.rs"), "pub fn core() -> bool { false }\n");
+
+    const report = await scan({ cwd: root });
+
+    expect(report.projectSignals.find((signal) => signal.ecosystem === "rust")?.workspacePackages?.map((workspacePackage) => workspacePackage.name)).toEqual([
+      "api-server",
+      "core-lib"
+    ]);
+    expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["core-lib", "api-server"]);
+    expect(report.commandPlan.map((command) => command.command)).toEqual([
+      "cargo test -p core-lib --all-targets",
+      "cargo clippy -p core-lib --all-targets -- -D warnings",
+      "cargo test -p api-server --all-targets",
+      "cargo clippy -p api-server --all-targets -- -D warnings"
+    ]);
+  });
+
   it("includes dependency changes in reports", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

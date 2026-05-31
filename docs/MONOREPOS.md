@@ -1,8 +1,8 @@
 # Monorepo Targeting
 
-PatchDrill detects Node workspaces and reports the affected packages for a diff.
+PatchDrill detects Node and Cargo workspaces and reports the affected packages for a diff.
 
-Supported workspace metadata:
+Supported Node workspace metadata:
 
 - `package.json` with `workspaces: []`
 - `package.json` with `workspaces.packages`
@@ -32,10 +32,20 @@ PatchDrill detects `turbo.json`, `nx.json`, root `turbo`/`nx` dependencies, and 
 
 Turborepo plans still use package names from `package.json`. Nx plans use `project.json` names when present, otherwise the package name. If a package has no script but `project.json` declares a matching target, PatchDrill can still plan `test`, `build`, `lint`, or `typecheck` through Nx.
 
+## Cargo Workspaces
+
+PatchDrill reads `[workspace].members` from root `Cargo.toml`, expands member globs, reads each member crate name, and keeps workspace-internal crate dependencies. A change under `crates/core` marks that crate as affected and also marks downstream workspace crates that depend on it.
+
+| Change | Example command |
+| --- | --- |
+| Direct crate change | `cargo test -p core-lib --all-targets` |
+| Downstream dependent crate | `cargo test -p api-server --all-targets` |
+| Optional lint plan | `cargo clippy -p core-lib --all-targets -- -D warnings` |
+
 ## Why This Matters
 
 Large repositories need targeted evidence. Running only root commands can hide which package proved the change, while running every package wastes CI time. PatchDrill keeps the plan explicit: affected package, command, and reason appear in Markdown and JSON reports.
 
 ## Current Scope
 
-PatchDrill builds workspace impact from package manifests, then hands task execution to Turborepo or Nx when those runners are detected. Native affected integration for Cargo workspaces, Go modules, and Pants remains a roadmap item.
+PatchDrill builds workspace impact from package manifests, then hands Node task execution to Turborepo or Nx when those runners are detected. Native affected integration for Go modules and Pants remains a roadmap item.
