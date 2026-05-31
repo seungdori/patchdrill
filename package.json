@@ -37,6 +37,8 @@
     "sarif",
     "codeowners",
     "monorepo",
+    "turborepo",
+    "nx",
     "supply-chain",
     "github-actions"
   ],

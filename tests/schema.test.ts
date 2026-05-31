@@ -80,11 +80,30 @@ describe("schemas", () => {
           ecosystem: "node",
           manifestPath: "package.json",
           packageManager: "npm",
+          taskRunner: "nx",
           scripts: { test: "vitest run" },
-          workspacePackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" }, dependencies: ["@acme/shared"] }]
+          workspacePackages: [
+            {
+              name: "@acme/api",
+              projectName: "api",
+              path: "packages/api",
+              scripts: { test: "vitest run" },
+              targets: ["test"],
+              dependencies: ["@acme/shared"]
+            }
+          ]
         }
       ],
-      affectedPackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" }, dependencies: ["@acme/shared"] }],
+      affectedPackages: [
+        {
+          name: "@acme/api",
+          projectName: "api",
+          path: "packages/api",
+          scripts: { test: "vitest run" },
+          targets: ["test"],
+          dependencies: ["@acme/shared"]
+        }
+      ],
       dependencyChanges: [
         {
           file: "package.json",

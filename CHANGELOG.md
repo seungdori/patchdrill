@@ -41,3 +41,4 @@
 - Added `Gemfile.lock` and `composer.lock` dependency diff summaries.
 - Reduced high-impact-area false positives for test file paths.
 - Added optional per-command timeout handling for verification runs.
+- Added native Turborepo and Nx task-runner planning for affected Node workspaces.

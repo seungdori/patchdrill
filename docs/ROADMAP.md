@@ -5,7 +5,7 @@
 - Binary `bun.lockb` diff guidance for legacy Bun projects.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
-- Native affected-task integration for Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
+- Native affected-task integration for Cargo workspaces, Go modules, and Pants.
 
 ## Later
 
@@ -52,6 +52,7 @@
 - Current-format example report covering Markdown sections.
 - GitHub issue forms and pull request template for contributor intake.
 - `schemaVersion` in JSON and Markdown reports.
+- Native Turborepo and Nx task-runner plans for affected Node workspaces.
 
 ## Contribution Targets
 

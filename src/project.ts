@@ -8,11 +8,14 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
   const add = (signal: ProjectSignal) => signals.push(signal);
 
   if (exists(root, "package.json")) {
+    const packageJson = readPackageJson(root);
+    const taskRunner = detectNodeTaskRunner(root, packageJson);
     add({
       ecosystem: "node",
       manifestPath: "package.json",
       packageManager: detectNodePackageManager(root),
-      scripts: readPackageScripts(root),
+      ...(taskRunner ? { taskRunner } : {}),
+      scripts: packageJson.scripts ?? {},
       workspacePackages: discoverNodeWorkspacePackages(root)
     });
   }
@@ -69,10 +72,6 @@ function detectNodePackageManager(root: string): string {
   return "npm";
 }
 
-function readPackageScripts(root: string): Record<string, string> {
-  return readPackageJson(root).scripts ?? {};
-}
-
 function readPackageJson(root: string): {
   name?: string;
   scripts?: Record<string, string>;
@@ -98,6 +97,26 @@ function readPackageJson(root: string): {
   }
 }
 
+function detectNodeTaskRunner(root: string, manifest: ReturnType<typeof readPackageJson>): "turbo" | "nx" | undefined {
+  if (exists(root, "turbo.json")) return "turbo";
+  if (exists(root, "nx.json")) return "nx";
+  if (hasPackageDependency(manifest, "turbo")) return "turbo";
+  if (hasPackageDependency(manifest, "nx")) return "nx";
+  if (scriptsMention(manifest.scripts, "turbo")) return "turbo";
+  if (scriptsMention(manifest.scripts, "nx")) return "nx";
+  return undefined;
+}
+
+function hasPackageDependency(manifest: ReturnType<typeof readPackageJson>, packageName: string): boolean {
+  return [manifest.dependencies, manifest.devDependencies, manifest.peerDependencies, manifest.optionalDependencies].some((section) => Boolean(section?.[packageName]));
+}
+
+function scriptsMention(scripts: Record<string, string> | undefined, commandName: string): boolean {
+  if (!scripts) return false;
+  const pattern = new RegExp(`(^|[\\s&|;(])${escapeRegExp(commandName)}(\\s|$)`);
+  return Object.values(scripts).some((script) => pattern.test(script));
+}
+
 function discoverNodeWorkspacePackages(root: string): WorkspacePackage[] {
   const patterns = readWorkspacePatterns(root);
   if (patterns.length === 0) return [];
@@ -107,10 +126,13 @@ function discoverNodeWorkspacePackages(root: string): WorkspacePackage[] {
     for (const packagePath of expandWorkspacePattern(root, pattern)) {
       const manifest = readPackageJson(join(root, packagePath));
       if (!manifest.name) continue;
+      const projectMetadata = readProjectMetadata(join(root, packagePath));
       const workspacePackage: WorkspacePackage = {
         name: manifest.name,
+        ...(projectMetadata.name && projectMetadata.name !== manifest.name ? { projectName: projectMetadata.name } : {}),
         path: packagePath,
-        scripts: manifest.scripts ?? {}
+        scripts: manifest.scripts ?? {},
+        ...(projectMetadata.targets.length > 0 ? { targets: projectMetadata.targets } : {})
       };
       const dependencies = readPackageDependencyNames(manifest);
       if (dependencies.length > 0) workspacePackage.dependencies = dependencies;
@@ -129,6 +151,19 @@ function discoverNodeWorkspacePackages(root: string): WorkspacePackage[] {
       return { ...workspacePackage, dependencies };
     })
     .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function readProjectMetadata(packageRoot: string): { name?: string; targets: string[] } {
+  try {
+    const parsed = JSON.parse(readFileSync(join(packageRoot, "project.json"), "utf8")) as { name?: unknown; targets?: unknown };
+    const targets = isRecord(parsed.targets) ? Object.keys(parsed.targets).sort() : [];
+    return {
+      ...(typeof parsed.name === "string" ? { name: parsed.name } : {}),
+      targets
+    };
+  } catch {
+    return { targets: [] };
+  }
 }
 
 function readPackageDependencyNames(manifest: ReturnType<typeof readPackageJson>): string[] {
@@ -200,6 +235,10 @@ function relativePath(root: string, path: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function hasFileWithExtension(root: string, extension: string, maxDepth: number): boolean {

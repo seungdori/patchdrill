@@ -213,6 +213,10 @@
         "packageManager": {
           "type": "string"
         },
+        "taskRunner": {
+          "type": "string",
+          "enum": ["turbo", "nx"]
+        },
         "scripts": {
           "type": "object",
           "additionalProperties": {
@@ -235,12 +239,21 @@
         "name": {
           "type": "string"
         },
+        "projectName": {
+          "type": "string"
+        },
         "path": {
           "type": "string"
         },
         "scripts": {
           "type": "object",
           "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": {
             "type": "string"
           }
         },

@@ -43,14 +43,17 @@ export interface ProjectSignal {
     | "unknown";
   manifestPath: string;
   packageManager?: string;
+  taskRunner?: "turbo" | "nx";
   scripts?: Record<string, string>;
   workspacePackages?: WorkspacePackage[];
 }
 
 export interface WorkspacePackage {
   name: string;
+  projectName?: string;
   path: string;
   scripts: Record<string, string>;
+  targets?: string[];
   dependencies?: string[];
 }
 

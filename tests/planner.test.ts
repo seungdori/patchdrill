@@ -129,4 +129,76 @@ describe("planCommands", () => {
     expect(commands.at(2)?.reason).toContain("depends on @acme/api");
     expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/shared", "@acme/api", "@acme/web"]);
   });
+
+  it("uses Turborepo for affected workspace package tasks", () => {
+    const files: ChangedFile[] = [
+      { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "node",
+        manifestPath: "package.json",
+        packageManager: "pnpm",
+        taskRunner: "turbo",
+        workspacePackages: [
+          {
+            name: "@acme/api",
+            path: "packages/api",
+            scripts: {
+              test: "vitest run",
+              build: "tsc -p tsconfig.json"
+            }
+          },
+          {
+            name: "@acme/web",
+            path: "apps/web",
+            scripts: {
+              test: "vitest run"
+            },
+            dependencies: ["@acme/api"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "pnpm exec turbo run test --filter=@acme/api",
+      "pnpm exec turbo run build --filter=@acme/api",
+      "pnpm exec turbo run test --filter=@acme/web"
+    ]);
+    expect(commands.every((command) => command.reason.includes("detected turbo"))).toBe(true);
+  });
+
+  it("uses Nx project targets when package scripts are absent", () => {
+    const files: ChangedFile[] = [
+      { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "node",
+        manifestPath: "package.json",
+        packageManager: "npm",
+        taskRunner: "nx",
+        workspacePackages: [
+          {
+            name: "@acme/api",
+            projectName: "api",
+            path: "packages/api",
+            scripts: {},
+            targets: ["build", "test"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual(["npx nx run api:test", "npx nx run api:build"]);
+    expect(commands.map((command) => command.reason)).toEqual([
+      '@acme/api changed under packages/api, and project.json defines target "test". PatchDrill detected nx and will use its task graph.',
+      '@acme/api changed under packages/api, and project.json defines target "build". PatchDrill detected nx and will use its task graph.'
+    ]);
+  });
 });

@@ -149,6 +149,42 @@ rules:
     ]);
   });
 
+  it("detects Turborepo and emits task-runner commands for workspaces", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify(
+        {
+          private: true,
+          workspaces: ["packages/*"],
+          devDependencies: {
+            turbo: "^2.0.0"
+          }
+        },
+        null,
+        2
+      )
+    );
+    writeFileSync(join(root, "turbo.json"), JSON.stringify({ tasks: { test: {} } }, null, 2));
+    mkdirSync(join(root, "packages", "api", "src"), { recursive: true });
+    writeFileSync(join(root, "packages", "api", "package.json"), JSON.stringify({ name: "@acme/api", scripts: { test: "node --test" } }, null, 2));
+    writeFileSync(join(root, "packages", "api", "src", "index.ts"), "export const api = true;\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "packages", "api", "src", "index.ts"), "export const api = 'changed';\n");
+
+    const report = await scan({ cwd: root });
+
+    expect(report.projectSignals[0]).toMatchObject({ ecosystem: "node", taskRunner: "turbo" });
+    expect(report.commandPlan.map((command) => command.command)).toEqual(["npx turbo run test --filter=@acme/api"]);
+  });
+
   it("includes dependency changes in reports", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

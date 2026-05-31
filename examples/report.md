@@ -37,9 +37,9 @@ Schema version: 1
 
 ## Project Signals
 
-| Ecosystem | Manifest | Package manager |
-| --- | --- | --- |
-| node | package.json | pnpm |
+| Ecosystem | Manifest | Package manager | Task runner |
+| --- | --- | --- | --- |
+| node | package.json | pnpm | turbo |
 
 ## Affected Workspace Packages
 
@@ -86,9 +86,9 @@ Schema version: 1
 
 | Required | Package | Command | Reason |
 | --- | --- | --- | --- |
-| yes | @acme/auth | `pnpm --filter @acme/auth run test` | @acme/auth changed under packages/auth, and its package.json defines "test". |
-| yes | @acme/auth | `pnpm --filter @acme/auth run build` | @acme/auth changed under packages/auth, and its package.json defines "build". |
-| yes | @acme/web | `pnpm --filter @acme/web run test` | @acme/web depends on @acme/auth, and its package.json defines "test". |
+| yes | @acme/auth | `pnpm exec turbo run test --filter=@acme/auth` | @acme/auth changed under packages/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
+| yes | @acme/auth | `pnpm exec turbo run build --filter=@acme/auth` | @acme/auth changed under packages/auth, and its package.json defines "build". PatchDrill detected turbo and will use its task graph. |
+| yes | @acme/web | `pnpm exec turbo run test --filter=@acme/web` | @acme/web depends on @acme/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
 
 ## Command Results
 

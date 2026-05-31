@@ -173,6 +173,9 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
   const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
   const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
   const rootWideChange = touchesRootWorkspaceMetadata(paths);
+  const taskRunnerPlanCount = addNodeTaskRunnerPlans(plans, affectedPackages, signal, directlyAffected, affectedNames, rootWideChange);
+  if (taskRunnerPlanCount > 0) return taskRunnerPlanCount;
+
   let added = 0;
   for (const workspacePackage of affectedPackages) {
     for (const script of ["typecheck", "lint", "test", "build"]) {
@@ -193,6 +196,43 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
     }
   }
   return added;
+}
+
+function addNodeTaskRunnerPlans(
+  plans: CommandPlan[],
+  affectedPackages: WorkspacePackage[],
+  signal: ProjectSignal,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): number {
+  if (!signal.taskRunner || affectedPackages.length === 0) return 0;
+  let added = 0;
+  for (const workspacePackage of affectedPackages) {
+    for (const script of ["typecheck", "lint", "test", "build"]) {
+      if (!workspaceSupportsTask(workspacePackage, script, signal.taskRunner)) continue;
+      const projectName = workspacePackage.projectName ?? workspacePackage.name;
+      const plan: CommandPlan = {
+        id: `node-${signal.taskRunner}-${slug(projectName)}-${script}`,
+        label: `${workspacePackage.name} ${script}`,
+        command: taskRunnerRun(signal.packageManager ?? "npm", signal.taskRunner, workspacePackage, script),
+        reason: `${workspaceTaskRunnerReason(workspacePackage, script, directlyAffected, affectedNames, rootWideChange)} PatchDrill detected ${signal.taskRunner} and will use its task graph.`,
+        ecosystem: "node",
+        required: script === "test" || script === "typecheck" || script === "build",
+        packageName: workspacePackage.name,
+        packagePath: workspacePackage.path
+      };
+      const before = plans.length;
+      pushUnique(plans, plan);
+      if (plans.length > before) added += 1;
+    }
+  }
+  return added;
+}
+
+function workspaceSupportsTask(workspacePackage: WorkspacePackage, script: string, taskRunner: NonNullable<ProjectSignal["taskRunner"]>): boolean {
+  if (workspacePackage.scripts[script]) return true;
+  return taskRunner === "nx" && Boolean(workspacePackage.targets?.includes(script));
 }
 
 function affectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
@@ -244,6 +284,24 @@ function workspaceReason(
   return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace package"}, and its package.json defines "${script}".`;
 }
 
+function workspaceTaskRunnerReason(
+  workspacePackage: WorkspacePackage,
+  script: string,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): string {
+  const taskDefinition = workspacePackage.scripts[script] ? `package.json defines "${script}"` : `project.json defines target "${script}"`;
+  if (rootWideChange) {
+    return `Root workspace metadata changed, and ${taskDefinition} for ${workspacePackage.name}.`;
+  }
+  if (directlyAffected.has(workspacePackage.path)) {
+    return `${workspacePackage.name} changed under ${workspacePackage.path}, and ${taskDefinition}.`;
+  }
+  const upstream = workspacePackage.dependencies?.find((dependency) => affectedNames.has(dependency));
+  return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace package"}, and ${taskDefinition}.`;
+}
+
 function touchesRootWorkspaceMetadata(paths: string[]): boolean {
   return paths.some((path) =>
     ["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "pnpm-workspace.yaml", "turbo.json", "nx.json"].includes(path)
@@ -266,6 +324,19 @@ function workspaceRun(packageManager: string, packageName: string, script: strin
   return `npm --workspace ${quotedName} run ${script}`;
 }
 
+function taskRunnerRun(packageManager: string, taskRunner: NonNullable<ProjectSignal["taskRunner"]>, workspacePackage: WorkspacePackage, script: string): string {
+  const runner = packageManagerExec(packageManager, taskRunner);
+  if (taskRunner === "turbo") return `${runner} run ${script} ${quoteShell(`--filter=${workspacePackage.name}`)}`;
+  return `${runner} run ${quoteShell(`${workspacePackage.projectName ?? workspacePackage.name}:${script}`)}`;
+}
+
+function packageManagerExec(packageManager: string, binary: string): string {
+  if (packageManager === "pnpm") return `pnpm exec ${binary}`;
+  if (packageManager === "yarn") return `yarn ${binary}`;
+  if (packageManager === "bun") return `bunx ${binary}`;
+  return `npx ${binary}`;
+}
+
 function touchesNode(paths: string[]): boolean {
   return paths.some((path) =>
     [
@@ -281,6 +352,9 @@ function touchesNode(paths: string[]): boolean {
       "yarn.lock",
       "bun.lock",
       "bun.lockb",
+      "pnpm-workspace.yaml",
+      "turbo.json",
+      "nx.json",
       "tsconfig.json",
       "vite.config.ts",
       "next.config.js",
@@ -307,7 +381,7 @@ function pushUnique(plans: CommandPlan[], plan: CommandPlan): void {
 }
 
 function quoteShell(value: string): string {
-  if (/^[A-Za-z0-9_./@-]+$/.test(value)) return value;
+  if (/^[A-Za-z0-9_./@=:-]+$/.test(value)) return value;
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 

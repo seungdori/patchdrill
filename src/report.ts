@@ -79,10 +79,10 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.projectSignals.length > 0) {
     lines.push("## Project Signals");
     lines.push("");
-    lines.push("| Ecosystem | Manifest | Package manager |");
-    lines.push("| --- | --- | --- |");
+    lines.push("| Ecosystem | Manifest | Package manager | Task runner |");
+    lines.push("| --- | --- | --- | --- |");
     for (const signal of report.projectSignals) {
-      lines.push(`| ${signal.ecosystem} | ${signal.manifestPath} | ${signal.packageManager ?? ""} |`);
+      lines.push(`| ${signal.ecosystem} | ${signal.manifestPath} | ${signal.packageManager ?? ""} | ${signal.taskRunner ?? ""} |`);
     }
     lines.push("");
   }

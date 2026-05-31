@@ -21,10 +21,21 @@ PatchDrill reads workspace `dependencies`, `devDependencies`, `peerDependencies`
 
 Root-wide files such as lockfiles, root `package.json`, `pnpm-workspace.yaml`, `turbo.json`, and `nx.json` still mark all workspace packages as affected.
 
+## Native Task Runners
+
+PatchDrill detects `turbo.json`, `nx.json`, root `turbo`/`nx` dependencies, and root scripts that invoke `turbo` or `nx`. When a supported task runner is present, workspace plans use the native task graph:
+
+| Runner | Example |
+| --- | --- |
+| Turborepo | `pnpm exec turbo run test --filter=@acme/api` |
+| Nx | `npx nx run api:test` |
+
+Turborepo plans still use package names from `package.json`. Nx plans use `project.json` names when present, otherwise the package name. If a package has no script but `project.json` declares a matching target, PatchDrill can still plan `test`, `build`, `lint`, or `typecheck` through Nx.
+
 ## Why This Matters
 
 Large repositories need targeted evidence. Running only root commands can hide which package proved the change, while running every package wastes CI time. PatchDrill keeps the plan explicit: affected package, command, and reason appear in Markdown and JSON reports.
 
 ## Current Scope
 
-PatchDrill builds its graph from package manifests only. Native task-graph integrations for Turborepo, Nx, Cargo workspaces, Go modules, and Pants remain roadmap items.
+PatchDrill builds workspace impact from package manifests, then hands task execution to Turborepo or Nx when those runners are detected. Native affected integration for Cargo workspaces, Go modules, and Pants remains a roadmap item.
