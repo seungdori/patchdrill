@@ -1,0 +1,388 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patchdrill.dev/schemas/patchdrill-report.schema.json",
+  "title": "PatchDrill Report",
+  "description": "Machine-readable JSON report emitted by PatchDrill scan --json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generatedAt",
+    "root",
+    "summary",
+    "changedFiles",
+    "addedLines",
+    "projectSignals",
+    "affectedPackages",
+    "dependencyChanges",
+    "findings",
+    "commandPlan",
+    "commandResults"
+  ],
+  "properties": {
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "root": {
+      "type": "string"
+    },
+    "base": {
+      "type": "string"
+    },
+    "head": {
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/patchSummary"
+    },
+    "changedFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/changedFile"
+      }
+    },
+    "addedLines": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "projectSignals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectSignal"
+      }
+    },
+    "affectedPackages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workspacePackage"
+      }
+    },
+    "dependencyChanges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependencyChange"
+      }
+    },
+    "policy": {
+      "$ref": "#/$defs/reportPolicy"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/riskFinding"
+      }
+    },
+    "commandPlan": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commandPlan"
+      }
+    },
+    "commandResults": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commandResult"
+      }
+    }
+  },
+  "$defs": {
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "patchStatus": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail"]
+    },
+    "fileStatus": {
+      "type": "string",
+      "enum": ["added", "modified", "deleted", "renamed", "copied", "untracked", "unknown"]
+    },
+    "ecosystem": {
+      "type": "string",
+      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "github-actions", "unknown"]
+    },
+    "commandEcosystem": {
+      "type": "string",
+      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "github-actions", "unknown", "general"]
+    },
+    "patchSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "riskScore",
+        "confidenceScore",
+        "changedFileCount",
+        "additions",
+        "deletions",
+        "requiredCommandCount",
+        "failedCommandCount"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/patchStatus"
+        },
+        "riskScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "confidenceScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "changedFileCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "additions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deletions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiredCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failedCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "changedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status", "additions", "deletions", "binary"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "previousPath": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/fileStatus"
+        },
+        "additions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deletions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "binary": {
+          "type": "boolean"
+        }
+      }
+    },
+    "projectSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "manifestPath"],
+      "properties": {
+        "ecosystem": {
+          "$ref": "#/$defs/ecosystem"
+        },
+        "manifestPath": {
+          "type": "string"
+        },
+        "packageManager": {
+          "type": "string"
+        },
+        "scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "workspacePackages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workspacePackage"
+          }
+        }
+      }
+    },
+    "workspacePackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "scripts"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dependencyChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "packageName", "dependencyType", "changeType"],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "packageName": {
+          "type": "string"
+        },
+        "dependencyType": {
+          "type": "string",
+          "enum": ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]
+        },
+        "changeType": {
+          "type": "string",
+          "enum": ["added", "removed", "updated"]
+        },
+        "before": {
+          "type": "string"
+        },
+        "after": {
+          "type": "string"
+        }
+      }
+    },
+    "reportPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "ignoredPaths", "ruleCount", "requiredCommandCount", "optionalCommandCount"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "ignoredPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failOn": {
+          "$ref": "#/$defs/severity"
+        },
+        "maxRisk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "ruleCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiredCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "optionalCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "riskFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "title", "detail"],
+      "properties": {
+        "ruleId": {
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "title": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commandPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "command", "reason", "ecosystem", "required"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "ecosystem": {
+          "$ref": "#/$defs/commandEcosystem"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "packageName": {
+          "type": "string"
+        },
+        "packagePath": {
+          "type": "string"
+        }
+      }
+    },
+    "commandResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "command", "exitCode", "durationMs", "stdout", "stderr"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "stderr": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

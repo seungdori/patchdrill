@@ -30,6 +30,7 @@
 - npm trusted publishing and provenance release workflow.
 - package.json dependency diff summaries.
 - Pull request comment upsert mode for the GitHub Action.
+- JSON Schemas for policy and report contracts.
 
 ## Contribution Targets
 

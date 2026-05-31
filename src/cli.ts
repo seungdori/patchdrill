@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gitRoot } from "./git.js";
 import { writeGitHubWorkflow } from "./init.js";
 import { renderMarkdown, shouldFail } from "./report.js";
+import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { Severity } from "./types.js";
 
@@ -38,6 +39,10 @@ async function main(): Promise<void> {
   }
   if (command === "explain") {
     explainCommand();
+    return;
+  }
+  if (command === "schema") {
+    schemaCommand(parsed);
     return;
   }
 
@@ -93,6 +98,26 @@ Typical use:
 `);
 }
 
+function schemaCommand(parsed: ParsedArgs): void {
+  const requested = parsed.positionals[0];
+  if (parsed.flags.list || requested === undefined) {
+    console.log(schemaNames.join("\n"));
+    return;
+  }
+  if (!isSchemaName(requested)) {
+    throw new Error(`Unknown schema "${requested}". Expected one of ${schemaNames.join(", ")}.`);
+  }
+
+  const schema = readSchema(requested);
+  if (typeof parsed.flags.output === "string") {
+    writeFileSync(parsed.flags.output, schema, "utf8");
+    console.log(`Wrote ${parsed.flags.output}`);
+    return;
+  }
+
+  console.log(schema.trimEnd());
+}
+
 function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: { failOn: Severity; maxRisk: number }): string {
   const required = report.commandPlan.filter((command) => command.required);
   const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
@@ -140,7 +165,7 @@ function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "init", "explain", "help"].includes(arg)) {
+    if (!arg.startsWith("-") && command === "scan" && ["scan", "init", "explain", "schema", "help"].includes(arg)) {
       command = arg;
       continue;
     }
@@ -151,7 +176,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on", "max-risk"].includes(flag);
+  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on", "max-risk", "output"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -191,6 +216,7 @@ Usage:
   patchdrill scan [options]
   patchdrill init [--force]
   patchdrill explain
+  patchdrill schema [policy|report] [--output <path>]
 
 Options:
   --base <ref>        Compare against a base ref, for example origin/main
@@ -203,6 +229,8 @@ Options:
   --fail-on <level>   Fail when findings meet severity: info, low, medium, high, critical
   --max-risk <score>  Fail when risk score is above 0-100 threshold, default 69
   --quiet             Only use exit code, no console report
+  --list              List schemas when used with schema
+  --output <path>     Write a schema to a file when used with schema
   --version           Print version
   --help              Print help
 `);

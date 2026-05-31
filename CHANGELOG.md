@@ -12,3 +12,4 @@
 - Added Node workspace affected-package targeting and release workflow for npm provenance.
 - Added package.json dependency diff summaries to Markdown and JSON reports.
 - Added pull request comment upsert mode to the GitHub Action and generated workflow.
+- Added JSON Schemas for policy and report contracts with `patchdrill schema`.

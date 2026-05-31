@@ -106,6 +106,13 @@ Use policy-as-code:
 patchdrill scan --config .patchdrill.yml
 ```
 
+Export JSON Schemas for editors and bots:
+
+```bash
+patchdrill schema policy > patchdrill-policy.schema.json
+patchdrill schema report > patchdrill-report.schema.json
+```
+
 Add a GitHub Actions workflow:
 
 ```bash
@@ -118,6 +125,7 @@ patchdrill init
 patchdrill scan [options]
 patchdrill init [--force]
 patchdrill explain
+patchdrill schema [policy|report] [--output <path>]
 ```
 
 Options:
@@ -134,6 +142,8 @@ Options:
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
 | `--quiet` | Only use exit code. |
+| `--list` | List available schemas when used with `patchdrill schema`. |
+| `--output <path>` | Write a schema to a file when used with `patchdrill schema`. |
 
 ## Supported Signals
 
@@ -250,6 +260,7 @@ See [examples/report.md](examples/report.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
+For machine-readable schemas, see [docs/SCHEMAS.md](docs/SCHEMAS.md).
 
 ## Release Provenance
 
