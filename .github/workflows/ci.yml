@@ -9,17 +9,54 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: node dist/cli.js scan --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on critical
+      - name: Resolve PatchDrill base
+        id: patchdrill-base
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "args=--base origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            echo "args=--base HEAD~1" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run PatchDrill
+        id: patchdrill
+        shell: bash
+        run: |
+          set +e
+          node dist/cli.js scan ${{ steps.patchdrill-base.outputs.args }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on critical
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: patchdrill.sarif
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: patchdrill-report
+          path: |
+            patchdrill-report.md
+            patchdrill-report.json
+            patchdrill.sarif
+      - name: Fail on PatchDrill gate
+        if: steps.patchdrill.outputs.status != '0'
+        run: exit "${{ steps.patchdrill.outputs.status }}"
       - run: npm pack --dry-run

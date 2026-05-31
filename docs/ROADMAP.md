@@ -38,6 +38,7 @@
 - `patchdrill init --policy` starter policy generation.
 - npm package metadata for repository discovery.
 - Architecture docs and action examples for the public package path.
+- CI dogfooding with PatchDrill SARIF and report artifacts.
 
 ## Contribution Targets
 

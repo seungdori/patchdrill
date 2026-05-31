@@ -7,7 +7,7 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 | Check | File | Purpose |
 | --- | --- | --- |
 | TypeScript build and Vitest | `.github/workflows/ci.yml` | Verifies deterministic scanner behavior and package readiness. |
-| PatchDrill self-scan | `.github/workflows/ci.yml` | Proves the repo can produce Markdown, JSON, and SARIF reports. |
+| PatchDrill self-scan | `.github/workflows/ci.yml` | Dogfoods pull request diff scanning, uploads SARIF, and preserves Markdown/JSON report artifacts. |
 | CodeQL | `.github/workflows/codeql.yml` | Adds GitHub-native static analysis for the TypeScript codebase. |
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Tracks open-source security posture and uploads SARIF results. |
 | Dependabot | `.github/dependabot.yml` | Keeps npm and GitHub Actions dependencies current. |

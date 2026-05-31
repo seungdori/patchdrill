@@ -21,3 +21,4 @@
 - Added `patchdrill init --policy` starter policy generation.
 - Added npm package metadata for repository discovery.
 - Updated architecture docs and action examples for the public package path.
+- Strengthened CI dogfooding with PatchDrill SARIF and report artifacts.
