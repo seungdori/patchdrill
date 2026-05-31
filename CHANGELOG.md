@@ -20,3 +20,4 @@
 - Added `--max-risk-delta` gating for baseline regressions.
 - Added `patchdrill init --policy` starter policy generation.
 - Added npm package metadata for repository discovery.
+- Updated architecture docs and action examples for the public package path.

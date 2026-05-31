@@ -4,23 +4,26 @@ PatchDrill is split into deterministic modules:
 
 | Module | Responsibility |
 | --- | --- |
+| `src/baseline.ts` | Compares current reports with previous JSON baselines and computes risk deltas. |
+| `src/codeowners.ts` | Reads GitHub CODEOWNERS files and annotates changed files with owners. |
 | `src/git.ts` | Reads changed files from git ranges, staged changes, unstaged changes, and untracked files. |
 | `src/policy.ts` | Loads `.patchdrill.yml/json`, filters ignored paths, and merges repo-specific commands/rules. |
-| `src/project.ts` | Discovers ecosystem signals from manifests. |
-| `src/dependency.ts` | Extracts package.json dependency additions, removals, and version updates. |
+| `src/project.ts` | Discovers ecosystem signals, package managers, and workspace dependency graphs from manifests. |
+| `src/dependency.ts` | Extracts package.json and npm lockfile dependency additions, removals, and version updates. |
 | `src/planner.ts` | Turns changed files, workspace package impact, and project signals into a verification command plan. |
 | `src/risk.ts` | Scores the patch and emits explainable findings. |
 | `src/runner.ts` | Executes required commands when `--run` is set. |
 | `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |
+| `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
 | `src/cli.ts` | Parses arguments and handles user output. |
 
 ## Pipeline
 
 ```text
-git diff -> changed files + added lines -> policy filters
-                       |                  |
-                       v                  v
+git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
+                       |                                      |
+                       v                                      v
        project signals + affected packages -> verification command plan
                        |
                        v
@@ -30,10 +33,13 @@ git diff -> changed files + added lines -> policy filters
                            optional command runner
                                       |
                                       v
-                    risk assessment -> Markdown / JSON / SARIF
+                    risk assessment -> baseline comparison
                                       |
                                       v
-                       fail-on severity + max-risk gate
+                          Markdown / JSON / SARIF
+                                      |
+                                      v
+             fail-on severity + max-risk + max-risk-delta gate
 ```
 
 ## Non-Goals

@@ -24,7 +24,7 @@ Use `--max-risk-delta 0` to fail on any risk increase, or a higher value to allo
 In GitHub Actions, pass the baseline path after downloading or restoring a previous report artifact:
 
 ```yaml
-- uses: your-org/patchdrill@v0
+- uses: patchdrill/patchdrill@v0
   with:
     baseline: previous-patchdrill-report.json
     max-risk-delta: "0"

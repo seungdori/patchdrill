@@ -37,6 +37,7 @@
 - `--max-risk-delta` gating for baseline regressions.
 - `patchdrill init --policy` starter policy generation.
 - npm package metadata for repository discovery.
+- Architecture docs and action examples for the public package path.
 
 ## Contribution Targets
 

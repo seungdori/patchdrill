@@ -23,7 +23,7 @@ npx patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node workspaces and targets changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Explains package.json dependency additions, removals, and version updates instead of only saying "lockfile changed."
+- Explains package.json and npm package-lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
 ## What It Does
@@ -95,7 +95,7 @@ patchdrill scan --base origin/main \
 Use the GitHub Action with PR comments:
 
 ```yaml
-- uses: your-org/patchdrill@v0
+- uses: patchdrill/patchdrill@v0
   with:
     base: origin/${{ github.base_ref }}
     pr-comment: "true"
@@ -191,7 +191,7 @@ The current deterministic rules look for:
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
 - Dependency lockfile changes.
-- package.json dependency additions, removals, and updates.
+- package.json and npm package-lock dependency additions, removals, and updates.
 - Source changes without test changes.
 - Large line deltas and binary files.
 - Failed verification commands.
