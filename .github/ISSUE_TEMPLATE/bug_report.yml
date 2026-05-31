@@ -1,0 +1,48 @@
+name: Bug report
+description: Report incorrect analysis, command planning, or CI behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What did PatchDrill do, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the command, repo shape, changed files, and any policy config needed to reproduce.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: PatchDrill output
+      description: Paste the relevant console output or redacted JSON/Markdown report.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `patchdrill --version`.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - git diff detection
+        - risk finding
+        - command planning
+        - policy config
+        - GitHub Action
+        - SARIF
+        - dependency diff
+        - monorepo targeting
+        - documentation
+    validations:
+      required: true

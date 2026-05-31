@@ -34,5 +34,7 @@ When adding a rule:
 
 - The change is covered by tests or fixture evidence.
 - `npm run check` passes.
+- `npm pack --dry-run` passes for packaging, docs, action, or release changes.
 - README or docs are updated when behavior changes.
 - New commands are conservative and do not mutate the checkout.
+- The pull request template includes verification evidence and compatibility notes.

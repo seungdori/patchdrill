@@ -40,6 +40,7 @@
 - Architecture docs and action examples for the public package path.
 - CI dogfooding with PatchDrill SARIF and report artifacts.
 - Current-format example report covering Markdown sections.
+- GitHub issue forms and pull request template for contributor intake.
 
 ## Contribution Targets
 

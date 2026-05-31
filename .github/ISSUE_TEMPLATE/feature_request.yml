@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a new ecosystem, rule, output format, or workflow.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What review or CI gap should PatchDrill close?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the behavior, CLI/API shape, and expected report output.
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Fixture or example repo shape
+      description: Include a minimal file tree, manifest, policy, or diff that would prove the feature.
+      render: text
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - ecosystem detector
+        - risk rule
+        - command planner
+        - dependency diff
+        - report format
+        - GitHub Action
+        - policy
+        - documentation
+    validations:
+      required: true

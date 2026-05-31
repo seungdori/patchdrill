@@ -23,3 +23,4 @@
 - Updated architecture docs and action examples for the public package path.
 - Strengthened CI dogfooding with PatchDrill SARIF and report artifacts.
 - Refreshed the example report to cover current Markdown sections.
+- Added GitHub issue forms and a pull request template for contributor intake.
