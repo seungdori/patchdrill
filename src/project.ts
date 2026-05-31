@@ -63,6 +63,7 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       manifestPath: firstExisting(root, ["Dockerfile", "compose.yaml", "docker-compose.yml"]) ?? "docker"
     });
   }
+  if (exists(root, "pants.toml")) add({ ecosystem: "pants", manifestPath: "pants.toml" });
   if (hasTerraform(root)) add({ ecosystem: "terraform", manifestPath: "*.tf" });
   if (exists(root, ".github/workflows")) add({ ecosystem: "github-actions", manifestPath: ".github/workflows" });
 

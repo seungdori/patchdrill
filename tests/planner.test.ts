@@ -273,4 +273,20 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.packageName)).toEqual(["example.com/core", "example.com/core", "example.com/api", "example.com/api"]);
     expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["example.com/core", "example.com/api"]);
   });
+
+  it("uses Pants native changed target selection", () => {
+    const files: ChangedFile[] = [
+      { path: "src/python/app/service.py", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [{ ecosystem: "pants", manifestPath: "pants.toml" }];
+
+    const commands = planCommands(process.cwd(), files, signals, { changedSince: "origin/main" });
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "pants --changed-since=origin/main --changed-dependents=transitive test",
+      "pants --changed-since=origin/main --changed-dependents=transitive lint",
+      "pants --changed-since=origin/main --changed-dependents=transitive check"
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["pants-changed-tests"]);
+  });
 });

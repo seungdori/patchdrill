@@ -28,7 +28,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const projectSignals = discoverProjectSignals(root);
   const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
   const dependencyChanges = analyzeDependencyChanges(gitOptions, changedFiles);
-  const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals), loadedPolicy.policy);
+  const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals, { changedSince: options.base ?? "HEAD" }), loadedPolicy.policy);
   const commandResults = options.run
     ? await runCommandPlan(commandPlan, {
         cwd: root,

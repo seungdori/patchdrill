@@ -47,3 +47,4 @@
 - Added Cargo workspace task planning for affected crates and downstream dependents.
 - Added Go workspace task planning for affected modules and downstream dependents.
 - Added packaged stack fixtures and a fixture harness for planner regression coverage.
+- Added native Pants changed-target task planning.

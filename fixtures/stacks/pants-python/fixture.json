@@ -1,0 +1,33 @@
+{
+  "name": "pants-python",
+  "expectedEcosystems": ["pants"],
+  "expectedCommands": [
+    "pants --changed-since=HEAD --changed-dependents=transitive test",
+    "pants --changed-since=HEAD --changed-dependents=transitive lint",
+    "pants --changed-since=HEAD --changed-dependents=transitive check"
+  ],
+  "baseFiles": [
+    {
+      "path": "pants.toml",
+      "lines": [
+        "[GLOBAL]",
+        "pants_version = \"2.32.0\"",
+        "backend_packages = [\"pants.backend.python\"]"
+      ]
+    },
+    {
+      "path": "src/python/app/BUILD",
+      "lines": ["python_sources()"]
+    },
+    {
+      "path": "src/python/app/service.py",
+      "lines": ["def ok():", "    return True"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/python/app/service.py",
+      "lines": ["def ok():", "    return False"]
+    }
+  ]
+}

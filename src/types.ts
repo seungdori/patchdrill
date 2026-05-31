@@ -39,6 +39,7 @@ export interface ProjectSignal {
     | "dotnet"
     | "terraform"
     | "docker"
+    | "pants"
     | "github-actions"
     | "unknown";
   manifestPath: string;

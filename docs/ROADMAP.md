@@ -3,7 +3,7 @@
 ## Near Term
 
 - Expand first-party fixtures toward the top 20 open-source stacks.
-- Native affected-task integration for Pants.
+- Expand native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, and Go workspaces.
 
 ## Later
 
@@ -56,6 +56,7 @@
 - Cargo workspace task plans for affected crates and downstream dependents.
 - Go workspace task plans for affected modules and downstream dependents.
 - First-party stack fixture harness covering Node/Turborepo, Cargo, Go, and Python services.
+- Native Pants changed-target task plans.
 
 ## Contribution Targets
 

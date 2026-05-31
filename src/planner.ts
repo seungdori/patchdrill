@@ -2,7 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ChangedFile, CommandPlan, ProjectSignal, WorkspacePackage } from "./types.js";
 
-export function planCommands(root: string, changedFiles: ChangedFile[], signals: ProjectSignal[]): CommandPlan[] {
+export interface PlannerOptions {
+  changedSince?: string;
+}
+
+export function planCommands(root: string, changedFiles: ChangedFile[], signals: ProjectSignal[], options: PlannerOptions = {}): CommandPlan[] {
   const plans: CommandPlan[] = [];
   const paths = changedFiles.map((file) => file.path);
 
@@ -114,6 +118,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         required: false
       });
     }
+    if (signal.ecosystem === "pants" && touchesPants(paths)) {
+      addPantsPlans(plans, root, options.changedSince ?? "HEAD");
+    }
   }
 
   if (paths.some((path) => path.startsWith(".github/workflows/"))) {
@@ -128,6 +135,35 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   }
 
   return plans;
+}
+
+function addPantsPlans(plans: CommandPlan[], root: string, changedSince: string): void {
+  const pants = existsSync(join(root, "pants")) ? "./pants" : "pants";
+  const changedArgs = `--changed-since=${quoteShell(changedSince)} --changed-dependents=transitive`;
+  pushUnique(plans, {
+    id: "pants-changed-tests",
+    label: "Pants changed tests",
+    command: `${pants} ${changedArgs} test`,
+    reason: "pants.toml is present, so Pants can select changed targets and transitive dependents from Git.",
+    ecosystem: "pants",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "pants-changed-lint",
+    label: "Pants changed lint",
+    command: `${pants} ${changedArgs} lint`,
+    reason: "Pants can lint changed targets and their transitive dependents with native target selection.",
+    ecosystem: "pants",
+    required: false
+  });
+  pushUnique(plans, {
+    id: "pants-changed-check",
+    label: "Pants changed check",
+    command: `${pants} ${changedArgs} check`,
+    reason: "Pants can run configured typecheck and static analysis goals over changed targets.",
+    ecosystem: "pants",
+    required: false
+  });
 }
 
 export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signals: ProjectSignal[]): WorkspacePackage[] {
@@ -522,6 +558,14 @@ function touchesPython(paths: string[], root: string): boolean {
 
 function touchesJava(paths: string[], root: string): boolean {
   return touches(paths, [".java", ".kt", ".kts", "pom.xml", "build.gradle", "build.gradle.kts"]) || existsSync(join(root, "mvnw"));
+}
+
+function touchesPants(paths: string[]): boolean {
+  return paths.some((path) => path === "pants.toml" || path === "pants" || path === "BUILD" || path.endsWith("/BUILD") || path.endsWith("/BUILD.pants") || isSourceLikePath(path));
+}
+
+function isSourceLikePath(path: string): boolean {
+  return /\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|java|kt|kts|rb|php|cs|fs|swift|scala)$/.test(path);
 }
 
 function touches(paths: string[], tokens: string[]): boolean {

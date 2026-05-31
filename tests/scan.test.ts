@@ -306,6 +306,39 @@ replace example.com/core => ../core
     ]);
   });
 
+  it("detects Pants and emits native changed-selection commands", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "pants.toml"),
+      `
+[GLOBAL]
+pants_version = "2.32.0"
+backend_packages = ["pants.backend.python"]
+`
+    );
+    mkdirSync(join(root, "src", "python", "app"), { recursive: true });
+    writeFileSync(join(root, "src", "python", "app", "BUILD"), "python_sources()\n");
+    writeFileSync(join(root, "src", "python", "app", "service.py"), "def ok():\n    return True\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "src", "python", "app", "service.py"), "def ok():\n    return False\n");
+
+    const report = await scan({ cwd: root });
+
+    expect(report.projectSignals).toContainEqual(expect.objectContaining({ ecosystem: "pants", manifestPath: "pants.toml" }));
+    expect(report.commandPlan.map((command) => command.command)).toEqual([
+      "pants --changed-since=HEAD --changed-dependents=transitive test",
+      "pants --changed-since=HEAD --changed-dependents=transitive lint",
+      "pants --changed-since=HEAD --changed-dependents=transitive check"
+    ]);
+  });
+
   it("includes dependency changes in reports", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);
