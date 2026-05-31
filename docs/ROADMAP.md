@@ -40,6 +40,8 @@
 - `poetry.lock` dependency diff summaries.
 - `Pipfile.lock` dependency diff summaries.
 - `bun.lock` dependency diff summaries.
+- `Gemfile.lock` dependency diff summaries.
+- `composer.lock` dependency diff summaries.
 - CODEOWNERS owner hints for changed files.
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.

@@ -90,6 +90,20 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Gemfile.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGemfileLock(pair.before);
+    const after = parseGemfileLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseComposerLock(pair.before);
+    const after = parseComposerLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
   );
@@ -413,6 +427,40 @@ function parsePipfileLock(value: string | undefined): Map<string, LockPackage> |
   }
 }
 
+function parseGemfileLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, LockPackage>();
+  let inSpecs = false;
+  for (const rawLine of value.split(/\r?\n/)) {
+    if (/^[A-Z][A-Z ]+$/.test(rawLine.trim())) {
+      inSpecs = rawLine.trim() === "GEM";
+      continue;
+    }
+    if (!inSpecs) continue;
+    if (rawLine.trim() === "specs:") continue;
+    const match = /^ {4}([A-Za-z0-9_.-]+)\s+\(([^)]+)\)/.exec(rawLine);
+    if (!match?.[1] || !match[2]) continue;
+    const version = match[2].split(",")[0]?.trim();
+    if (!version) continue;
+    const path = `${match[1]}@${version}`;
+    packages.set(path, { name: match[1], path, version });
+  }
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseComposerLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as { packages?: unknown; "packages-dev"?: unknown };
+    const packages = new Map<string, LockPackage>();
+    readComposerSection(packages, "packages", parsed.packages);
+    readComposerSection(packages, "packages-dev", parsed["packages-dev"]);
+    return packages.size > 0 ? packages : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function isRequirementsFile(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
@@ -497,6 +545,15 @@ function readPipfileVersion(value: unknown): string | undefined {
   if (typeof value === "string") return value;
   if (isRecord(value) && typeof value.version === "string") return value.version;
   return undefined;
+}
+
+function readComposerSection(result: Map<string, LockPackage>, section: "packages" | "packages-dev", value: unknown): void {
+  if (!Array.isArray(value)) return;
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.name !== "string" || typeof item.version !== "string") continue;
+    const path = `${section}.${item.name}`;
+    result.set(path, { name: item.name, path, version: item.version });
+  }
 }
 
 interface LockDependencyNode {

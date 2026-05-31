@@ -62,6 +62,8 @@ Schema version: 1
 | Cargo.lock | lockfile | anyhow | anyhow@1.0.80 -> anyhow@1.0.81 | updated | 1.0.80 | 1.0.81 |
 | poetry.lock | lockfile | black | black@24.1.0 -> black@24.2.0 | updated | 24.1.0 | 24.2.0 |
 | Pipfile.lock | lockfile | requests | default.requests | updated | ==2.31.0 | ==2.32.0 |
+| Gemfile.lock | lockfile | rails | rails@7.1.3 -> rails@7.2.0 | updated | 7.1.3 | 7.2.0 |
+| composer.lock | lockfile | monolog/monolog | packages.monolog/monolog | updated | 3.5.0 | 3.6.0 |
 | package-lock.json | lockfile | yaml | node_modules/yaml | added |  | 2.0.0 |
 
 ## Changed Files

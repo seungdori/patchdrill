@@ -747,6 +747,138 @@ python-versions = ">=3.10"
       }
     ]);
   });
+
+  it("reports Gemfile.lock additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-gemfile-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGemfileLock(
+      root,
+      `
+GEM
+  remote: https://rubygems.org/
+  specs:
+    oldgem (0.1.0)
+    puma (6.4.2)
+    rails (7.1.3)
+      actionpack (= 7.1.3)
+
+PLATFORMS
+  ruby
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGemfileLock(
+      root,
+      `
+GEM
+  remote: https://rubygems.org/
+  specs:
+    puma (6.4.2)
+    rack (3.0.9)
+    rails (7.2.0)
+      actionpack (= 7.2.0)
+
+PLATFORMS
+  ruby
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "Gemfile.lock", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "Gemfile.lock",
+        packageName: "oldgem",
+        packagePath: "oldgem@0.1.0",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "0.1.0"
+      },
+      {
+        file: "Gemfile.lock",
+        packageName: "rack",
+        packagePath: "rack@3.0.9",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "3.0.9"
+      },
+      {
+        file: "Gemfile.lock",
+        packageName: "rails",
+        packagePath: "rails@7.1.3 -> rails@7.2.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "7.1.3",
+        after: "7.2.0"
+      }
+    ]);
+  });
+
+  it("reports composer.lock additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-composer-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeComposerLock(root, {
+      packages: [
+        { name: "monolog/monolog", version: "3.5.0" },
+        { name: "old/vendor", version: "1.0.0" }
+      ],
+      "packages-dev": [{ name: "phpunit/phpunit", version: "10.5.0" }]
+    });
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeComposerLock(root, {
+      packages: [
+        { name: "monolog/monolog", version: "3.6.0" },
+        { name: "symfony/console", version: "7.0.0" }
+      ],
+      "packages-dev": [{ name: "phpunit/phpunit", version: "10.5.0" }]
+    });
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "composer.lock", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "composer.lock",
+        packageName: "monolog/monolog",
+        packagePath: "packages.monolog/monolog",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "3.5.0",
+        after: "3.6.0"
+      },
+      {
+        file: "composer.lock",
+        packageName: "old/vendor",
+        packagePath: "packages.old/vendor",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "1.0.0"
+      },
+      {
+        file: "composer.lock",
+        packageName: "symfony/console",
+        packagePath: "packages.symfony/console",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "7.0.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
@@ -787,6 +919,14 @@ function writePoetryLock(root: string, contents: string): void {
 
 function writePipfileLock(root: string, contents: unknown): void {
   writeFileSync(join(root, "Pipfile.lock"), JSON.stringify(contents, null, 2));
+}
+
+function writeGemfileLock(root: string, contents: string): void {
+  writeFileSync(join(root, "Gemfile.lock"), contents.trimStart());
+}
+
+function writeComposerLock(root: string, contents: unknown): void {
+  writeFileSync(join(root, "composer.lock"), JSON.stringify(contents, null, 2));
 }
 
 function git(cwd: string, args: string[]): string {
