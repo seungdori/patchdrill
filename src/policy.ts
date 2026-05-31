@@ -74,6 +74,7 @@ function normalizePolicy(value: unknown): PatchPolicy {
   return {
     ignoredPaths: readStringArray(value.ignoredPaths ?? value.ignore),
     ...(readSeverity(value.failOn) ? { failOn: readSeverity(value.failOn) as Severity } : {}),
+    ...(readRisk(value.maxRisk) !== undefined ? { maxRisk: readRisk(value.maxRisk) as number } : {}),
     rules: readRules(value.rules),
     requiredCommands: readCommands(value.requiredCommands, true),
     optionalCommands: readCommands(value.optionalCommands, false)
@@ -141,6 +142,11 @@ function readPathPattern(value: unknown): string | string[] | undefined {
 
 function readSeverity(value: unknown): Severity | undefined {
   return typeof value === "string" && severities.includes(value as Severity) ? (value as Severity) : undefined;
+}
+
+function readRisk(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

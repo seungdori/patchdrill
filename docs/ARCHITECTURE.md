@@ -27,6 +27,9 @@ git diff -> changed files + added lines -> policy filters
                                       |
                                       v
                     risk assessment -> Markdown / JSON / SARIF
+                                      |
+                                      v
+                       fail-on severity + max-risk gate
 ```
 
 ## Non-Goals
@@ -37,3 +40,7 @@ git diff -> changed files + added lines -> policy filters
 - Becoming a full SAST, SCA, or test selection platform.
 
 PatchDrill should stay useful as the small, deterministic layer before those heavier tools.
+
+## Security Posture
+
+The repository also includes CI, CodeQL, OpenSSF Scorecard, Dependabot, and package dry-run verification. See [SECURITY_POSTURE.md](SECURITY_POSTURE.md).

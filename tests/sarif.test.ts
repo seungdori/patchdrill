@@ -36,11 +36,19 @@ describe("renderSarif", () => {
     };
 
     const sarif = JSON.parse(renderSarif(report)) as {
-      runs: Array<{ results: Array<{ ruleId: string; level: string; locations: Array<{ physicalLocation: { region: { startLine: number } } }> }> }>;
+      runs: Array<{
+        results: Array<{
+          ruleId: string;
+          level: string;
+          partialFingerprints: Record<string, string>;
+          locations: Array<{ physicalLocation: { region: { startLine: number } } }>;
+        }>;
+      }>;
     };
 
     expect(sarif.runs[0]?.results[0]?.ruleId).toBe("agent.prompt-injection");
     expect(sarif.runs[0]?.results[0]?.level).toBe("error");
     expect(sarif.runs[0]?.results[0]?.locations[0]?.physicalLocation.region.startLine).toBe(12);
+    expect(sarif.runs[0]?.results[0]?.partialFingerprints.patchdrillFinding).toMatch(/^[a-f0-9]{64}$/);
   });
 });

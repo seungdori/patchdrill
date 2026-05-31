@@ -1,0 +1,29 @@
+# Security Posture
+
+PatchDrill is meant to be installed in CI and sometimes executed locally against sensitive diffs. The repository should therefore carry the same trust signals it asks users to expect from their own projects.
+
+## Automated Checks
+
+| Check | File | Purpose |
+| --- | --- | --- |
+| TypeScript build and Vitest | `.github/workflows/ci.yml` | Verifies deterministic scanner behavior and package readiness. |
+| PatchDrill self-scan | `.github/workflows/ci.yml` | Proves the repo can produce Markdown, JSON, and SARIF reports. |
+| CodeQL | `.github/workflows/codeql.yml` | Adds GitHub-native static analysis for the TypeScript codebase. |
+| OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Tracks open-source security posture and uploads SARIF results. |
+| Dependabot | `.github/dependabot.yml` | Keeps npm and GitHub Actions dependencies current. |
+
+## Repository Rules To Enable On GitHub
+
+- Require pull request review before merging to `main`.
+- Require status checks: CI, CodeQL, OpenSSF Scorecard.
+- Require signed commits or vigilant mode if the maintainers use it consistently.
+- Restrict GitHub Actions permissions to least privilege by default.
+- Enable private vulnerability reporting.
+- Enable secret scanning and push protection where available.
+
+## Release Hygiene
+
+- Run `npm pack --dry-run` before publishing.
+- Review the tarball file list before every release.
+- Keep generated reports out of git through `.gitignore`.
+- Avoid storing any real secret-like fixture in tests; synthesize test values at runtime.

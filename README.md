@@ -9,7 +9,8 @@ npx patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
-  --fail-on high
+  --fail-on high \
+  --max-risk 69
 ```
 
 ## Why Star It
@@ -20,6 +21,7 @@ npx patchdrill scan --base origin/main --run \
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
 - Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
+- Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 
 ## What It Does
 
@@ -119,6 +121,7 @@ Options:
 | `--json <path>` | Write a JSON report. |
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
+| `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
 | `--quiet` | Only use exit code. |
 
 ## Supported Signals
@@ -162,6 +165,7 @@ PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` fr
 
 ```yaml
 failOn: high
+maxRisk: 69
 
 ignoredPaths:
   - generated/**
@@ -211,7 +215,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high
+      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -230,6 +234,7 @@ jobs:
 
 See [examples/report.md](examples/report.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
+For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 
 ## Design Principles
 
@@ -238,6 +243,7 @@ For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 - Local by default. Source code stays in your checkout.
 - Conservative scoring. PatchDrill would rather ask for proof than silently bless a risky patch.
 - Extensible later. The rule engine is small enough for contributors to add ecosystems and policies.
+- Trustworthy distribution. CI verifies build, tests, SARIF generation, and npm package contents.
 
 ## Roadmap
 

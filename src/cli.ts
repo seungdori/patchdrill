@@ -46,6 +46,7 @@ async function main(): Promise<void> {
 
 async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliFailOn = typeof parsed.flags["fail-on"] === "string" ? readSeverity(parsed.flags["fail-on"], "critical") : undefined;
+  const cliMaxRisk = typeof parsed.flags["max-risk"] === "string" ? readMaxRisk(parsed.flags["max-risk"]) : undefined;
   const report = await scan({
     cwd: process.cwd(),
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
@@ -58,15 +59,16 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {})
   });
 
+  const gateOptions = { failOn: cliFailOn ?? report.policy?.failOn ?? "critical", maxRisk: cliMaxRisk ?? report.policy?.maxRisk ?? 69 };
   if (!parsed.flags.quiet) {
-    console.log(renderConsoleSummary(report));
+    console.log(renderConsoleSummary(report, gateOptions));
     if (!parsed.flags.markdown) {
       console.log("");
       console.log(renderMarkdown(report));
     }
   }
 
-  if (shouldFail(report, cliFailOn ?? report.policy?.failOn ?? "critical")) {
+  if (shouldFail(report, gateOptions)) {
     process.exitCode = 1;
   }
 }
@@ -87,14 +89,16 @@ function explainCommand(): void {
 5. Emit Markdown, JSON, and SARIF evidence for PR review or CI artifacts.
 
 Typical use:
-  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif
+  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
 `);
 }
 
-function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>): string {
+function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: { failOn: Severity; maxRisk: number }): string {
   const required = report.commandPlan.filter((command) => command.required);
+  const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
   const lines = [
-    `PatchDrill ${report.summary.status.toUpperCase()} - risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
+    `PatchDrill Gate ${gateStatus} - assessment ${report.summary.status.toUpperCase()}, risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
+    `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}`,
     `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
     `Required commands: ${required.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
     `Added lines inspected: ${report.addedLines}`
@@ -147,7 +151,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on"].includes(flag);
+  return ["base", "head", "config", "markdown", "json", "sarif", "fail-on", "max-risk"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -156,6 +160,17 @@ function readSeverity(value: string | boolean | undefined, fallback: Severity): 
     throw new Error(`Invalid severity "${value}". Expected one of ${severities.join(", ")}.`);
   }
   return value as Severity;
+}
+
+function readMaxRisk(value: string): number {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`Invalid max risk "${value}". Expected an integer from 0 to 100.`);
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    throw new Error(`Invalid max risk "${value}". Expected an integer from 0 to 100.`);
+  }
+  return parsed;
 }
 
 function readVersion(): string {
@@ -186,6 +201,7 @@ Options:
   --json <path>       Write a JSON report
   --sarif <path>      Write a SARIF report for GitHub code scanning
   --fail-on <level>   Fail when findings meet severity: info, low, medium, high, critical
+  --max-risk <score>  Fail when risk score is above 0-100 threshold, default 69
   --quiet             Only use exit code, no console report
   --version           Print version
   --help              Print help

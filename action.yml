@@ -10,6 +10,10 @@ inputs:
     description: Severity threshold that should fail the action.
     required: false
     default: high
+  max-risk:
+    description: Maximum allowed risk score from 0 to 100.
+    required: false
+    default: "69"
   config:
     description: Optional PatchDrill policy path.
     required: false
@@ -63,6 +67,7 @@ runs:
           --json "${{ inputs.json }}" \
           --sarif "${{ inputs.sarif }}" \
           --fail-on "${{ inputs.fail-on }}" \
+          --max-risk "${{ inputs.max-risk }}" \
           $CONFIG_FLAG \
           $RUN_FLAG
     - name: Export report paths

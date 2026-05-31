@@ -12,6 +12,7 @@ Each file-scoped finding becomes a SARIF result with:
 - `level`: mapped from severity.
 - `location`: file and line when available.
 - `properties`: severity and tags.
+- `partialFingerprints`: stable PatchDrill fingerprints for GitHub alert tracking.
 
 ## GitHub Actions
 
@@ -27,7 +28,7 @@ steps:
   - uses: actions/setup-node@v4
     with:
       node-version: 22
-  - run: npx patchdrill scan --base origin/${{ github.base_ref }} --sarif patchdrill.sarif --markdown patchdrill-report.md --json patchdrill-report.json
+  - run: npx patchdrill scan --base origin/${{ github.base_ref }} --sarif patchdrill.sarif --markdown patchdrill-report.md --json patchdrill-report.json --fail-on high --max-risk 69
   - uses: github/codeql-action/upload-sarif@v3
     if: always()
     with:

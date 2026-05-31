@@ -21,6 +21,7 @@ describe("policy", () => {
       join(root, ".patchdrill.yml"),
       `
 failOn: high
+maxRisk: 80
 ignoredPaths:
   - generated/**
 requiredCommands:
@@ -42,6 +43,7 @@ rules:
     ];
 
     expect(loaded.policy.failOn).toBe("high");
+    expect(loaded.policy.maxRisk).toBe(80);
     expect(filterIgnoredFiles(files, loaded.policy).map((file) => file.path)).toEqual(["src/schema/user.ts"]);
     expect(mergePolicyCommands([], loaded.policy)).toContainEqual(
       expect.objectContaining({

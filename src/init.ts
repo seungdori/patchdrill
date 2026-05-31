@@ -36,7 +36,7 @@ jobs:
           node-version: 22
       - name: Run PatchDrill
         run: |
-          npx patchdrill scan --base origin/\${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high
+          npx patchdrill scan --base origin/\${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()

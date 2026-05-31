@@ -48,6 +48,21 @@ const LOCKFILES = [
   "composer.lock"
 ];
 
+const AGENT_CONTROL_FILE_PATTERNS = [
+  /(^|\/)(AGENTS|CLAUDE|GEMINI|CURSOR)\.md$/i,
+  /(^|\/)\.github\/copilot-instructions\.md$/i,
+  /(^|\/)\.cursor\/rules\//i,
+  /(^|\/)\.windsurfrules$/i,
+  /(^|\/)\.claude\/(commands|settings)\//i
+];
+
+const MCP_CONFIG_PATTERNS = [
+  /(^|\/)\.mcp\.json$/i,
+  /(^|\/)mcp\.json$/i,
+  /(^|\/)\.cursor\/mcp\.json$/i,
+  /(^|\/)claude_desktop_config\.json$/i
+];
+
 const ADDED_SECRET_PATTERNS: Array<{ ruleId: string; title: string; pattern: RegExp; remediation: string }> = [
   {
     ruleId: "secret.private-key",
@@ -90,6 +105,45 @@ const PROMPT_INJECTION_PATTERNS: RegExp[] = [
   /you\s+are\s+now\s+in\s+developer\s+mode/i
 ];
 
+const AGENT_TOOL_ABUSE_PATTERNS: RegExp[] = [
+  /\brm\s+-rf\s+(\/|\$HOME|~|\*)/i,
+  /\b(curl|wget)\b.+\|\s*(sh|bash)\b/i,
+  /\bsudo\s+(rm|chmod|chown|dd|mkfs|shutdown|reboot)\b/i,
+  /\bchmod\s+777\b/i,
+  /\b(delete|wipe|destroy)\s+(all\s+)?(files|database|cloud\s+resources|system)\b/i
+];
+
+const WORKFLOW_PRIVILEGE_PATTERNS: Array<{ ruleId: string; severity: Severity; title: string; pattern: RegExp; remediation: string }> = [
+  {
+    ruleId: "workflow.pull-request-target",
+    severity: "high",
+    title: "pull_request_target trigger added",
+    pattern: /^\s*pull_request_target\s*:/i,
+    remediation: "Use pull_request unless the workflow is intentionally designed for untrusted fork safety."
+  },
+  {
+    ruleId: "workflow.write-all",
+    severity: "high",
+    title: "Broad GitHub token write permissions added",
+    pattern: /^\s*permissions\s*:\s*write-all\s*$/i,
+    remediation: "Use least-privilege per-scope permissions instead of write-all."
+  },
+  {
+    ruleId: "workflow.write-scope",
+    severity: "medium",
+    title: "GitHub token write scope added",
+    pattern: /^\s*(actions|checks|contents|deployments|id-token|issues|packages|pull-requests|security-events)\s*:\s*write\s*$/i,
+    remediation: "Confirm the workflow needs this exact write permission and cannot use read-only access."
+  },
+  {
+    ruleId: "workflow.inherited-secrets",
+    severity: "high",
+    title: "Workflow secret inheritance added",
+    pattern: /^\s*secrets\s*:\s*inherit\s*$/i,
+    remediation: "Avoid inherited secrets in reusable workflows unless trust boundaries and callers are tightly controlled."
+  }
+];
+
 const severityWeights: Record<Severity, number> = {
   info: 1,
   low: 4,
@@ -130,6 +184,30 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         file: file.path,
         remediation: "Add targeted tests and include manual verification notes in the PR.",
         tags: ["review", "regression"]
+      });
+    }
+    if (isAgentControlFile(file.path)) {
+      risk += 18;
+      findings.push({
+        ruleId: "agent.control-file",
+        severity: "high",
+        title: "Agent instruction surface changed",
+        detail: "Files consumed by AI coding agents can alter goals, tool choices, review behavior, or memory-like context.",
+        file: file.path,
+        remediation: "Review this file as executable agent policy. Keep untrusted examples and external content out of agent instruction surfaces.",
+        tags: ["ai-safety", "agentic-ai", "owasp:ASI01", "owasp:ASI09"]
+      });
+    }
+    if (isMcpConfigFile(file.path)) {
+      risk += 30;
+      findings.push({
+        ruleId: "agent.mcp-config",
+        severity: "critical",
+        title: "MCP or agent tool configuration changed",
+        detail: "MCP and agent tool configs can grant local tools, credentials, or network access to autonomous agents.",
+        file: file.path,
+        remediation: "Require owner review for tool allowlists, command arguments, environment variables, and credential sources.",
+        tags: ["ai-safety", "mcp", "owasp:ASI02", "owasp:ASI03", "owasp:ASI04"]
       });
     }
     if (INFRA_PATTERNS.some((pattern) => pattern.test(file.path))) {
@@ -210,8 +288,40 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         file: line.file,
         line: line.line,
         remediation: "Keep untrusted prompt-like content out of agent instruction files and avoid passing it to privileged AI review contexts.",
-        tags: ["ai-safety", "prompt-injection"]
+        tags: ["ai-safety", "prompt-injection", "owasp:ASI01"]
       });
+    }
+
+    if ((isAgentVisibleFile(line.file) || isAgentControlFile(line.file)) && AGENT_TOOL_ABUSE_PATTERNS.some((pattern) => pattern.test(line.content))) {
+      risk += 22;
+      findings.push({
+        ruleId: "agent.tool-abuse-instruction",
+        severity: "high",
+        title: "Agent tool-abuse instruction added",
+        detail: "An agent-visible line appears to encourage destructive local commands, privilege changes, or remote shell execution.",
+        file: line.file,
+        line: line.line,
+        remediation: "Move destructive examples behind explicit human-only documentation and keep them out of privileged agent instruction context.",
+        tags: ["ai-safety", "tool-misuse", "owasp:ASI02", "owasp:ASI05"]
+      });
+    }
+
+    if (line.file.startsWith(".github/workflows/")) {
+      for (const workflowPattern of WORKFLOW_PRIVILEGE_PATTERNS) {
+        if (!workflowPattern.pattern.test(line.content)) continue;
+        risk += severityWeights[workflowPattern.severity];
+        findings.push({
+          ruleId: workflowPattern.ruleId,
+          severity: workflowPattern.severity,
+          title: workflowPattern.title,
+          detail: "A newly added workflow line changes GitHub Actions trust or token privilege.",
+          file: line.file,
+          line: line.line,
+          remediation: workflowPattern.remediation,
+          tags: ["ci", "github-actions", "supply-chain"]
+        });
+        break;
+      }
     }
   }
 
@@ -303,6 +413,14 @@ function isAgentVisibleFile(path: string): boolean {
     path.startsWith(".github/PULL_REQUEST_TEMPLATE") ||
     /\.(md|mdx|txt)$/i.test(path)
   );
+}
+
+function isAgentControlFile(path: string): boolean {
+  return AGENT_CONTROL_FILE_PATTERNS.some((pattern) => pattern.test(path));
+}
+
+function isMcpConfigFile(path: string): boolean {
+  return MCP_CONFIG_PATTERNS.some((pattern) => pattern.test(path));
 }
 
 function isTestFile(path: string): boolean {

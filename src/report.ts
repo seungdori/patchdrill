@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { PatchReport, Severity } from "./types.js";
 
 const severityRank: Record<Severity, number> = {
@@ -8,9 +9,15 @@ const severityRank: Record<Severity, number> = {
   critical: 4
 };
 
-export function shouldFail(report: PatchReport, failOn: Severity): boolean {
-  if (report.summary.status === "fail") return true;
-  const threshold = severityRank[failOn];
+export interface GateOptions {
+  failOn: Severity;
+  maxRisk: number;
+}
+
+export function shouldFail(report: PatchReport, options: GateOptions): boolean {
+  if (report.summary.failedCommandCount > 0) return true;
+  if (report.summary.riskScore > options.maxRisk) return true;
+  const threshold = severityRank[options.failOn];
   return report.findings.some((finding) => severityRank[finding.severity] >= threshold);
 }
 
@@ -39,6 +46,8 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
     lines.push(`- Config: ${report.policy.path}`);
     lines.push(`- Ignored path patterns: ${report.policy.ignoredPaths.length}`);
+    if (report.policy.failOn) lines.push(`- Fail-on severity: ${report.policy.failOn}`);
+    if (report.policy.maxRisk !== undefined) lines.push(`- Max risk: ${report.policy.maxRisk}`);
     lines.push(`- Policy rules: ${report.policy.ruleCount}`);
     lines.push(`- Policy commands: ${report.policy.requiredCommandCount} required, ${report.policy.optionalCommandCount} optional`);
     lines.push("");
@@ -170,6 +179,9 @@ export function renderSarif(report: PatchReport): string {
         properties: {
           severity: finding.severity,
           tags: finding.tags ?? []
+        },
+        partialFingerprints: {
+          patchdrillFinding: stableFingerprint(ruleId, finding.file ?? "", finding.line ?? 0, finding.title)
         }
       };
     });
@@ -223,4 +235,8 @@ function escapeBackticks(value: string): string {
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "patchdrill-finding";
+}
+
+function stableFingerprint(ruleId: string, file: string, line: number, title: string): string {
+  return createHash("sha256").update(`${ruleId}\0${file}\0${line}\0${title}`).digest("hex");
 }

@@ -1,4 +1,5 @@
 failOn: critical
+maxRisk: 100
 
 ignoredPaths:
   - node_modules/**

@@ -44,7 +44,8 @@ describe("report", () => {
 
     expect(renderMarkdown(report)).toContain("PatchDrill Report");
     expect(renderMarkdown(report)).toContain("file.high-impact-area");
-    expect(shouldFail(report, "critical")).toBe(false);
-    expect(shouldFail(report, "high")).toBe(true);
+    expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
+    expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
+    expect(shouldFail(report, { failOn: "critical", maxRisk: 30 })).toBe(true);
   });
 });

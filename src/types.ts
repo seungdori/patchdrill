@@ -88,6 +88,7 @@ export interface PolicyRule {
 export interface PatchPolicy {
   ignoredPaths: string[];
   failOn?: Severity;
+  maxRisk?: number;
   rules: PolicyRule[];
   requiredCommands: CommandPlan[];
   optionalCommands: CommandPlan[];
@@ -117,6 +118,7 @@ export interface PatchReport {
     path: string;
     ignoredPaths: string[];
     failOn?: Severity;
+    maxRisk?: number;
     ruleCount: number;
     requiredCommandCount: number;
     optionalCommandCount: number;

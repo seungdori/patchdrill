@@ -64,6 +64,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
             path: relative(root, loadedPolicy.path),
             ignoredPaths: loadedPolicy.policy.ignoredPaths,
             ...(loadedPolicy.policy.failOn ? { failOn: loadedPolicy.policy.failOn } : {}),
+            ...(loadedPolicy.policy.maxRisk !== undefined ? { maxRisk: loadedPolicy.policy.maxRisk } : {}),
             ruleCount: loadedPolicy.policy.rules.length,
             requiredCommandCount: loadedPolicy.policy.requiredCommands.length,
             optionalCommandCount: loadedPolicy.policy.optionalCommands.length

@@ -10,6 +10,7 @@ patchdrill scan --config security/patchdrill.yml
 
 ```yaml
 failOn: high
+maxRisk: 69
 
 ignoredPaths:
   - generated/**
@@ -44,6 +45,7 @@ rules:
 | Field | Purpose |
 | --- | --- |
 | `failOn` | Default CLI failure threshold when `--fail-on` is not passed. |
+| `maxRisk` | Default numeric risk threshold when `--max-risk` is not passed. |
 | `ignoredPaths` | Glob patterns removed from changed-file and added-line analysis. |
 | `requiredCommands` | Commands PatchDrill runs when `--run` is set. |
 | `optionalCommands` | Commands shown in the report but not executed by default. |
