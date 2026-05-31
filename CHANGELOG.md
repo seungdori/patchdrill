@@ -33,3 +33,4 @@
 - Added `poetry.lock` dependency diff summaries.
 - Added `Pipfile.lock` dependency diff summaries.
 - Added `bun.lock` dependency diff summaries.
+- Hardened GitHub Action input handling with environment-backed bash argument arrays.

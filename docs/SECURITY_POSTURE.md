@@ -12,6 +12,7 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 | OpenSSF Scorecard | `.github/workflows/scorecard.yml` | Tracks open-source security posture and uploads SARIF results. |
 | Dependabot | `.github/dependabot.yml` | Keeps npm and GitHub Actions dependencies current. |
 | Release provenance | `.github/workflows/release.yml` | Publishes through npm trusted publishing and provenance. |
+| Hardened Action inputs | `action.yml` | Passes composite Action inputs through step environment variables and a bash array so optional paths and thresholds are not re-tokenized by the shell. |
 
 ## Repository Rules To Enable On GitHub
 

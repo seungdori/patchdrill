@@ -73,44 +73,52 @@ runs:
     - name: Run PatchDrill
       id: run
       shell: bash
+      env:
+        PATCHDRILL_BASE: ${{ inputs.base }}
+        PATCHDRILL_FAIL_ON: ${{ inputs.fail-on }}
+        PATCHDRILL_MAX_RISK: ${{ inputs.max-risk }}
+        PATCHDRILL_MAX_RISK_DELTA: ${{ inputs.max-risk-delta }}
+        PATCHDRILL_CONFIG: ${{ inputs.config }}
+        PATCHDRILL_BASELINE: ${{ inputs.baseline }}
+        PATCHDRILL_RUN: ${{ inputs.run }}
+        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
+        PATCHDRILL_JSON: ${{ inputs.json }}
+        PATCHDRILL_SARIF: ${{ inputs.sarif }}
       run: |
-        RUN_FLAG=""
-        if [ "${{ inputs.run }}" = "true" ]; then
-          RUN_FLAG="--run"
+        args=(
+          scan
+          --base "$PATCHDRILL_BASE"
+          --markdown "$PATCHDRILL_MARKDOWN"
+          --json "$PATCHDRILL_JSON"
+          --sarif "$PATCHDRILL_SARIF"
+          --fail-on "$PATCHDRILL_FAIL_ON"
+          --max-risk "$PATCHDRILL_MAX_RISK"
+        )
+        if [ "$PATCHDRILL_RUN" = "true" ]; then
+          args+=(--run)
         fi
-        CONFIG_FLAG=""
-        if [ -n "${{ inputs.config }}" ]; then
-          CONFIG_FLAG="--config ${{ inputs.config }}"
+        if [ -n "$PATCHDRILL_CONFIG" ]; then
+          args+=(--config "$PATCHDRILL_CONFIG")
         fi
-        BASELINE_FLAG=""
-        if [ -n "${{ inputs.baseline }}" ]; then
-          BASELINE_FLAG="--baseline ${{ inputs.baseline }}"
+        if [ -n "$PATCHDRILL_BASELINE" ]; then
+          args+=(--baseline "$PATCHDRILL_BASELINE")
         fi
-        MAX_RISK_DELTA_FLAG=""
-        if [ -n "${{ inputs.max-risk-delta }}" ]; then
-          MAX_RISK_DELTA_FLAG="--max-risk-delta ${{ inputs.max-risk-delta }}"
+        if [ -n "$PATCHDRILL_MAX_RISK_DELTA" ]; then
+          args+=(--max-risk-delta "$PATCHDRILL_MAX_RISK_DELTA")
         fi
         set +e
-        npx patchdrill scan \
-          --base "${{ inputs.base }}" \
-          --markdown "${{ inputs.markdown }}" \
-          --json "${{ inputs.json }}" \
-          --sarif "${{ inputs.sarif }}" \
-          --fail-on "${{ inputs.fail-on }}" \
-          --max-risk "${{ inputs.max-risk }}" \
-          $CONFIG_FLAG \
-          $BASELINE_FLAG \
-          $MAX_RISK_DELTA_FLAG \
-          $RUN_FLAG
+        npx patchdrill "${args[@]}"
         STATUS=$?
         echo "status=$STATUS" >> "$GITHUB_OUTPUT"
         exit 0
     - name: Write step summary
       if: inputs.step-summary == 'true'
       shell: bash
+      env:
+        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
       run: |
-        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "${{ inputs.markdown }}" ]; then
-          cat "${{ inputs.markdown }}" >> "$GITHUB_STEP_SUMMARY"
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$PATCHDRILL_MARKDOWN" ]; then
+          cat -- "$PATCHDRILL_MARKDOWN" >> "$GITHUB_STEP_SUMMARY"
         fi
     - name: Upsert PR comment
       if: inputs.pr-comment == 'true' && github.event_name == 'pull_request'
@@ -155,10 +163,24 @@ runs:
     - name: Export report paths
       id: paths
       shell: bash
+      env:
+        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
+        PATCHDRILL_JSON: ${{ inputs.json }}
+        PATCHDRILL_SARIF: ${{ inputs.sarif }}
       run: |
-        echo "json=${{ inputs.json }}" >> "$GITHUB_OUTPUT"
-        echo "markdown=${{ inputs.markdown }}" >> "$GITHUB_OUTPUT"
-        echo "sarif=${{ inputs.sarif }}" >> "$GITHUB_OUTPUT"
+        write_output() {
+          local name="$1"
+          local value="$2"
+          local delimiter="patchdrill_${name}_EOF"
+          {
+            printf '%s<<%s\n' "$name" "$delimiter"
+            printf '%s\n' "$value"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        }
+        write_output json "$PATCHDRILL_JSON"
+        write_output markdown "$PATCHDRILL_MARKDOWN"
+        write_output sarif "$PATCHDRILL_SARIF"
     - name: Fail on PatchDrill gate
       if: steps.run.outputs.status != '0'
       shell: bash
