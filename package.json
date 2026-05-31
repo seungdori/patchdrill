@@ -33,9 +33,22 @@
     "code-review",
     "testing",
     "agentic-coding",
-    "evidence"
+    "evidence",
+    "sarif",
+    "codeowners",
+    "monorepo",
+    "supply-chain",
+    "github-actions"
   ],
-  "author": "",
+  "author": "PatchDrill contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patchdrill/patchdrill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/patchdrill/patchdrill/issues"
+  },
+  "homepage": "https://github.com/patchdrill/patchdrill#readme",
   "license": "MIT",
   "engines": {
     "node": ">=20"

@@ -36,6 +36,7 @@
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.
 - `patchdrill init --policy` starter policy generation.
+- npm package metadata for repository discovery.
 
 ## Contribution Targets
 
