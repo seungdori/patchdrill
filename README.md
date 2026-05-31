@@ -194,6 +194,7 @@ The current deterministic rules look for:
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
 - Dependency manifest and lockfile changes.
 - package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
+- Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.
 - Source changes without test changes.
 - Large line deltas and binary files.
 - Failed verification commands.

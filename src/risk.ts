@@ -234,6 +234,18 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         tags: ["dependencies", "supply-chain"]
       });
     }
+    if (file.binary && isBinaryBunLockfile(file.path)) {
+      risk += 14;
+      findings.push({
+        ruleId: "file.bun-lockb",
+        severity: "medium",
+        title: "Binary Bun lockfile changed",
+        detail: "Legacy bun.lockb files are binary, so package-level dependency changes cannot be summarized from a normal diff.",
+        file: file.path,
+        remediation: "Prefer the text bun.lock format. Migrate with `bun install --save-text-lockfile --frozen-lockfile --lockfile-only`, verify the result, then remove bun.lockb.",
+        tags: ["dependencies", "supply-chain", "bun"]
+      });
+    }
     if (isRequirementsFile(file.path)) {
       risk += 12;
       findings.push({
@@ -256,7 +268,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         file: file.path
       });
     }
-    if (file.binary) {
+    if (file.binary && !isBinaryBunLockfile(file.path)) {
       risk += 10;
       findings.push({
         ruleId: "file.binary",
@@ -442,6 +454,10 @@ function isTestFile(path: string): boolean {
 function isRequirementsFile(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
+}
+
+function isBinaryBunLockfile(path: string): boolean {
+  return path.split("/").at(-1) === "bun.lockb";
 }
 
 function clamp(value: number, min: number, max: number): number {

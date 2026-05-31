@@ -169,4 +169,21 @@ describe("assessRisk", () => {
       })
     );
   });
+
+  it("adds migration guidance for binary Bun lockfiles", () => {
+    const assessment = assessRisk(
+      [{ path: "bun.lockb", status: "modified", additions: 0, deletions: 0, binary: true }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.bun-lockb",
+        severity: "medium",
+        file: "bun.lockb",
+        remediation: expect.stringContaining("bun install --save-text-lockfile --frozen-lockfile --lockfile-only")
+      })
+    );
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("file.binary");
+  });
 });
