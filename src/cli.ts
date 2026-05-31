@@ -53,6 +53,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliFailOn = typeof parsed.flags["fail-on"] === "string" ? readSeverity(parsed.flags["fail-on"], "critical") : undefined;
   const cliMaxRisk = typeof parsed.flags["max-risk"] === "string" ? readMaxRisk(parsed.flags["max-risk"]) : undefined;
   const cliMaxRiskDelta = typeof parsed.flags["max-risk-delta"] === "string" ? readMaxRiskDelta(parsed.flags["max-risk-delta"]) : undefined;
+  const cliMaxOutputChars = typeof parsed.flags["max-output-chars"] === "string" ? readPositiveInteger(parsed.flags["max-output-chars"], "max output chars") : undefined;
   const report = await scan({
     cwd: process.cwd(),
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
@@ -63,7 +64,8 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
     ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
     ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {}),
-    ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {})
+    ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {}),
+    ...(cliMaxOutputChars !== undefined ? { maxOutputChars: cliMaxOutputChars } : {})
   });
 
   const gateOptions = {
@@ -186,7 +188,7 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "max-risk-delta", "output"].includes(flag);
+  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "max-risk-delta", "max-output-chars", "output"].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -215,6 +217,17 @@ function readMaxRiskDelta(value: string): number {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
     throw new Error(`Invalid max risk delta "${value}". Expected an integer from 0 to 100.`);
+  }
+  return parsed;
+}
+
+function readPositiveInteger(value: string, label: string): number {
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`Invalid ${label} "${value}". Expected a positive integer.`);
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`Invalid ${label} "${value}". Expected a positive integer.`);
   }
   return parsed;
 }
@@ -252,6 +265,8 @@ Options:
   --max-risk <score>  Fail when risk score is above 0-100 threshold, default 69
   --max-risk-delta <score>
                       Fail when baseline risk increase is above this threshold
+  --max-output-chars <n>
+                      Keep the last n characters of each command output stream, default 20000
   --quiet             Only use exit code, no console report
   --policy            Create .patchdrill.yml when used with init
   --list              List schemas when used with schema

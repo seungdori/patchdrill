@@ -34,3 +34,4 @@
 - Added `Pipfile.lock` dependency diff summaries.
 - Added `bun.lock` dependency diff summaries.
 - Hardened GitHub Action input handling with environment-backed bash argument arrays.
+- Added configurable command-output retention with visible truncation markers.

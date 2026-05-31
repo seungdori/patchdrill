@@ -18,6 +18,10 @@ inputs:
     description: Maximum allowed risk increase against the optional baseline report.
     required: false
     default: ""
+  max-output-chars:
+    description: Maximum characters to retain from each command output stream.
+    required: false
+    default: "20000"
   config:
     description: Optional PatchDrill policy path.
     required: false
@@ -78,6 +82,7 @@ runs:
         PATCHDRILL_FAIL_ON: ${{ inputs.fail-on }}
         PATCHDRILL_MAX_RISK: ${{ inputs.max-risk }}
         PATCHDRILL_MAX_RISK_DELTA: ${{ inputs.max-risk-delta }}
+        PATCHDRILL_MAX_OUTPUT_CHARS: ${{ inputs.max-output-chars }}
         PATCHDRILL_CONFIG: ${{ inputs.config }}
         PATCHDRILL_BASELINE: ${{ inputs.baseline }}
         PATCHDRILL_RUN: ${{ inputs.run }}
@@ -93,6 +98,7 @@ runs:
           --sarif "$PATCHDRILL_SARIF"
           --fail-on "$PATCHDRILL_FAIL_ON"
           --max-risk "$PATCHDRILL_MAX_RISK"
+          --max-output-chars "$PATCHDRILL_MAX_OUTPUT_CHARS"
         )
         if [ "$PATCHDRILL_RUN" = "true" ]; then
           args+=(--run)

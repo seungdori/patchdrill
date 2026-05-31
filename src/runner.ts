@@ -58,7 +58,10 @@ function runShellCommand(id: string, command: string, options: RunOptions): Prom
 }
 
 function appendBounded(current: string, next: string, maxChars: number): string {
+  const limit = Math.max(0, maxChars);
   const combined = current + next;
-  if (combined.length <= maxChars) return combined;
-  return combined.slice(combined.length - maxChars);
+  if (combined.length <= limit) return combined;
+  const marker = `[PatchDrill truncated output to last ${limit} characters]\n`;
+  if (limit <= marker.length) return marker.slice(0, limit);
+  return `${marker}${combined.slice(-(limit - marker.length))}`;
 }
