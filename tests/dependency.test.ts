@@ -202,6 +202,81 @@ packages:
       }
     ]);
   });
+
+  it("reports yarn lockfile additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-yarn-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeYarnLock(
+      root,
+      `
+"@scope/pkg@npm:^1.0.0":
+  version "1.0.0"
+react@^18.2.0:
+  version "18.2.0"
+zod@^3.0.0:
+  version "3.0.0"
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeYarnLock(
+      root,
+      `
+"@scope/pkg@npm:^1.1.0":
+  version: 1.1.0
+react@^19.0.0:
+  version "19.0.0"
+yaml@^2.0.0:
+  version "2.0.0"
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "yarn.lock", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "yarn.lock",
+        packageName: "@scope/pkg",
+        packagePath: "@scope/pkg@npm:^1.0.0 -> @scope/pkg@npm:^1.1.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "1.0.0",
+        after: "1.1.0"
+      },
+      {
+        file: "yarn.lock",
+        packageName: "react",
+        packagePath: "react@^18.2.0 -> react@^19.0.0",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "18.2.0",
+        after: "19.0.0"
+      },
+      {
+        file: "yarn.lock",
+        packageName: "yaml",
+        packagePath: "yaml@^2.0.0",
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "2.0.0"
+      },
+      {
+        file: "yarn.lock",
+        packageName: "zod",
+        packagePath: "zod@^3.0.0",
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "3.0.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
@@ -214,6 +289,10 @@ function writePackageLock(root: string, contents: unknown): void {
 
 function writePnpmLock(root: string, contents: string): void {
   writeFileSync(join(root, "pnpm-lock.yaml"), contents.trimStart());
+}
+
+function writeYarnLock(root: string, contents: string): void {
+  writeFileSync(join(root, "yarn.lock"), contents.trimStart());
 }
 
 function git(cwd: string, args: string[]): string {

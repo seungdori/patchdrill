@@ -55,6 +55,7 @@ Schema version: 1
 | package.json | dependencies | react |  | updated | ^18.2.0 | ^19.0.0 |
 | package-lock.json | lockfile | react | node_modules/react | updated | 18.2.0 | 19.0.0 |
 | pnpm-lock.yaml | lockfile | @acme/ui | @acme/ui@1.4.0 -> @acme/ui@1.5.0 | updated | 1.4.0 | 1.5.0 |
+| yarn.lock | lockfile | zod | zod@^3.0.0 -> zod@^4.0.0 | updated | 3.0.0 | 4.0.0 |
 | package-lock.json | lockfile | yaml | node_modules/yaml | added |  | 2.0.0 |
 
 ## Changed Files

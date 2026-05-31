@@ -35,6 +35,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffPnpmLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("yarn.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseYarnLock(pair.before);
+    const after = parseYarnLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffPnpmLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
   );
@@ -200,6 +207,34 @@ function parsePnpmLock(value: string | undefined): Map<string, LockPackage> | un
   }
 }
 
+function parseYarnLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, LockPackage>();
+  const lines = value.split(/\r?\n/);
+  let descriptor: string | undefined;
+
+  for (const rawLine of lines) {
+    if (!rawLine.trim() || rawLine.startsWith("#")) continue;
+    if (!/^\s/.test(rawLine) && rawLine.trim().endsWith(":")) {
+      descriptor = normalizeYarnDescriptor(rawLine.trim().slice(0, -1));
+      continue;
+    }
+    if (!descriptor) continue;
+    const version = readYarnVersion(rawLine);
+    if (!version) continue;
+    const parsedDescriptor = parseYarnDescriptor(descriptor);
+    if (!parsedDescriptor) continue;
+    packages.set(descriptor, {
+      name: parsedDescriptor.name,
+      path: descriptor,
+      version
+    });
+    descriptor = undefined;
+  }
+
+  return packages.size > 0 ? packages : undefined;
+}
+
 interface LockDependencyNode {
   version?: unknown;
   dependencies?: Record<string, LockDependencyNode>;
@@ -241,6 +276,26 @@ function parsePnpmPackageKey(rawKey: string): { name: string; version: string } 
   const version = key.slice(separator + 1).split("(")[0]?.split("_")[0];
   if (!name || !version) return undefined;
   return { name, version };
+}
+
+function normalizeYarnDescriptor(value: string): string {
+  return value.replace(/^"|"$/g, "").split(",")[0]?.trim().replace(/^"|"$/g, "") ?? value;
+}
+
+function readYarnVersion(line: string): string | undefined {
+  const trimmed = line.trim();
+  const classic = /^version\s+"([^"]+)"$/.exec(trimmed);
+  if (classic?.[1]) return classic[1];
+  const modern = /^version:\s*"?([^"\s]+)"?$/.exec(trimmed);
+  return modern?.[1];
+}
+
+function parseYarnDescriptor(descriptor: string): { name: string } | undefined {
+  const key = descriptor.replace(/^"|"$/g, "");
+  const separator = key.startsWith("@") ? key.indexOf("@", key.indexOf("/") + 1) : key.indexOf("@");
+  if (separator <= 0) return undefined;
+  const name = key.slice(0, separator);
+  return name ? { name } : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
