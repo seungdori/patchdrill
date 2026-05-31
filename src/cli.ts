@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gitRoot } from "./git.js";
-import { writeGitHubWorkflow } from "./init.js";
+import { writeGitHubWorkflow, writePolicyFile } from "./init.js";
 import { renderMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -88,6 +88,10 @@ function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
   const path = writeGitHubWorkflow(root, Boolean(parsed.flags.force));
   console.log(`Created ${path}`);
+  if (parsed.flags.policy) {
+    const policyPath = writePolicyFile(root, Boolean(parsed.flags.force));
+    console.log(`Created ${policyPath}`);
+  }
 }
 
 function explainCommand(): void {
@@ -231,7 +235,7 @@ function printHelp(): void {
 
 Usage:
   patchdrill scan [options]
-  patchdrill init [--force]
+  patchdrill init [--force] [--policy]
   patchdrill explain
   patchdrill schema [policy|report] [--output <path>]
 
@@ -249,6 +253,7 @@ Options:
   --max-risk-delta <score>
                       Fail when baseline risk increase is above this threshold
   --quiet             Only use exit code, no console report
+  --policy            Create .patchdrill.yml when used with init
   --list              List schemas when used with schema
   --output <path>     Write a schema to a file when used with schema
   --version           Print version

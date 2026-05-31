@@ -18,3 +18,4 @@
 - Added CODEOWNERS owner hints for changed files.
 - Added baseline comparison against previous JSON reports.
 - Added `--max-risk-delta` gating for baseline regressions.
+- Added `patchdrill init --policy` starter policy generation.

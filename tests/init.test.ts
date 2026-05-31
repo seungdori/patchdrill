@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { workflowTemplate, writeGitHubWorkflow } from "../src/init.js";
+import { policyTemplate, workflowTemplate, writeGitHubWorkflow, writePolicyFile } from "../src/init.js";
 
 const tempDirs: string[] = [];
 
@@ -33,5 +33,16 @@ describe("init", () => {
 
     expect(workflowPath).toBe(join(root, ".github", "workflows", "patchdrill.yml"));
     expect(readFileSync(workflowPath, "utf8")).toBe(workflowTemplate());
+  });
+
+  it("writes a default policy file", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-init-"));
+    tempDirs.push(root);
+
+    const policyPath = writePolicyFile(root);
+
+    expect(policyPath).toBe(join(root, ".patchdrill.yml"));
+    expect(readFileSync(policyPath, "utf8")).toBe(policyTemplate());
+    expect(policyTemplate()).toContain("agent-policy-review");
   });
 });

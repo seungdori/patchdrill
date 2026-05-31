@@ -12,6 +12,15 @@ export function writeGitHubWorkflow(root: string, force = false): string {
   return workflowPath;
 }
 
+export function writePolicyFile(root: string, force = false): string {
+  const policyPath = join(root, ".patchdrill.yml");
+  if (existsSync(policyPath) && !force) {
+    throw new Error(`${policyPath} already exists. Re-run with --force to overwrite.`);
+  }
+  writeFileSync(policyPath, policyTemplate(), "utf8");
+  return policyPath;
+}
+
 export function workflowTemplate(): string {
   return `name: PatchDrill
 
@@ -76,5 +85,34 @@ jobs:
             patchdrill-report.md
             patchdrill-report.json
             patchdrill.sarif
+`;
+}
+
+export function policyTemplate(): string {
+  return `failOn: high
+maxRisk: 69
+
+ignoredPaths:
+  - dist/**
+  - coverage/**
+  - generated/**
+
+requiredCommands: []
+optionalCommands: []
+
+rules:
+  - id: agent-policy-review
+    title: Agent policy review required
+    severity: high
+    path:
+      - AGENTS.md
+      - CLAUDE.md
+      - GEMINI.md
+      - .github/copilot-instructions.md
+    detail: Agent-visible instruction files can change automated coding behavior.
+    remediation: Require maintainer review for prompt, tool, memory, and workflow changes.
+    tags:
+      - ai-safety
+      - agentic-ai
 `;
 }

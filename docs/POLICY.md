@@ -6,6 +6,12 @@ PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` fr
 patchdrill scan --config security/patchdrill.yml
 ```
 
+Create a starter policy:
+
+```bash
+patchdrill init --policy
+```
+
 ## Example
 
 ```yaml

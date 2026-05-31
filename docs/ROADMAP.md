@@ -35,6 +35,7 @@
 - CODEOWNERS owner hints for changed files.
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.
+- `patchdrill init --policy` starter policy generation.
 
 ## Contribution Targets
 

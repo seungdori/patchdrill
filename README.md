@@ -126,11 +126,17 @@ Add a GitHub Actions workflow:
 patchdrill init
 ```
 
+Add a workflow and starter policy:
+
+```bash
+patchdrill init --policy
+```
+
 ## CLI
 
 ```text
 patchdrill scan [options]
-patchdrill init [--force]
+patchdrill init [--force] [--policy]
 patchdrill explain
 patchdrill schema [policy|report] [--output <path>]
 ```
@@ -151,6 +157,7 @@ Options:
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
 | `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. |
 | `--quiet` | Only use exit code. |
+| `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema to a file when used with `patchdrill schema`. |
 
