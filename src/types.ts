@@ -84,6 +84,7 @@ export interface CommandResult {
   durationMs: number;
   stdout: string;
   stderr: string;
+  timedOut?: boolean;
 }
 
 export interface RiskFinding {
@@ -181,4 +182,5 @@ export interface ScanOptions {
   jsonPath?: string;
   sarifPath?: string;
   maxOutputChars?: number;
+  commandTimeoutMs?: number;
 }

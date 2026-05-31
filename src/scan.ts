@@ -32,7 +32,8 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const commandResults = options.run
     ? await runCommandPlan(commandPlan, {
         cwd: root,
-        maxOutputChars: options.maxOutputChars ?? 20_000
+        maxOutputChars: options.maxOutputChars ?? 20_000,
+        ...(options.commandTimeoutMs !== undefined ? { commandTimeoutMs: options.commandTimeoutMs } : {})
       })
     : [];
   const assessment = assessRisk(changedFiles, commandResults, {

@@ -54,6 +54,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliMaxRisk = typeof parsed.flags["max-risk"] === "string" ? readMaxRisk(parsed.flags["max-risk"]) : undefined;
   const cliMaxRiskDelta = typeof parsed.flags["max-risk-delta"] === "string" ? readMaxRiskDelta(parsed.flags["max-risk-delta"]) : undefined;
   const cliMaxOutputChars = typeof parsed.flags["max-output-chars"] === "string" ? readPositiveInteger(parsed.flags["max-output-chars"], "max output chars") : undefined;
+  const cliCommandTimeoutMs = typeof parsed.flags["command-timeout-ms"] === "string" ? readPositiveInteger(parsed.flags["command-timeout-ms"], "command timeout ms") : undefined;
   const report = await scan({
     cwd: process.cwd(),
     ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
@@ -65,7 +66,8 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
     ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {}),
     ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {}),
-    ...(cliMaxOutputChars !== undefined ? { maxOutputChars: cliMaxOutputChars } : {})
+    ...(cliMaxOutputChars !== undefined ? { maxOutputChars: cliMaxOutputChars } : {}),
+    ...(cliCommandTimeoutMs !== undefined ? { commandTimeoutMs: cliCommandTimeoutMs } : {})
   });
 
   const gateOptions = {
@@ -188,7 +190,21 @@ function parseArgs(args: string[]): ParsedArgs {
 }
 
 function takesValue(flag: string): boolean {
-  return ["base", "head", "config", "baseline", "markdown", "json", "sarif", "fail-on", "max-risk", "max-risk-delta", "max-output-chars", "output"].includes(flag);
+  return [
+    "base",
+    "head",
+    "config",
+    "baseline",
+    "markdown",
+    "json",
+    "sarif",
+    "fail-on",
+    "max-risk",
+    "max-risk-delta",
+    "max-output-chars",
+    "command-timeout-ms",
+    "output"
+  ].includes(flag);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -267,6 +283,8 @@ Options:
                       Fail when baseline risk increase is above this threshold
   --max-output-chars <n>
                       Keep the last n characters of each command output stream, default 20000
+  --command-timeout-ms <n>
+                      Stop each verification command after n milliseconds
   --quiet             Only use exit code, no console report
   --policy            Create .patchdrill.yml when used with init
   --list              List schemas when used with schema

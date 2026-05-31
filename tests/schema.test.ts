@@ -159,7 +159,8 @@ describe("schemas", () => {
           exitCode: 0,
           durationMs: 1200,
           stdout: "ok",
-          stderr: ""
+          stderr: "",
+          timedOut: false
         }
       ]
     };

@@ -52,6 +52,22 @@ describe("report", () => {
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
     expect(shouldFail(report, { failOn: "critical", maxRisk: 30 })).toBe(true);
     expect(
+      renderMarkdown({
+        ...report,
+        commandResults: [
+          {
+            id: "node-test",
+            command: "npm run test",
+            exitCode: 124,
+            durationMs: 1000,
+            stdout: "",
+            stderr: "timed out",
+            timedOut: true
+          }
+        ]
+      })
+    ).toContain("Timed out: yes");
+    expect(
       shouldFail(
         {
           ...report,

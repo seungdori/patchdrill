@@ -170,6 +170,7 @@ export function renderMarkdown(report: PatchReport): string {
       lines.push("");
       lines.push(`- Exit code: ${result.exitCode}`);
       lines.push(`- Duration: ${result.durationMs}ms`);
+      if (result.timedOut) lines.push("- Timed out: yes");
       if (result.stdout.trim()) {
         lines.push("");
         lines.push("```text");

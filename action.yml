@@ -22,6 +22,10 @@ inputs:
     description: Maximum characters to retain from each command output stream.
     required: false
     default: "20000"
+  command-timeout-ms:
+    description: Optional timeout in milliseconds for each verification command.
+    required: false
+    default: ""
   config:
     description: Optional PatchDrill policy path.
     required: false
@@ -83,6 +87,7 @@ runs:
         PATCHDRILL_MAX_RISK: ${{ inputs.max-risk }}
         PATCHDRILL_MAX_RISK_DELTA: ${{ inputs.max-risk-delta }}
         PATCHDRILL_MAX_OUTPUT_CHARS: ${{ inputs.max-output-chars }}
+        PATCHDRILL_COMMAND_TIMEOUT_MS: ${{ inputs.command-timeout-ms }}
         PATCHDRILL_CONFIG: ${{ inputs.config }}
         PATCHDRILL_BASELINE: ${{ inputs.baseline }}
         PATCHDRILL_RUN: ${{ inputs.run }}
@@ -111,6 +116,9 @@ runs:
         fi
         if [ -n "$PATCHDRILL_MAX_RISK_DELTA" ]; then
           args+=(--max-risk-delta "$PATCHDRILL_MAX_RISK_DELTA")
+        fi
+        if [ -n "$PATCHDRILL_COMMAND_TIMEOUT_MS" ]; then
+          args+=(--command-timeout-ms "$PATCHDRILL_COMMAND_TIMEOUT_MS")
         fi
         set +e
         npx patchdrill "${args[@]}"

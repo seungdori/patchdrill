@@ -157,6 +157,7 @@ Options:
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
 | `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. |
 | `--max-output-chars <n>` | Keep the last `n` characters from each command output stream, default `20000`. |
+| `--command-timeout-ms <n>` | Stop each verification command after `n` milliseconds. |
 | `--quiet` | Only use exit code. |
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |

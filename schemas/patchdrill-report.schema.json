@@ -472,6 +472,9 @@
         },
         "stderr": {
           "type": "string"
+        },
+        "timedOut": {
+          "type": "boolean"
         }
       }
     }
