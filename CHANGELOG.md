@@ -29,3 +29,6 @@
 - Added `yarn.lock` dependency diff summaries.
 - Added `go.sum` dependency diff summaries.
 - Added `Cargo.lock` dependency diff summaries.
+- Added `requirements.txt` dependency diff summaries.
+- Added `poetry.lock` dependency diff summaries.
+- Added `Pipfile.lock` dependency diff summaries.

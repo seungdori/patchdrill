@@ -145,4 +145,19 @@ describe("assessRisk", () => {
       })
     );
   });
+
+  it("flags Python requirements files as dependency manifests", () => {
+    const assessment = assessRisk(
+      [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "requirements-dev.txt"
+      })
+    );
+  });
 });

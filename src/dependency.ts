@@ -11,6 +11,12 @@ interface LockPackage {
   path: string;
   version: string;
 }
+interface RequirementPackage {
+  name: string;
+  displayName: string;
+  key: string;
+  spec: string;
+}
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
   const changes: DependencyChange[] = [];
@@ -20,6 +26,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const after = parsePackageJson(pair.after);
     if (!before && !after) continue;
     changes.push(...diffPackageJson(file.path, before ?? {}, after ?? {}));
+  }
+  for (const file of changedFiles.filter((candidate) => isRequirementsFile(candidate.path))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseRequirements(pair.before);
+    const after = parseRequirements(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffRequirementPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
     const pair = readFilePair(options, file.path);
@@ -51,10 +64,24 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
   }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Cargo.lock"))) {
     const pair = readFilePair(options, file.path);
-    const before = parseCargoLock(pair.before);
-    const after = parseCargoLock(pair.after);
+    const before = parseTomlPackageLock(pair.before);
+    const after = parseTomlPackageLock(pair.after);
     if (!before && !after) continue;
     changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("poetry.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseTomlPackageLock(pair.before);
+    const after = parseTomlPackageLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Pipfile.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parsePipfileLock(pair.before);
+    const after = parsePipfileLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
@@ -83,6 +110,48 @@ function diffPackageJson(file: string, before: PackageJson, after: PackageJson):
   return changes;
 }
 
+function diffRequirementPackages(file: string, before: Map<string, RequirementPackage>, after: Map<string, RequirementPackage>): DependencyChange[] {
+  const changes: DependencyChange[] = [];
+  const keys = new Set([...before.keys(), ...after.keys()]);
+  for (const key of keys) {
+    const beforePackage = before.get(key);
+    const afterPackage = after.get(key);
+    if (beforePackage?.spec === afterPackage?.spec) continue;
+    const packageName = afterPackage?.name ?? beforePackage?.name ?? key;
+    const packagePath = requirementPackagePath(afterPackage ?? beforePackage);
+    if (!beforePackage && afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: afterPackage.spec
+      });
+    } else if (beforePackage && !afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: beforePackage.spec
+      });
+    } else if (beforePackage && afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: beforePackage.spec,
+        after: afterPackage.spec
+      });
+    }
+  }
+  return changes;
+}
+
 function parsePackageJson(value: string | undefined): PackageJson | undefined {
   if (!value) return undefined;
   try {
@@ -91,6 +160,19 @@ function parsePackageJson(value: string | undefined): PackageJson | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseRequirements(value: string | undefined): Map<string, RequirementPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, RequirementPackage>();
+  for (const rawLine of value.split(/\r?\n/)) {
+    const line = cleanRequirementLine(rawLine);
+    if (!line) continue;
+    const parsed = parseRequirementLine(line);
+    if (!parsed) continue;
+    packages.set(parsed.key, parsed);
+  }
+  return packages.size > 0 ? packages : undefined;
 }
 
 function diffLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
@@ -262,7 +344,7 @@ function parseGoSum(value: string | undefined): Map<string, LockPackage> | undef
   return packages.size > 0 ? packages : undefined;
 }
 
-function parseCargoLock(value: string | undefined): Map<string, LockPackage> | undefined {
+function parseTomlPackageLock(value: string | undefined): Map<string, LockPackage> | undefined {
   if (!value) return undefined;
   const packages = new Map<string, LockPackage>();
   let current: Partial<Pick<LockPackage, "name" | "version">> | undefined;
@@ -275,9 +357,9 @@ function parseCargoLock(value: string | undefined): Map<string, LockPackage> | u
 
   for (const rawLine of value.split(/\r?\n/)) {
     const trimmed = rawLine.trim();
-    if (trimmed === "[[package]]") {
+    if (/^\[\[.*\]\]$/.test(trimmed)) {
       flush();
-      current = {};
+      current = trimmed === "[[package]]" ? {} : undefined;
       continue;
     }
     if (!current) continue;
@@ -292,6 +374,105 @@ function parseCargoLock(value: string | undefined): Map<string, LockPackage> | u
 
   flush();
   return packages.size > 0 ? packages : undefined;
+}
+
+function parsePipfileLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as { default?: unknown; develop?: unknown };
+    const packages = new Map<string, LockPackage>();
+    readPipfileSection(packages, "default", parsed.default);
+    readPipfileSection(packages, "develop", parsed.develop);
+    return packages.size > 0 ? packages : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRequirementsFile(path: string): boolean {
+  const fileName = path.split("/").at(-1) ?? path;
+  return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
+}
+
+function cleanRequirementLine(rawLine: string): string | undefined {
+  const line = rawLine.trim();
+  if (!line || line.startsWith("#") || line.startsWith("--hash")) return undefined;
+  const cleaned = line
+    .replace(/\s+#.*$/, "")
+    .replace(/\s+\\$/, "")
+    .replace(/\s+--hash=\S+.*$/, "")
+    .trim();
+  if (!cleaned || cleaned.startsWith("-r ") || cleaned.startsWith("--")) return undefined;
+  return cleaned;
+}
+
+function parseRequirementLine(line: string): RequirementPackage | undefined {
+  const editable = /^-e\s+(.+)$/.exec(line);
+  if (editable?.[1]) {
+    const egg = /[#&]egg=([^&\s]+)/.exec(editable[1]);
+    if (!egg?.[1]) return undefined;
+    return buildRequirementPackage(decodeURIComponent(egg[1]), `@ ${editable[1]}`);
+  }
+
+  const direct = /^([A-Za-z0-9_.-]+(?:\[[^\]]+\])?)\s*@\s*(.+)$/.exec(line);
+  if (direct?.[1] && direct[2]) {
+    return buildRequirementPackage(direct[1], `@ ${direct[2].trim()}`);
+  }
+
+  const constrained = /^([A-Za-z0-9_.-]+(?:\[[^\]]+\])?)\s*(===|==|~=|!=|<=|>=|<|>)\s*(.+)$/.exec(line);
+  if (constrained?.[1] && constrained[2] && constrained[3]) {
+    return buildRequirementPackage(constrained[1], `${constrained[2]}${constrained[3].trim()}`);
+  }
+
+  const bare = /^([A-Za-z0-9_.-]+(?:\[[^\]]+\])?)$/.exec(line);
+  if (bare?.[1]) return buildRequirementPackage(bare[1], "*");
+
+  return undefined;
+}
+
+function buildRequirementPackage(displayName: string, spec: string): RequirementPackage | undefined {
+  const name = normalizePythonPackageName(displayName);
+  if (!name) return undefined;
+  return {
+    name,
+    displayName,
+    key: requirementKey(name, spec),
+    spec
+  };
+}
+
+function normalizePythonPackageName(value: string): string {
+  return value.replace(/\[.*$/, "").toLowerCase().replace(/[-_.]+/g, "-");
+}
+
+function requirementKey(name: string, spec: string): string {
+  const marker = spec.split(";", 2)[1]?.trim();
+  return marker ? `${name};${marker}` : name;
+}
+
+function requirementPackagePath(item: RequirementPackage | undefined): string | undefined {
+  if (!item) return undefined;
+  const marker = item.key.split(";", 2)[1];
+  if (marker) return `${item.displayName}; ${marker}`;
+  return normalizePythonPackageName(item.displayName) === item.displayName ? undefined : item.displayName;
+}
+
+function readPipfileSection(result: Map<string, LockPackage>, section: "default" | "develop", value: unknown): void {
+  if (!isRecord(value)) return;
+  for (const [rawName, entry] of Object.entries(value)) {
+    const version = readPipfileVersion(entry);
+    if (!version) continue;
+    const name = normalizePythonPackageName(rawName);
+    if (!name) continue;
+    const path = `${section}.${name}`;
+    result.set(path, { name, path, version });
+  }
+}
+
+function readPipfileVersion(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (isRecord(value) && typeof value.version === "string") return value.version;
+  return undefined;
 }
 
 interface LockDependencyNode {

@@ -234,6 +234,18 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         tags: ["dependencies", "supply-chain"]
       });
     }
+    if (isRequirementsFile(file.path)) {
+      risk += 12;
+      findings.push({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        title: "Dependency manifest changed",
+        detail: "Dependency manifest changes can introduce supply-chain, licensing, or runtime regressions.",
+        file: file.path,
+        remediation: "Review direct dependency intent and ensure the lockfile or environment was updated consistently.",
+        tags: ["dependencies", "supply-chain"]
+      });
+    }
     if (file.status === "deleted") {
       risk += 8;
       findings.push({
@@ -425,6 +437,11 @@ function isMcpConfigFile(path: string): boolean {
 
 function isTestFile(path: string): boolean {
   return /(^|\/)(__tests__|tests?|spec)\//i.test(path) || /\.(test|spec)\.[a-z0-9]+$/i.test(path);
+}
+
+function isRequirementsFile(path: string): boolean {
+  const fileName = path.split("/").at(-1) ?? path;
+  return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
 }
 
 function clamp(value: number, min: number, max: number): number {

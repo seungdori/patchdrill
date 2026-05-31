@@ -23,7 +23,7 @@ npx patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node workspaces and targets changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Explains package.json, npm package-lock, pnpm-lock, yarn.lock, go.sum, and Cargo.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
+- Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, go.sum, Cargo.lock, poetry.lock, and Pipfile.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
 ## What It Does
@@ -190,8 +190,8 @@ The current deterministic rules look for:
 - Prompt-injection instructions added to agent-visible files such as `AGENTS.md`, issue templates, and Markdown docs.
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
-- Dependency lockfile changes.
-- package.json, npm package-lock, pnpm-lock, yarn.lock, go.sum, and Cargo.lock dependency additions, removals, and updates.
+- Dependency manifest and lockfile changes.
+- package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, go.sum, Cargo.lock, poetry.lock, and Pipfile.lock dependency additions, removals, and updates.
 - Source changes without test changes.
 - Large line deltas and binary files.
 - Failed verification commands.
@@ -286,7 +286,7 @@ PatchDrill includes a release workflow for npm trusted publishing and provenance
 
 ## Dependency Review
 
-PatchDrill summarizes dependency changes from changed `package.json`, npm `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `go.sum`, and `Cargo.lock` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
+PatchDrill summarizes dependency changes from changed `package.json`, `requirements.txt`, npm `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `go.sum`, `Cargo.lock`, `poetry.lock`, and `Pipfile.lock` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
 
 ## Design Principles
 
@@ -301,7 +301,7 @@ PatchDrill summarizes dependency changes from changed `package.json`, npm `packa
 
 - Workspace dependency graph expansion.
 - Language-aware test selection.
-- Dependency diff enrichment for Bun and Python.
+- Dependency diff enrichment for Bun lockfiles.
 - Optional LLM summary mode that never replaces deterministic findings.
 
 ## Contributing

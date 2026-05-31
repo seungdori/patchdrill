@@ -53,11 +53,14 @@ Schema version: 1
 | File | Type | Package | Path | Change | Before | After |
 | --- | --- | --- | --- | --- | --- | --- |
 | package.json | dependencies | react |  | updated | ^18.2.0 | ^19.0.0 |
+| requirements.txt | dependencies | requests |  | updated | ==2.31.0 | ==2.32.0 |
 | package-lock.json | lockfile | react | node_modules/react | updated | 18.2.0 | 19.0.0 |
 | pnpm-lock.yaml | lockfile | @acme/ui | @acme/ui@1.4.0 -> @acme/ui@1.5.0 | updated | 1.4.0 | 1.5.0 |
 | yarn.lock | lockfile | zod | zod@^3.0.0 -> zod@^4.0.0 | updated | 3.0.0 | 4.0.0 |
 | go.sum | lockfile | github.com/gin-gonic/gin | github.com/gin-gonic/gin@v1.9.0 -> github.com/gin-gonic/gin@v1.10.0 | updated | v1.9.0 | v1.10.0 |
 | Cargo.lock | lockfile | anyhow | anyhow@1.0.80 -> anyhow@1.0.81 | updated | 1.0.80 | 1.0.81 |
+| poetry.lock | lockfile | black | black@24.1.0 -> black@24.2.0 | updated | 24.1.0 | 24.2.0 |
+| Pipfile.lock | lockfile | requests | default.requests | updated | ==2.31.0 | ==2.32.0 |
 | package-lock.json | lockfile | yaml | node_modules/yaml | added |  | 2.0.0 |
 
 ## Changed Files
