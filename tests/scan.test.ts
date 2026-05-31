@@ -35,7 +35,9 @@ describe("scan", () => {
       )
     );
     mkdirSync(join(root, "src"), { recursive: true });
+    mkdirSync(join(root, ".github"), { recursive: true });
     writeFileSync(join(root, "src", "index.ts"), "export const ok = true;\n");
+    writeFileSync(join(root, ".github", "CODEOWNERS"), "src/auth/ @security-team\n");
     git(root, ["add", "."]);
     git(root, ["commit", "-m", "initial"]);
 
@@ -45,6 +47,8 @@ describe("scan", () => {
     const report = await scan({ cwd: root });
 
     expect(report.changedFiles.map((file) => file.path)).toContain("src/auth/session.ts");
+    expect(report.changedFiles.find((file) => file.path === "src/auth/session.ts")?.owners).toEqual(["@security-team"]);
+    expect(report.codeOwners).toEqual({ path: ".github/CODEOWNERS", ruleCount: 1 });
     expect(report.projectSignals).toContainEqual(expect.objectContaining({ ecosystem: "node" }));
     expect(report.commandPlan.map((command) => command.id)).toContain("node-test");
     expect(report.findings.map((finding) => finding.title)).toContain("High-impact product area changed");

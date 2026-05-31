@@ -18,6 +18,7 @@ export interface ChangedFile {
   additions: number;
   deletions: number;
   binary: boolean;
+  owners?: string[];
 }
 
 export interface AddedLine {
@@ -146,6 +147,10 @@ export interface PatchReport {
     ruleCount: number;
     requiredCommandCount: number;
     optionalCommandCount: number;
+  };
+  codeOwners?: {
+    path: string;
+    ruleCount: number;
   };
   findings: RiskFinding[];
   commandPlan: CommandPlan[];

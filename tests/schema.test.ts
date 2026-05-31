@@ -68,7 +68,8 @@ describe("schemas", () => {
           status: "modified",
           additions: 10,
           deletions: 2,
-          binary: false
+          binary: false,
+          owners: ["@acme/platform"]
         }
       ],
       addedLines: 10,
@@ -109,6 +110,10 @@ describe("schemas", () => {
         ruleCount: 1,
         requiredCommandCount: 1,
         optionalCommandCount: 0
+      },
+      codeOwners: {
+        path: ".github/CODEOWNERS",
+        ruleCount: 2
       },
       findings: [
         {

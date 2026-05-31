@@ -24,6 +24,7 @@ npx patchdrill scan --base origin/main --run \
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node workspaces and targets changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Explains package.json dependency additions, removals, and version updates instead of only saying "lockfile changed."
+- Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
 ## What It Does
 
@@ -261,6 +262,7 @@ For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
 For machine-readable schemas, see [docs/SCHEMAS.md](docs/SCHEMAS.md).
+For owner hints, see [docs/CODEOWNERS.md](docs/CODEOWNERS.md).
 
 ## Release Provenance
 

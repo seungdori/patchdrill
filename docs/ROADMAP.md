@@ -32,6 +32,7 @@
 - JSON Schemas for policy and report contracts.
 - Workspace dependency graph expansion for downstream package testing.
 - npm `package-lock.json` dependency diff summaries.
+- CODEOWNERS owner hints for changed files.
 
 ## Contribution Targets
 

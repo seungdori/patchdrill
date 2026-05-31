@@ -53,6 +53,14 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
+  if (report.codeOwners) {
+    lines.push("## Code Owners");
+    lines.push("");
+    lines.push(`- Config: ${report.codeOwners.path}`);
+    lines.push(`- Rules: ${report.codeOwners.ruleCount}`);
+    lines.push("");
+  }
+
   if (report.projectSignals.length > 0) {
     lines.push("## Project Signals");
     lines.push("");
@@ -97,11 +105,11 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.changedFiles.length === 0) {
     lines.push("No changed files detected.");
   } else {
-    lines.push("| File | Status | +/- |");
-    lines.push("| --- | --- | --- |");
+    lines.push("| File | Status | +/- | Owners |");
+    lines.push("| --- | --- | --- | --- |");
     for (const file of report.changedFiles) {
       const rename = file.previousPath ? `${escapePipe(file.previousPath)} -> ${escapePipe(file.path)}` : escapePipe(file.path);
-      lines.push(`| ${rename} | ${file.status} | +${file.additions} / -${file.deletions}${file.binary ? " (binary)" : ""} |`);
+      lines.push(`| ${rename} | ${file.status} | +${file.additions} / -${file.deletions}${file.binary ? " (binary)" : ""} | ${escapePipe(file.owners?.join(", ") ?? "")} |`);
     }
   }
   lines.push("");

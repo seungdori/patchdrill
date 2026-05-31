@@ -66,6 +66,9 @@
     "policy": {
       "$ref": "#/$defs/reportPolicy"
     },
+    "codeOwners": {
+      "$ref": "#/$defs/codeOwners"
+    },
     "findings": {
       "type": "array",
       "items": {
@@ -179,6 +182,12 @@
         },
         "binary": {
           "type": "boolean"
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -333,6 +342,20 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "codeOwners": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "ruleCount"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "ruleCount": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },

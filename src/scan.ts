@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { annotateCodeOwners, loadCodeOwners } from "./codeowners.js";
 import { analyzeDependencyChanges } from "./dependency.js";
 import { gitRoot, readAddedLines, readChangedFiles } from "./git.js";
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
@@ -20,7 +21,8 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   };
   const rawChangedFiles = readChangedFiles(gitOptions);
   const rawAddedLines = readAddedLines(gitOptions);
-  const changedFiles = filterIgnoredFiles(rawChangedFiles, loadedPolicy.policy);
+  const codeOwners = loadCodeOwners(root);
+  const changedFiles = annotateCodeOwners(filterIgnoredFiles(rawChangedFiles, loadedPolicy.policy), codeOwners);
   const addedLines = rawAddedLines.filter((line) => !matchesAnyPath(line.file, loadedPolicy.policy.ignoredPaths));
   const projectSignals = discoverProjectSignals(root);
   const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
@@ -70,6 +72,14 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
             ruleCount: loadedPolicy.policy.rules.length,
             requiredCommandCount: loadedPolicy.policy.requiredCommands.length,
             optionalCommandCount: loadedPolicy.policy.optionalCommands.length
+          }
+        }
+      : {}),
+    ...(codeOwners
+      ? {
+          codeOwners: {
+            path: codeOwners.path,
+            ruleCount: codeOwners.rules.length
           }
         }
       : {}),

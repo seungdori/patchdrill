@@ -15,3 +15,4 @@
 - Added JSON Schemas for policy and report contracts with `patchdrill schema`.
 - Added downstream workspace dependency graph expansion for Node monorepos.
 - Added npm `package-lock.json` dependency diff summaries.
+- Added CODEOWNERS owner hints for changed files.
