@@ -31,4 +31,4 @@ For editor completion in YAML, add a language-server schema comment:
 
 ## Report Schema
 
-Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, findings, verification plans, and command results.
+Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, findings, verification plans, and command results.

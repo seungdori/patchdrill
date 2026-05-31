@@ -41,6 +41,7 @@
 - CI dogfooding with PatchDrill SARIF and report artifacts.
 - Current-format example report covering Markdown sections.
 - GitHub issue forms and pull request template for contributor intake.
+- `schemaVersion` in JSON and Markdown reports.
 
 ## Contribution Targets
 

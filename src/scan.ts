@@ -53,6 +53,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     : undefined;
 
   const report: PatchReport = {
+    schemaVersion: "1",
     generatedAt: new Date().toISOString(),
     root,
     ...(options.base ? { base: options.base } : {}),

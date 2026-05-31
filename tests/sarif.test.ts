@@ -5,6 +5,7 @@ import type { PatchReport } from "../src/types.js";
 describe("renderSarif", () => {
   it("renders SARIF results for file findings", () => {
     const report: PatchReport = {
+      schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
       summary: {

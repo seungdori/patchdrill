@@ -129,6 +129,7 @@ export interface PatchSummary {
 }
 
 export interface PatchReport {
+  schemaVersion: "1";
   generatedAt: string;
   root: string;
   base?: string;

@@ -33,6 +33,7 @@ export function renderMarkdown(report: PatchReport): string {
   lines.push(`Risk score: **${report.summary.riskScore}/100**`);
   lines.push(`Confidence score: **${report.summary.confidenceScore}/100**`);
   lines.push(`Generated: ${report.generatedAt}`);
+  lines.push(`Schema version: ${report.schemaVersion}`);
   lines.push("");
   lines.push("## Summary");
   lines.push("");

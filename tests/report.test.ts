@@ -5,6 +5,7 @@ import type { PatchReport } from "../src/types.js";
 describe("report", () => {
   it("renders Markdown and respects fail thresholds", () => {
     const report: PatchReport = {
+      schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
       summary: {
@@ -45,6 +46,7 @@ describe("report", () => {
     };
 
     expect(renderMarkdown(report)).toContain("PatchDrill Report");
+    expect(renderMarkdown(report)).toContain("Schema version: 1");
     expect(renderMarkdown(report)).toContain("file.high-impact-area");
     expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);

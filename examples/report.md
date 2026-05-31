@@ -4,6 +4,7 @@ Status: **WARN**
 Risk score: **48/100**
 Confidence score: **72/100**
 Generated: 2026-06-01T00:00:00.000Z
+Schema version: 1
 
 ## Summary
 

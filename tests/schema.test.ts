@@ -25,6 +25,7 @@ describe("schemas", () => {
       properties: Record<string, unknown>;
     };
 
+    expect(reportSchema.required).toContain("schemaVersion");
     expect(reportSchema.required).toContain("summary");
     expect(reportSchema.required).toContain("dependencyChanges");
     expect(reportSchema.properties.commandResults).toBeDefined();
@@ -48,6 +49,7 @@ describe("schemas", () => {
       ]
     };
     const report = {
+      schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
       base: "origin/main",

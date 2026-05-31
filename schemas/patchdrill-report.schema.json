@@ -6,6 +6,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "schemaVersion",
     "generatedAt",
     "root",
     "summary",
@@ -19,6 +20,10 @@
     "commandResults"
   ],
   "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
     "generatedAt": {
       "type": "string",
       "format": "date-time"
