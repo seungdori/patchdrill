@@ -43,6 +43,15 @@ describe("assessRisk", () => {
     expect(assessment.findings.map((finding) => finding.title)).not.toContain("High-impact product area changed");
   });
 
+  it("does not treat test file paths as high-impact product areas", () => {
+    const assessment = assessRisk(
+      [{ path: "tests/policy.test.ts", status: "modified", additions: 5, deletions: 1, binary: false }],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.title)).not.toContain("High-impact product area changed");
+  });
+
   it("detects added secrets without echoing their values", () => {
     const syntheticAwsKey = "AKIA" + "IOSFODNN7EXAMPLE";
     const assessment = assessRisk(

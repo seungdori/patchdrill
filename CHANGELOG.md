@@ -39,3 +39,4 @@
 - Added fail-fast validation for malformed PatchDrill policy files.
 - Fixed the example report confidence score and added a documentation consistency test.
 - Added `Gemfile.lock` and `composer.lock` dependency diff summaries.
+- Reduced high-impact-area false positives for test file paths.

@@ -174,7 +174,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         tags: ["security", "secrets"]
       });
     }
-    if (!isDocumentationFile(file.path) && HIGH_IMPACT_PATTERNS.some((pattern) => pattern.test(file.path))) {
+    if (!isDocumentationFile(file.path) && !isTestFile(file.path) && HIGH_IMPACT_PATTERNS.some((pattern) => pattern.test(file.path))) {
       risk += 18;
       findings.push({
         ruleId: "file.high-impact-area",
