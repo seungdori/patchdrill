@@ -10,6 +10,9 @@ export interface LoadedPolicy {
 
 const configCandidates = [".patchdrill.yml", ".patchdrill.yaml", ".patchdrill.json"];
 const severities: Severity[] = ["info", "low", "medium", "high", "critical"];
+const policyKeys = new Set(["$schema", "ignoredPaths", "ignore", "failOn", "maxRisk", "requiredCommands", "optionalCommands", "rules"]);
+const commandKeys = new Set(["id", "label", "command", "reason"]);
+const ruleKeys = new Set(["id", "title", "severity", "path", "paths", "detail", "remediation", "weight", "tags"]);
 
 export function loadPolicy(root: string, configPath?: string): LoadedPolicy {
   const path = resolvePolicyPath(root, configPath);
@@ -71,10 +74,13 @@ function emptyPolicy(): PatchPolicy {
 
 function normalizePolicy(value: unknown): PatchPolicy {
   if (!isRecord(value)) return emptyPolicy();
+  assertKnownKeys("policy", value, policyKeys);
+  const failOn = value.failOn === undefined ? undefined : readRequiredSeverity(value.failOn, "failOn");
+  const maxRisk = value.maxRisk === undefined ? undefined : readRequiredRisk(value.maxRisk, "maxRisk");
   return {
-    ignoredPaths: readStringArray(value.ignoredPaths ?? value.ignore),
-    ...(readSeverity(value.failOn) ? { failOn: readSeverity(value.failOn) as Severity } : {}),
-    ...(readRisk(value.maxRisk) !== undefined ? { maxRisk: readRisk(value.maxRisk) as number } : {}),
+    ignoredPaths: readStringArray(value.ignoredPaths ?? value.ignore, "ignoredPaths"),
+    ...(failOn ? { failOn } : {}),
+    ...(maxRisk !== undefined ? { maxRisk } : {}),
     rules: readRules(value.rules),
     requiredCommands: readCommands(value.requiredCommands, true),
     optionalCommands: readCommands(value.optionalCommands, false)
@@ -82,35 +88,41 @@ function normalizePolicy(value: unknown): PatchPolicy {
 }
 
 function readRules(value: unknown): PolicyRule[] {
-  if (!Array.isArray(value)) return [];
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("Invalid PatchDrill policy at rules: expected an array.");
   const rules: PolicyRule[] = [];
-  for (const item of value) {
-    if (!isRecord(item)) continue;
-    const id = readString(item.id);
-    const title = readString(item.title);
-    const severity = readSeverity(item.severity);
-    if (!id || !title || !severity) continue;
+  for (const [index, item] of value.entries()) {
+    const field = `rules[${index}]`;
+    if (!isRecord(item)) throw new Error(`Invalid PatchDrill policy at ${field}: expected an object.`);
+    assertKnownKeys(field, item, ruleKeys);
+    const id = readRequiredString(item.id, `${field}.id`);
+    const title = readRequiredString(item.title, `${field}.title`);
+    const severity = readRequiredSeverity(item.severity, `${field}.severity`);
+    const path = item.path ?? item.paths;
+    const tags = readStringArray(item.tags, `${field}.tags`);
     rules.push({
       id,
       title,
       severity,
-      ...(readPathPattern(item.path ?? item.paths) ? { path: readPathPattern(item.path ?? item.paths) as string | string[] } : {}),
+      ...(readPathPattern(path, `${field}.path`) ? { path: readPathPattern(path, `${field}.path`) as string | string[] } : {}),
       ...(readString(item.detail) ? { detail: readString(item.detail) as string } : {}),
       ...(readString(item.remediation) ? { remediation: readString(item.remediation) as string } : {}),
-      ...(typeof item.weight === "number" ? { weight: item.weight } : {}),
-      ...(readStringArray(item.tags).length > 0 ? { tags: readStringArray(item.tags) } : {})
+      ...(readWeight(item.weight, `${field}.weight`) !== undefined ? { weight: readWeight(item.weight, `${field}.weight`) as number } : {}),
+      ...(tags.length > 0 ? { tags } : {})
     });
   }
   return rules;
 }
 
 function readCommands(value: unknown, required: boolean): CommandPlan[] {
-  if (!Array.isArray(value)) return [];
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error(`Invalid PatchDrill policy at ${required ? "requiredCommands" : "optionalCommands"}: expected an array.`);
   const commands: CommandPlan[] = [];
-  for (const item of value) {
-    if (!isRecord(item)) continue;
-    const command = readString(item.command);
-    if (!command) continue;
+  for (const [index, item] of value.entries()) {
+    const field = `${required ? "requiredCommands" : "optionalCommands"}[${index}]`;
+    if (!isRecord(item)) throw new Error(`Invalid PatchDrill policy at ${field}: expected an object.`);
+    assertKnownKeys(field, item, commandKeys);
+    const command = readRequiredString(item.command, `${field}.command`);
     const id = readString(item.id) ?? `policy-${slug(command)}`;
     commands.push({
       id,
@@ -124,29 +136,55 @@ function readCommands(value: unknown, required: boolean): CommandPlan[] {
   return commands;
 }
 
+function assertKnownKeys(field: string, value: Record<string, unknown>, allowed: Set<string>): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      throw new Error(`Invalid PatchDrill policy at ${field}.${key}: unknown field.`);
+    }
+  }
+}
+
 function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function readStringArray(value: unknown): string[] {
-  if (typeof value === "string" && value.trim()) return [value.trim()];
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+function readRequiredString(value: unknown, field: string): string {
+  const parsed = readString(value);
+  if (!parsed) throw new Error(`Invalid PatchDrill policy at ${field}: expected a non-empty string.`);
+  return parsed;
 }
 
-function readPathPattern(value: unknown): string | string[] | undefined {
-  const values = readStringArray(value);
+function readStringArray(value: unknown, field: string): string[] {
+  if (value === undefined) return [];
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  if (!Array.isArray(value)) throw new Error(`Invalid PatchDrill policy at ${field}: expected a string or string array.`);
+  return value.map((item, index) => readRequiredString(item, `${field}[${index}]`));
+}
+
+function readPathPattern(value: unknown, field: string): string | string[] | undefined {
+  const values = readStringArray(value, field);
   if (values.length === 0) return undefined;
   return values.length === 1 ? values[0] : values;
 }
 
-function readSeverity(value: unknown): Severity | undefined {
-  return typeof value === "string" && severities.includes(value as Severity) ? (value as Severity) : undefined;
+function readRequiredSeverity(value: unknown, field: string): Severity {
+  if (typeof value === "string" && severities.includes(value as Severity)) return value as Severity;
+  throw new Error(`Invalid PatchDrill policy at ${field}: expected one of ${severities.join(", ")}.`);
 }
 
-function readRisk(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  return Math.max(0, Math.min(100, Math.round(value)));
+function readRequiredRisk(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) {
+    throw new Error(`Invalid PatchDrill policy at ${field}: expected an integer from 0 to 100.`);
+  }
+  return value;
+}
+
+function readWeight(value: unknown, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`Invalid PatchDrill policy at ${field}: expected a number.`);
+  }
+  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

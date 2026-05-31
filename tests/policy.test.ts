@@ -59,4 +59,37 @@ rules:
     expect(matchesAnyPath("snapshot.snap", ["**/*.snap"])).toBe(true);
     expect(matchesAnyPath("src/auth/session.ts", ["docs/**"])).toBe(false);
   });
+
+  it("fails fast on invalid policy fields", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-invalid-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+failOn: severe
+requiredCommands:
+  - id: missing-command
+rules:
+  - id: missing-title
+    severity: high
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/failOn/);
+  });
+
+  it("fails fast on malformed policy rules", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-invalid-rule-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+rules:
+  - id: missing-title
+    severity: high
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/rules\[0\]\.title/);
+  });
 });

@@ -6,6 +6,8 @@ PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` fr
 patchdrill scan --config security/patchdrill.yml
 ```
 
+Policy files are validated when loaded. Invalid severities, unknown fields, malformed command entries, and malformed rules fail the scan instead of being silently ignored.
+
 Create a starter policy:
 
 ```bash
