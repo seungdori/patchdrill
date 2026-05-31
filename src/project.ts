@@ -73,12 +73,24 @@ function readPackageScripts(root: string): Record<string, string> {
   return readPackageJson(root).scripts ?? {};
 }
 
-function readPackageJson(root: string): { name?: string; scripts?: Record<string, string>; workspaces?: unknown } {
+function readPackageJson(root: string): {
+  name?: string;
+  scripts?: Record<string, string>;
+  workspaces?: unknown;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+} {
   try {
     const parsed = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
       name?: string;
       scripts?: Record<string, string>;
       workspaces?: unknown;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
     };
     return parsed;
   } catch {
@@ -89,21 +101,43 @@ function readPackageJson(root: string): { name?: string; scripts?: Record<string
 function discoverNodeWorkspacePackages(root: string): WorkspacePackage[] {
   const patterns = readWorkspacePatterns(root);
   if (patterns.length === 0) return [];
-  const packages = new Map<string, { name: string; path: string; scripts: Record<string, string> }>();
+  const packages = new Map<string, WorkspacePackage>();
 
   for (const pattern of patterns) {
     for (const packagePath of expandWorkspacePattern(root, pattern)) {
       const manifest = readPackageJson(join(root, packagePath));
       if (!manifest.name) continue;
-      packages.set(packagePath, {
+      const workspacePackage: WorkspacePackage = {
         name: manifest.name,
         path: packagePath,
         scripts: manifest.scripts ?? {}
-      });
+      };
+      const dependencies = readPackageDependencyNames(manifest);
+      if (dependencies.length > 0) workspacePackage.dependencies = dependencies;
+      packages.set(packagePath, workspacePackage);
     }
   }
 
-  return [...packages.values()].sort((a, b) => a.path.localeCompare(b.path));
+  const workspaceNames = new Set([...packages.values()].map((workspacePackage) => workspacePackage.name));
+  return [...packages.values()]
+    .map((workspacePackage) => {
+      const dependencies = workspacePackage.dependencies?.filter((dependency) => workspaceNames.has(dependency)) ?? [];
+      if (dependencies.length === 0) {
+        const { dependencies: _dependencies, ...withoutDependencies } = workspacePackage;
+        return withoutDependencies;
+      }
+      return { ...workspacePackage, dependencies };
+    })
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function readPackageDependencyNames(manifest: ReturnType<typeof readPackageJson>): string[] {
+  const dependencies = new Set<string>();
+  for (const section of [manifest.dependencies, manifest.devDependencies, manifest.peerDependencies, manifest.optionalDependencies]) {
+    if (!section) continue;
+    for (const name of Object.keys(section)) dependencies.add(name);
+  }
+  return [...dependencies].sort();
 }
 
 function readWorkspacePatterns(root: string): string[] {

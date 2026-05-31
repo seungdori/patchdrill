@@ -13,3 +13,4 @@
 - Added package.json dependency diff summaries to Markdown and JSON reports.
 - Added pull request comment upsert mode to the GitHub Action and generated workflow.
 - Added JSON Schemas for policy and report contracts with `patchdrill schema`.
+- Added downstream workspace dependency graph expansion for Node monorepos.

@@ -22,7 +22,7 @@ npx patchdrill scan --base origin/main --run \
 - Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
 - Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
-- Understands Node workspaces and targets changed packages instead of blindly running only root-level commands.
+- Understands Node workspaces and targets changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Explains package.json dependency additions, removals, and version updates instead of only saying "lockfile changed."
 
 ## What It Does
@@ -161,7 +161,7 @@ PatchDrill detects project shape from repo manifests:
 | Docker | `Dockerfile`, Compose files | `docker build .` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 
-For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for affected packages. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
+For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for directly changed packages and downstream dependents. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
 
 ## Risk Model
 

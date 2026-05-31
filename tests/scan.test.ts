@@ -124,7 +124,10 @@ rules:
       JSON.stringify({ name: "@acme/api", scripts: { test: "node --test", build: "tsc -p tsconfig.json" } }, null, 2)
     );
     writeFileSync(join(root, "packages", "api", "src", "index.ts"), "export const api = true;\n");
-    writeFileSync(join(root, "packages", "web", "package.json"), JSON.stringify({ name: "@acme/web", scripts: { test: "node --test" } }, null, 2));
+    writeFileSync(
+      join(root, "packages", "web", "package.json"),
+      JSON.stringify({ name: "@acme/web", scripts: { test: "node --test" }, dependencies: { "@acme/api": "workspace:*" } }, null, 2)
+    );
     writeFileSync(join(root, "packages", "web", "src", "index.ts"), "export const web = true;\n");
     git(root, ["add", "."]);
     git(root, ["commit", "-m", "initial"]);
@@ -134,8 +137,12 @@ rules:
     const report = await scan({ cwd: root });
 
     expect(report.projectSignals[0]?.workspacePackages?.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api", "@acme/web"]);
-    expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api"]);
-    expect(report.commandPlan.map((command) => command.command)).toEqual(["npm --workspace @acme/api run test", "npm --workspace @acme/api run build"]);
+    expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(["@acme/api", "@acme/web"]);
+    expect(report.commandPlan.map((command) => command.command)).toEqual([
+      "npm --workspace @acme/api run test",
+      "npm --workspace @acme/api run build",
+      "npm --workspace @acme/web run test"
+    ]);
   });
 
   it("includes dependency changes in reports", async () => {

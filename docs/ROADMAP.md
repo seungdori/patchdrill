@@ -5,7 +5,6 @@
 - Dependency diff enrichment for npm lockfiles, Cargo, Go, and Python.
 - First-party fixtures for the top 20 open-source stacks.
 - Organization policy packs for regulated teams.
-- Workspace dependency graph expansion for downstream package testing.
 - Native affected-task integration for Turborepo, Nx, Cargo workspaces, Go modules, and Pants.
 
 ## Later
@@ -31,6 +30,7 @@
 - package.json dependency diff summaries.
 - Pull request comment upsert mode for the GitHub Action.
 - JSON Schemas for policy and report contracts.
+- Workspace dependency graph expansion for downstream package testing.
 
 ## Contribution Targets
 

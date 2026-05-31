@@ -150,7 +150,7 @@ export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signa
       affected.set(workspacePackage.path, workspacePackage);
     }
   }
-  return [...affected.values()].sort((a, b) => a.path.localeCompare(b.path));
+  return [...affected.values()];
 }
 
 function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
@@ -170,6 +170,9 @@ function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
 
 function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
   const affectedPackages = affectedPackagesForSignal(paths, signal);
+  const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
+  const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
+  const rootWideChange = touchesRootWorkspaceMetadata(paths);
   let added = 0;
   for (const workspacePackage of affectedPackages) {
     for (const script of ["typecheck", "lint", "test", "build"]) {
@@ -178,7 +181,7 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
         id: `node-workspace-${slug(workspacePackage.name)}-${script}`,
         label: `${workspacePackage.name} ${script}`,
         command: workspaceRun(signal.packageManager ?? "npm", workspacePackage.name, script),
-        reason: `${workspacePackage.name} changed under ${workspacePackage.path}, and its package.json defines "${script}".`,
+        reason: workspaceReason(workspacePackage, script, directlyAffected, affectedNames, rootWideChange),
         ecosystem: "node",
         required: script === "test" || script === "typecheck" || script === "build",
         packageName: workspacePackage.name,
@@ -195,11 +198,56 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
 function affectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
   const workspacePackages = signal.workspacePackages ?? [];
   if (workspacePackages.length === 0) return [];
-  const rootWideChange = paths.some((path) =>
+  const rootWideChange = touchesRootWorkspaceMetadata(paths);
+  if (rootWideChange) return workspacePackages;
+  return includeDownstreamDependents(directlyAffectedPackagesForSignal(paths, signal), workspacePackages);
+}
+
+function directlyAffectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
+  const workspacePackages = signal.workspacePackages ?? [];
+  return workspacePackages.filter((workspacePackage) => paths.some((path) => path === workspacePackage.path || path.startsWith(`${workspacePackage.path}/`)));
+}
+
+function includeDownstreamDependents(directlyAffected: WorkspacePackage[], workspacePackages: WorkspacePackage[]): WorkspacePackage[] {
+  const affected = new Map<string, WorkspacePackage>();
+  const queue = [...directlyAffected];
+  for (const workspacePackage of directlyAffected) affected.set(workspacePackage.path, workspacePackage);
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const changedPackage = queue[index];
+    if (!changedPackage) continue;
+    for (const candidate of workspacePackages) {
+      if (affected.has(candidate.path)) continue;
+      if (!candidate.dependencies?.includes(changedPackage.name)) continue;
+      affected.set(candidate.path, candidate);
+      queue.push(candidate);
+    }
+  }
+
+  return [...affected.values()];
+}
+
+function workspaceReason(
+  workspacePackage: WorkspacePackage,
+  script: string,
+  directlyAffected: Set<string>,
+  affectedNames: Set<string>,
+  rootWideChange: boolean
+): string {
+  if (rootWideChange) {
+    return `Root workspace metadata changed, and ${workspacePackage.name} defines "${script}".`;
+  }
+  if (directlyAffected.has(workspacePackage.path)) {
+    return `${workspacePackage.name} changed under ${workspacePackage.path}, and its package.json defines "${script}".`;
+  }
+  const upstream = workspacePackage.dependencies?.find((dependency) => affectedNames.has(dependency));
+  return `${workspacePackage.name} depends on ${upstream ?? "an affected workspace package"}, and its package.json defines "${script}".`;
+}
+
+function touchesRootWorkspaceMetadata(paths: string[]): boolean {
+  return paths.some((path) =>
     ["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "pnpm-workspace.yaml", "turbo.json", "nx.json"].includes(path)
   );
-  if (rootWideChange) return workspacePackages;
-  return workspacePackages.filter((workspacePackage) => paths.some((path) => path === workspacePackage.path || path.startsWith(`${workspacePackage.path}/`)));
 }
 
 function nodeRun(packageManager: string, script: string): string {

@@ -78,10 +78,10 @@ describe("schemas", () => {
           manifestPath: "package.json",
           packageManager: "npm",
           scripts: { test: "vitest run" },
-          workspacePackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" } }]
+          workspacePackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" }, dependencies: ["@acme/shared"] }]
         }
       ],
-      affectedPackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" } }],
+      affectedPackages: [{ name: "@acme/api", path: "packages/api", scripts: { test: "vitest run" }, dependencies: ["@acme/shared"] }],
       dependencyChanges: [
         {
           file: "package.json",

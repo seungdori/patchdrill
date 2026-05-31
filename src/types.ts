@@ -50,6 +50,7 @@ export interface WorkspacePackage {
   name: string;
   path: string;
   scripts: Record<string, string>;
+  dependencies?: string[];
 }
 
 export type DependencyChangeType = "added" | "removed" | "updated";
