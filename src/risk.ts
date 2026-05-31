@@ -158,8 +158,8 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
   const totalAdditions = changedFiles.reduce((sum, file) => sum + file.additions, 0);
   const totalDeletions = changedFiles.reduce((sum, file) => sum + file.deletions, 0);
-  const changedSource = changedFiles.some((file) => isSourceFile(file.path));
-  const changedTests = changedFiles.some((file) => isTestFile(file.path));
+  const changedSourceFiles = changedFiles.filter((file) => isSourceFile(file.path) && !isTestFile(file.path));
+  const changedTestPaths = new Set(changedFiles.filter((file) => isTestFile(file.path)).map((file) => file.path));
 
   for (const file of changedFiles) {
     if (SECRET_PATTERNS.some((pattern) => pattern.test(file.path))) {
@@ -384,14 +384,16 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     });
   }
 
-  if (changedSource && !changedTests) {
+  const untestedSourceFiles = changedSourceFiles.filter((file) => !hasMatchingChangedTest(file.path, changedTestPaths));
+  if (untestedSourceFiles.length > 0) {
+    const examples = untestedSourceFiles.slice(0, 5).map((file) => file.path);
     risk += 16;
     findings.push({
       ruleId: "test.source-without-test-change",
       severity: "medium",
-      title: "Source changed without test changes",
-      detail: "No changed file looked like a test. Existing test suites may still cover this, but the PR should prove it.",
-      remediation: "Add or update tests, or explain why existing tests cover the patch."
+      title: "Source changed without matching test changes",
+      detail: `No changed test file matched ${examples.join(", ")}${untestedSourceFiles.length > examples.length ? ", ..." : ""}. Existing suites may still cover this, but the PR should prove it.`,
+      remediation: `Add or update nearby tests such as ${testCandidates(untestedSourceFiles[0]?.path ?? "").slice(0, 3).join(", ")}, or explain why existing tests cover the patch.`
     });
   }
 
@@ -449,6 +451,62 @@ function isMcpConfigFile(path: string): boolean {
 
 function isTestFile(path: string): boolean {
   return /(^|\/)(__tests__|tests?|spec)\//i.test(path) || /\.(test|spec)\.[a-z0-9]+$/i.test(path);
+}
+
+function hasMatchingChangedTest(sourcePath: string, changedTestPaths: Set<string>): boolean {
+  const candidates = testCandidates(sourcePath);
+  return candidates.some((candidate) => changedTestPaths.has(candidate));
+}
+
+function testCandidates(sourcePath: string): string[] {
+  const parsed = parsePath(sourcePath);
+  if (!parsed) return [];
+  const testNames = [
+    `${parsed.name}.test${parsed.extension}`,
+    `${parsed.name}.spec${parsed.extension}`,
+    `test_${parsed.name}${parsed.extension}`,
+    `${parsed.name}_test${parsed.extension}`,
+    `${parsed.name}_spec${parsed.extension}`
+  ];
+  const candidates = new Set<string>();
+  for (const testName of testNames) {
+    candidates.add(joinPath(parsed.directory, testName));
+    candidates.add(joinPath(parsed.directory, "__tests__", testName));
+    candidates.add(joinPath("tests", parsed.directory, testName));
+    candidates.add(joinPath("test", parsed.directory, testName));
+    candidates.add(joinPath("spec", parsed.directory, testName));
+    candidates.add(joinPath("tests", testName));
+    candidates.add(joinPath("test", testName));
+    candidates.add(joinPath("spec", testName));
+    if (parsed.directory.startsWith("src/")) {
+      const withoutSrc = parsed.directory.slice(4);
+      candidates.add(joinPath("tests", withoutSrc, testName));
+      candidates.add(joinPath("test", withoutSrc, testName));
+      candidates.add(joinPath("spec", withoutSrc, testName));
+    }
+    if (parsed.directory.startsWith("app/")) {
+      candidates.add(joinPath("tests", parsed.directory, testName));
+      candidates.add(joinPath("test", parsed.directory, testName));
+    }
+  }
+  return [...candidates];
+}
+
+function parsePath(path: string): { directory: string; name: string; extension: string } | undefined {
+  const slash = path.lastIndexOf("/");
+  const directory = slash >= 0 ? path.slice(0, slash) : "";
+  const fileName = slash >= 0 ? path.slice(slash + 1) : path;
+  const dot = fileName.lastIndexOf(".");
+  if (dot <= 0) return undefined;
+  return {
+    directory,
+    name: fileName.slice(0, dot),
+    extension: fileName.slice(dot)
+  };
+}
+
+function joinPath(...parts: string[]): string {
+  return parts.filter(Boolean).join("/");
 }
 
 function isRequirementsFile(path: string): boolean {

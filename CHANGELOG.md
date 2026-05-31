@@ -49,3 +49,4 @@
 - Added packaged stack fixtures and a fixture harness for planner regression coverage.
 - Added native Pants changed-target task planning.
 - Expanded stack fixtures with Next.js, Rails, PHP/Composer, and Terraform examples.
+- Added language-aware source-to-test matching for missing-test risk findings.

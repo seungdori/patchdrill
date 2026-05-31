@@ -12,7 +12,7 @@ describe("assessRisk", () => {
 
     expect(assessment.status).toBe("warn");
     expect(assessment.findings.map((finding) => finding.title)).toContain("High-impact product area changed");
-    expect(assessment.findings.map((finding) => finding.title)).toContain("Source changed without test changes");
+    expect(assessment.findings.map((finding) => finding.title)).toContain("Source changed without matching test changes");
   });
 
   it("fails when a verification command failed", () => {
@@ -185,5 +185,35 @@ describe("assessRisk", () => {
       })
     );
     expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("file.binary");
+  });
+
+  it("requires matching tests instead of any unrelated test change", () => {
+    const assessment = assessRisk(
+      [
+        { path: "src/billing/invoice.ts", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "tests/auth/session.test.ts", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "test.source-without-test-change",
+        detail: expect.stringContaining("src/billing/invoice.ts"),
+        remediation: expect.stringContaining("src/billing/invoice.test.ts")
+      })
+    );
+  });
+
+  it("accepts nearby and mirrored matching test changes", () => {
+    const assessment = assessRisk(
+      [
+        { path: "src/billing/invoice.ts", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "tests/billing/invoice.test.ts", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
   });
 });

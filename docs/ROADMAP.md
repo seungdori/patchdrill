@@ -7,7 +7,7 @@
 
 ## Later
 
-- Language-aware changed-test matching.
+- Expand language-aware changed-test matching with framework-specific conventions.
 - Optional MCP server for coding agents.
 - Optional LLM summarization that can only summarize deterministic findings.
 - Web dashboard that reads JSON artifacts from CI.
@@ -57,6 +57,7 @@
 - Go workspace task plans for affected modules and downstream dependents.
 - First-party stack fixture harness covering Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Pants, Cargo, and Go services.
 - Native Pants changed-target task plans.
+- Language-aware source-to-test matching for risk scoring.
 
 ## Contribution Targets
 
