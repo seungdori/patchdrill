@@ -1,0 +1,46 @@
+{
+  "name": "patchdrill",
+  "version": "0.1.0",
+  "description": "A local-first CI drill for proving AI-generated and human patches are safe before merge.",
+  "type": "module",
+  "bin": {
+    "patchdrill": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "action.yml",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run build && npm test",
+    "prepack": "npm run check"
+  },
+  "keywords": [
+    "ai-coding",
+    "ci",
+    "developer-tools",
+    "git",
+    "code-review",
+    "testing",
+    "agentic-coding",
+    "evidence"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

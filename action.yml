@@ -1,0 +1,42 @@
+name: PatchDrill
+description: Generate deterministic patch verification evidence for pull requests.
+author: PatchDrill contributors
+inputs:
+  base:
+    description: Base ref to compare against.
+    required: false
+    default: origin/main
+  fail-on:
+    description: Severity threshold that should fail the action.
+    required: false
+    default: high
+  run:
+    description: Execute required verification commands.
+    required: false
+    default: "false"
+outputs:
+  report-json:
+    description: Path to the generated JSON report.
+    value: patchdrill-report.json
+  report-markdown:
+    description: Path to the generated Markdown report.
+    value: patchdrill-report.md
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - name: Run PatchDrill
+      shell: bash
+      run: |
+        RUN_FLAG=""
+        if [ "${{ inputs.run }}" = "true" ]; then
+          RUN_FLAG="--run"
+        fi
+        npx patchdrill scan \
+          --base "${{ inputs.base }}" \
+          --markdown patchdrill-report.md \
+          --json patchdrill-report.json \
+          --fail-on "${{ inputs.fail-on }}" \
+          $RUN_FLAG
