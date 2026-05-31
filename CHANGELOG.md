@@ -37,3 +37,4 @@
 - Added configurable command-output retention with visible truncation markers.
 - Updated `patchdrill init` to generate workflows that use the hardened composite Action.
 - Added fail-fast validation for malformed PatchDrill policy files.
+- Fixed the example report confidence score and added a documentation consistency test.
