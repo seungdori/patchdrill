@@ -49,6 +49,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Cargo.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseCargoLock(pair.before);
+    const after = parseCargoLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
   );
@@ -252,6 +259,38 @@ function parseGoSum(value: string | undefined): Map<string, LockPackage> | undef
     const path = `${name}@${version}`;
     packages.set(path, { name, path, version });
   }
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseCargoLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, LockPackage>();
+  let current: Partial<Pick<LockPackage, "name" | "version">> | undefined;
+
+  const flush = () => {
+    if (!current?.name || !current.version) return;
+    const path = `${current.name}@${current.version}`;
+    packages.set(path, { name: current.name, path, version: current.version });
+  };
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const trimmed = rawLine.trim();
+    if (trimmed === "[[package]]") {
+      flush();
+      current = {};
+      continue;
+    }
+    if (!current) continue;
+    const match = /^(name|version)\s*=\s*"([^"]+)"/.exec(trimmed);
+    if (!match?.[1] || !match[2]) continue;
+    if (match[1] === "name") {
+      current.name = match[2];
+    } else {
+      current.version = match[2];
+    }
+  }
+
+  flush();
   return packages.size > 0 ? packages : undefined;
 }
 

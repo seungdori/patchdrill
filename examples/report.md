@@ -57,6 +57,7 @@ Schema version: 1
 | pnpm-lock.yaml | lockfile | @acme/ui | @acme/ui@1.4.0 -> @acme/ui@1.5.0 | updated | 1.4.0 | 1.5.0 |
 | yarn.lock | lockfile | zod | zod@^3.0.0 -> zod@^4.0.0 | updated | 3.0.0 | 4.0.0 |
 | go.sum | lockfile | github.com/gin-gonic/gin | github.com/gin-gonic/gin@v1.9.0 -> github.com/gin-gonic/gin@v1.10.0 | updated | v1.9.0 | v1.10.0 |
+| Cargo.lock | lockfile | anyhow | anyhow@1.0.80 -> anyhow@1.0.81 | updated | 1.0.80 | 1.0.81 |
 | package-lock.json | lockfile | yaml | node_modules/yaml | added |  | 2.0.0 |
 
 ## Changed Files

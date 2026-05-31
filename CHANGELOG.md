@@ -28,3 +28,4 @@
 - Added `pnpm-lock.yaml` dependency diff summaries.
 - Added `yarn.lock` dependency diff summaries.
 - Added `go.sum` dependency diff summaries.
+- Added `Cargo.lock` dependency diff summaries.
