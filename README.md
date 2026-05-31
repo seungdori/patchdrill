@@ -20,7 +20,7 @@ npx patchdrill scan --base origin/main --run \
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
 - Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
-- Supports policy-as-code through `.patchdrill.yml` for repo-specific review rules and required commands.
+- Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node workspaces, Turborepo, and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
@@ -132,11 +132,17 @@ Add a workflow and starter policy:
 patchdrill init --policy
 ```
 
+Use a stricter starter policy pack:
+
+```bash
+patchdrill init --policy-pack regulated
+```
+
 ## CLI
 
 ```text
 patchdrill scan [options]
-patchdrill init [--force] [--policy]
+patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report] [--output <path>]
 ```
@@ -160,6 +166,7 @@ Options:
 | `--command-timeout-ms <n>` | Stop each verification command after `n` milliseconds. |
 | `--quiet` | Only use exit code. |
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
+| `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema to a file when used with `patchdrill schema`. |
 

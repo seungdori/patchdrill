@@ -14,6 +14,21 @@ Create a starter policy:
 patchdrill init --policy
 ```
 
+Create a stricter starter pack:
+
+```bash
+patchdrill init --policy-pack regulated
+patchdrill init --policy-pack agentic
+```
+
+Built-in packs:
+
+| Pack | Focus |
+| --- | --- |
+| `default` | General repo hygiene and agent instruction review. |
+| `regulated` | Payments, identity/access, data migrations, release infrastructure, and lower default risk tolerance. |
+| `agentic` | Agent instructions, MCP/tool configs, prompt templates, and AI workflow trust boundaries. |
+
 ## Example
 
 ```yaml

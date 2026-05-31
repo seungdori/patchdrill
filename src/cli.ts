@@ -2,7 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gitRoot } from "./git.js";
-import { writeGitHubWorkflow, writePolicyFile } from "./init.js";
+import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
 import { renderMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -90,10 +90,11 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
 
 function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
+  const policyPack = readPolicyPack(parsed.flags["policy-pack"]);
   const path = writeGitHubWorkflow(root, Boolean(parsed.flags.force));
   console.log(`Created ${path}`);
-  if (parsed.flags.policy) {
-    const policyPath = writePolicyFile(root, Boolean(parsed.flags.force));
+  if (parsed.flags.policy || parsed.flags["policy-pack"]) {
+    const policyPath = writePolicyFile(root, Boolean(parsed.flags.force), policyPack);
     console.log(`Created ${policyPath}`);
   }
 }
@@ -203,6 +204,7 @@ function takesValue(flag: string): boolean {
     "max-risk-delta",
     "max-output-chars",
     "command-timeout-ms",
+    "policy-pack",
     "output"
   ].includes(flag);
 }
@@ -248,6 +250,17 @@ function readPositiveInteger(value: string, label: string): number {
   return parsed;
 }
 
+function readPolicyPack(value: string | boolean | undefined): PolicyPackName {
+  if (value === undefined || value === false) return "default";
+  if (typeof value !== "string") {
+    throw new Error(`Invalid policy pack. Expected one of ${policyPackNames.join(", ")}.`);
+  }
+  if (!isPolicyPackName(value)) {
+    throw new Error(`Invalid policy pack "${value}". Expected one of ${policyPackNames.join(", ")}.`);
+  }
+  return value;
+}
+
 function readVersion(): string {
   const packagePath = join(new URL("..", import.meta.url).pathname, "package.json");
   if (!existsSync(packagePath)) return "0.1.0";
@@ -264,7 +277,7 @@ function printHelp(): void {
 
 Usage:
   patchdrill scan [options]
-  patchdrill init [--force] [--policy]
+  patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill schema [policy|report] [--output <path>]
 
@@ -287,6 +300,8 @@ Options:
                       Stop each verification command after n milliseconds
   --quiet             Only use exit code, no console report
   --policy            Create .patchdrill.yml when used with init
+  --policy-pack <name>
+                      Starter policy pack for init --policy: ${policyPackNames.join(", ")}
   --list              List schemas when used with schema
   --output <path>     Write a schema to a file when used with schema
   --version           Print version

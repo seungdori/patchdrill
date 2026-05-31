@@ -43,3 +43,4 @@
 - Added optional per-command timeout handling for verification runs.
 - Added native Turborepo and Nx task-runner planning for affected Node workspaces.
 - Added migration guidance when legacy binary `bun.lockb` lockfiles change.
+- Added built-in `regulated` and `agentic` policy packs for `patchdrill init`.

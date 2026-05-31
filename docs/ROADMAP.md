@@ -3,7 +3,6 @@
 ## Near Term
 
 - First-party fixtures for the top 20 open-source stacks.
-- Organization policy packs for regulated teams.
 - Native affected-task integration for Cargo workspaces, Go modules, and Pants.
 
 ## Later
@@ -53,6 +52,7 @@
 - `schemaVersion` in JSON and Markdown reports.
 - Native Turborepo and Nx task-runner plans for affected Node workspaces.
 - Binary `bun.lockb` migration guidance for legacy Bun projects.
+- Organization policy packs for regulated and agentic-code teams.
 
 ## Contribution Targets
 

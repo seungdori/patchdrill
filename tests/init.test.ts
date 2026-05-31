@@ -2,7 +2,8 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { policyTemplate, workflowTemplate, writeGitHubWorkflow, writePolicyFile } from "../src/init.js";
+import { policyPackNames, policyTemplate, workflowTemplate, writeGitHubWorkflow, writePolicyFile } from "../src/init.js";
+import { loadPolicy } from "../src/policy.js";
 
 const tempDirs: string[] = [];
 
@@ -44,5 +45,20 @@ describe("init", () => {
     expect(policyPath).toBe(join(root, ".patchdrill.yml"));
     expect(readFileSync(policyPath, "utf8")).toBe(policyTemplate());
     expect(policyTemplate()).toContain("agent-policy-review");
+  });
+
+  it("generates loadable built-in policy packs", () => {
+    for (const pack of policyPackNames) {
+      const root = mkdtempSync(join(tmpdir(), `patchdrill-init-${pack}-`));
+      tempDirs.push(root);
+
+      writePolicyFile(root, false, pack);
+      const loaded = loadPolicy(root);
+
+      expect(readFileSync(join(root, ".patchdrill.yml"), "utf8")).toBe(policyTemplate(pack));
+      expect(loaded.policy.rules.length).toBeGreaterThan(0);
+    }
+    expect(policyTemplate("regulated")).toContain("payments-owner-review");
+    expect(policyTemplate("agentic")).toContain("mcp-tool-review");
   });
 });
