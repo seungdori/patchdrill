@@ -67,3 +67,4 @@
 - Added Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
 - Added context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
 - Added Python/FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
+- Added whole-file GitHub Actions context so privileged PR-head checkout findings work when only one side of the dangerous pattern is newly added.

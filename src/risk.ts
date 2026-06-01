@@ -10,6 +10,7 @@ export interface RiskAssessment {
 
 export interface RiskOptions {
   addedLines?: AddedLine[];
+  workflowFiles?: Array<{ file: string; content: string }>;
   policy?: PatchPolicy;
 }
 
@@ -391,7 +392,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
   }
 
-  for (const finding of workflowContextFindings(options.addedLines ?? [])) {
+  for (const finding of workflowContextFindings(options.addedLines ?? [], options.workflowFiles ?? [])) {
     risk += severityWeights[finding.severity];
     findings.push(finding);
   }
@@ -576,7 +577,7 @@ function workflowUsesUnpinnedAction(content: string): boolean {
   return !/^[a-f0-9]{40}$/i.test(ref);
 }
 
-function workflowContextFindings(addedLines: AddedLine[]): RiskFinding[] {
+function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{ file: string; content: string }>): RiskFinding[] {
   const findings: RiskFinding[] = [];
   const workflowLinesByFile = new Map<string, AddedLine[]>();
   for (const line of addedLines) {
@@ -587,23 +588,38 @@ function workflowContextFindings(addedLines: AddedLine[]): RiskFinding[] {
   }
 
   for (const [file, lines] of workflowLinesByFile) {
-    if (!lines.some((line) => /^\s*pull_request_target\s*:/i.test(line.content))) continue;
-    if (!lines.some((line) => workflowUsesCheckoutAction(line.content))) continue;
-    const headCheckoutLine = lines.find((line) => workflowUsesPullRequestHeadContext(line.content));
-    if (!headCheckoutLine) continue;
-    findings.push({
-      ruleId: "workflow.pull-request-target-head-checkout",
-      severity: "critical",
-      title: "pull_request_target checks out pull request head",
-      detail: "New workflow lines combine the privileged pull_request_target event with checkout of attacker-controlled pull request code.",
-      file,
-      line: headCheckoutLine.line,
-      remediation: "Use pull_request for untrusted code, or keep pull_request_target jobs on trusted base code with least-privilege permissions.",
-      tags: ["ci", "github-actions", "supply-chain", "trust-boundary"]
-    });
+    const finding = workflowHeadCheckoutFinding(file, lines, "New workflow lines combine the privileged pull_request_target event with checkout of attacker-controlled pull request code.");
+    if (finding) findings.push(finding);
   }
 
-  return findings;
+  for (const workflowFile of workflowFiles) {
+    const lines = workflowFile.content.split(/\r?\n/).map((content, index) => ({ file: workflowFile.file, line: index + 1, content }));
+    const finding = workflowHeadCheckoutFinding(
+      workflowFile.file,
+      lines,
+      "The changed workflow combines the privileged pull_request_target event with checkout of attacker-controlled pull request code."
+    );
+    if (finding) findings.push(finding);
+  }
+
+  return dedupeFindings(findings);
+}
+
+function workflowHeadCheckoutFinding(file: string, lines: AddedLine[], detail: string): RiskFinding | undefined {
+  if (!lines.some((line) => /^\s*pull_request_target\s*:/i.test(line.content))) return undefined;
+  if (!lines.some((line) => workflowUsesCheckoutAction(line.content))) return undefined;
+  const headCheckoutLine = lines.find((line) => workflowUsesPullRequestHeadContext(line.content));
+  if (!headCheckoutLine) return undefined;
+  return {
+    ruleId: "workflow.pull-request-target-head-checkout",
+    severity: "critical",
+    title: "pull_request_target checks out pull request head",
+    detail,
+    file,
+    line: headCheckoutLine.line,
+    remediation: "Use pull_request for untrusted code, or keep pull_request_target jobs on trusted base code with least-privilege permissions.",
+    tags: ["ci", "github-actions", "supply-chain", "trust-boundary"]
+  };
 }
 
 function workflowUsesCheckoutAction(content: string): boolean {

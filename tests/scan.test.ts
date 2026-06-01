@@ -103,6 +103,61 @@ rules:
     });
   });
 
+  it("uses full workflow context for privileged pull_request_target checkout findings", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }, null, 2));
+    mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+    writeFileSync(
+      join(root, ".github", "workflows", "label.yml"),
+      [
+        "name: Label",
+        "on:",
+        "  pull_request_target:",
+        "jobs:",
+        "  label:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac",
+        ""
+      ].join("\n")
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(
+      join(root, ".github", "workflows", "label.yml"),
+      [
+        "name: Label",
+        "on:",
+        "  pull_request_target:",
+        "jobs:",
+        "  label:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac",
+        "        with:",
+        "          ref: ${{ github.event.pull_request.head.sha }}",
+        ""
+      ].join("\n")
+    );
+
+    const report = await scan({ cwd: root });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.pull-request-target-head-checkout",
+        severity: "critical",
+        file: ".github/workflows/label.yml",
+        line: 10
+      })
+    );
+  });
+
   it("detects Node workspaces and reports affected packages", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

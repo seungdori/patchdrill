@@ -258,6 +258,42 @@ describe("assessRisk", () => {
     expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.pull-request-target-head-checkout");
   });
 
+  it("flags pull_request_target head checkout from full workflow context", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/label.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/label.yml", line: 16, content: "          ref: ${{ github.event.pull_request.head.sha }}" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/label.yml",
+            content: [
+              "name: Label",
+              "on:",
+              "  pull_request_target:",
+              "jobs:",
+              "  label:",
+              "    runs-on: ubuntu-latest",
+              "    steps:",
+              "      - uses: actions/checkout@v4",
+              "        with:",
+              "          ref: ${{ github.event.pull_request.head.sha }}"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.pull-request-target-head-checkout",
+        severity: "critical",
+        file: ".github/workflows/label.yml",
+        line: 10
+      })
+    );
+  });
+
   it("flags Python requirements files as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],

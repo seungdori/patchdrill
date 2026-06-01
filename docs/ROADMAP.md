@@ -75,12 +75,13 @@
 - Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
 - Context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
 - Python and FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
+- Whole-file GitHub Actions context analysis for changed workflows with pre-existing privileged triggers or checkout steps.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Workflow whole-file context analysis for pre-existing privileged triggers and checkout steps.
+- Workflow trust-boundary modeling across reusable workflows and inherited secrets.
 - FastAPI dependency-override and router import graph targeting.
 - .NET solution filter and central package management targeting.
 - Android flavor-dimension parsing beyond explicit variant source sets.

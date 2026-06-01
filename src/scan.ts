@@ -3,7 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import { compareBaseline } from "./baseline.js";
 import { annotateCodeOwners, loadCodeOwners } from "./codeowners.js";
 import { analyzeDependencyChanges } from "./dependency.js";
-import { gitRoot, readAddedLines, readChangedFiles } from "./git.js";
+import { gitRoot, readAddedLines, readChangedFiles, readFilePair } from "./git.js";
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
 import { discoverProjectSignals } from "./project.js";
@@ -28,6 +28,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const projectSignals = discoverProjectSignals(root);
   const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
   const dependencyChanges = analyzeDependencyChanges(gitOptions, changedFiles);
+  const workflowFiles = readWorkflowFiles(gitOptions, changedFiles);
   const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals, { changedSince: options.base ?? "HEAD" }), loadedPolicy.policy);
   const commandResults = options.run
     ? await runCommandPlan(commandPlan, {
@@ -38,6 +39,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     : [];
   const assessment = assessRisk(changedFiles, commandResults, {
     addedLines,
+    workflowFiles,
     policy: loadedPolicy.policy
   });
   const additions = changedFiles.reduce((sum, file) => sum + file.additions, 0);
@@ -115,6 +117,16 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   }
 
   return report;
+}
+
+function readWorkflowFiles(gitOptions: { cwd: string; base?: string; head?: string }, changedFiles: PatchReport["changedFiles"]): Array<{ file: string; content: string }> {
+  const workflowFiles: Array<{ file: string; content: string }> = [];
+  for (const file of changedFiles) {
+    if (!file.path.startsWith(".github/workflows/") || file.binary || file.status === "deleted") continue;
+    const after = readFilePair(gitOptions, file.path).after;
+    if (after !== undefined) workflowFiles.push({ file: file.path, content: after });
+  }
+  return workflowFiles;
 }
 
 function writeOutput(path: string, contents: string, root: string): void {
