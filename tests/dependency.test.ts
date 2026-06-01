@@ -980,6 +980,134 @@ checksum = "new-tokio"
     ]);
   });
 
+  it("reports Cargo.toml dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cargo-toml-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeCargoToml(
+      root,
+      `
+[package]
+name = "demo"
+version = "0.1.0"
+
+[dependencies]
+serde = "1.0"
+oldcrate = "0.1"
+tokio = { version = "1.36", features = ["rt"] }
+feature-flag = { version = "0.2", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+nix = "0.27"
+
+[dependencies.tracing]
+version = "0.1.40"
+features = ["attributes"]
+
+[dev-dependencies]
+insta = "1.34"
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeCargoToml(
+      root,
+      `
+[package]
+name = "demo"
+version = "0.1.0"
+
+[dependencies]
+serde = "1.0"
+tokio = { version = "1.37", features = ["rt"] }
+regex = "1.10"
+feature-flag = { version = "0.3", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+nix = "0.28"
+
+[dependencies.tracing]
+version = "0.1.41"
+features = ["attributes"]
+
+[dev-dependencies]
+insta = "1.35"
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "Cargo.toml", status: "modified", additions: 12, deletions: 12, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "Cargo.toml",
+        packageName: "nix",
+        packagePath: "target.'cfg(unix)'.dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "0.27",
+        after: "0.28"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "oldcrate",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "0.1"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "regex",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "1.10"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "tokio",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "1.36",
+        after: "1.37"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "tracing",
+        packagePath: "dependencies.tracing",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "0.1.40",
+        after: "0.1.41"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "insta",
+        packagePath: "dev-dependencies",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "1.34",
+        after: "1.35"
+      },
+      {
+        file: "Cargo.toml",
+        packageName: "feature-flag",
+        packagePath: "dependencies",
+        dependencyType: "optionalDependencies",
+        changeType: "updated",
+        before: "0.2",
+        after: "0.3"
+      }
+    ]);
+  });
+
   it("reports poetry.lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-poetry-lock-"));
     tempDirs.push(root);
@@ -1562,6 +1690,10 @@ function writeGoMod(root: string, contents: string): void {
 
 function writeCargoLock(root: string, contents: string): void {
   writeFileSync(join(root, "Cargo.lock"), contents.trimStart());
+}
+
+function writeCargoToml(root: string, contents: string): void {
+  writeFileSync(join(root, "Cargo.toml"), contents.trimStart());
 }
 
 function writePoetryLock(root: string, contents: string): void {

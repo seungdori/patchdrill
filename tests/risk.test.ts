@@ -729,6 +729,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags Cargo.toml as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "Cargo.toml", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "Cargo.toml"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

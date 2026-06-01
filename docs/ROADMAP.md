@@ -33,6 +33,7 @@
 - `yarn.lock` dependency diff summaries.
 - `go.mod` dependency diff summaries.
 - `go.sum` dependency diff summaries.
+- `Cargo.toml` dependency diff summaries.
 - `Cargo.lock` dependency diff summaries.
 - `requirements.txt` dependency diff summaries.
 - `poetry.lock` dependency diff summaries.

@@ -24,6 +24,12 @@ interface ManifestDependency {
   packagePath: string;
   dependencyType?: DependencyChange["dependencyType"];
 }
+interface CargoTableDependency {
+  name: string;
+  packagePath: string;
+  dependencyType: DependencyChange["dependencyType"];
+  values: string[];
+}
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
   const changes: DependencyChange[] = [];
@@ -73,6 +79,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const pair = readFilePair(options, file.path);
     const before = parseGoMod(pair.before);
     const after = parseGoMod(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Cargo.toml"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseCargoToml(pair.before);
+    const after = parseCargoToml(pair.after);
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
@@ -362,6 +375,57 @@ function parseGoMod(value: string | undefined): Map<string, ManifestDependency> 
     });
   }
 
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseCargoToml(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const lines = value.split(/\r?\n/);
+  let section = "";
+  let tableDependency: CargoTableDependency | undefined;
+
+  const flushTableDependency = (): void => {
+    if (!tableDependency) return;
+    const spec = readCargoTableDependencySpec(tableDependency.values);
+    if (spec) {
+      const dependencyType = cargoEffectiveDependencyType(tableDependency.dependencyType, tableDependency.values.join(", "));
+      const key = `${dependencyType}:${tableDependency.packagePath}:${tableDependency.name.toLowerCase()}`;
+      packages.set(key, {
+        name: tableDependency.name,
+        key,
+        spec,
+        packagePath: tableDependency.packagePath,
+        dependencyType
+      });
+    }
+    tableDependency = undefined;
+  };
+
+  for (const rawLine of lines) {
+    const trimmed = stripTomlComment(rawLine).trim();
+    if (!trimmed) continue;
+    const sectionMatch = /^\[([^\]]+)\]$/.exec(trimmed);
+    if (sectionMatch?.[1]) {
+      flushTableDependency();
+      section = sectionMatch[1];
+      tableDependency = cargoDependencyTable(section);
+      continue;
+    }
+
+    if (tableDependency) {
+      if (readTomlKeyValue(trimmed)) tableDependency.values.push(trimmed);
+      continue;
+    }
+
+    const dependencyType = cargoDependencySectionType(section);
+    if (!dependencyType) continue;
+    const item = readTomlKeyValue(trimmed);
+    if (!item) continue;
+    addCargoDependency(packages, section, dependencyType, item.key, item.value);
+  }
+
+  flushTableDependency();
   return packages.size > 0 ? packages : undefined;
 }
 
@@ -816,6 +880,76 @@ function parseGoModRequireLine(line: string): { name: string; version: string; i
   const [name, version] = cleaned.split(/\s+/);
   if (!name || !version || name === ")") return undefined;
   return { name, version, indirect };
+}
+
+function cargoDependencySectionType(section: string): DependencyChange["dependencyType"] | undefined {
+  if (section === "dependencies" || section === "workspace.dependencies" || section.endsWith(".dependencies")) return "dependencies";
+  if (section === "dev-dependencies" || section === "workspace.dev-dependencies" || section.endsWith(".dev-dependencies")) return "devDependencies";
+  if (section === "build-dependencies" || section === "workspace.build-dependencies" || section.endsWith(".build-dependencies")) return "dependencies";
+  return undefined;
+}
+
+function cargoDependencyTable(section: string): CargoTableDependency | undefined {
+  const match =
+    /^((?:dependencies|dev-dependencies|build-dependencies)|workspace\.(?:dependencies|dev-dependencies|build-dependencies)|.+\.(?:dependencies|dev-dependencies|build-dependencies))\.("[^"]+"|'[^']+'|[A-Za-z0-9_-]+)$/.exec(
+      section
+    );
+  if (!match?.[1] || !match[2]) return undefined;
+  const dependencyType = cargoDependencySectionType(match[1]);
+  if (!dependencyType) return undefined;
+  return {
+    name: unquoteTomlScalar(match[2]),
+    packagePath: section,
+    dependencyType,
+    values: []
+  };
+}
+
+function addCargoDependency(
+  packages: Map<string, ManifestDependency>,
+  packagePath: string,
+  dependencyType: DependencyChange["dependencyType"],
+  rawName: string,
+  rawValue: string
+): void {
+  const name = unquoteTomlScalar(rawName);
+  const spec = readCargoDependencySpec(rawValue);
+  if (!name || !spec) return;
+  const effectiveDependencyType = cargoEffectiveDependencyType(dependencyType, rawValue);
+  const key = `${effectiveDependencyType}:${packagePath}:${name.toLowerCase()}`;
+  packages.set(key, {
+    name,
+    key,
+    spec,
+    packagePath,
+    dependencyType: effectiveDependencyType
+  });
+}
+
+function readCargoDependencySpec(value: string): string | undefined {
+  const trimmed = stripTomlComment(value).trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("{")) {
+    const version = /\bversion\s*=\s*("[^"]*"|'[^']*'|[^,}]+)/.exec(trimmed)?.[1];
+    return version ? unquoteTomlScalar(version.trim()) : normalizeInlineToml(trimmed);
+  }
+  return unquoteTomlScalar(trimmed);
+}
+
+function readCargoTableDependencySpec(values: string[]): string | undefined {
+  for (const value of values) {
+    const item = readTomlKeyValue(value);
+    if (!item || unquoteTomlScalar(item.key) !== "version") continue;
+    return unquoteTomlScalar(item.value);
+  }
+  return values.length > 0 ? normalizeInlineToml(`{ ${values.join(", ")} }`) : undefined;
+}
+
+function cargoEffectiveDependencyType(
+  dependencyType: DependencyChange["dependencyType"],
+  rawValue: string
+): DependencyChange["dependencyType"] {
+  return dependencyType === "dependencies" && /\boptional\s*=\s*true\b/i.test(rawValue) ? "optionalDependencies" : dependencyType;
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {
