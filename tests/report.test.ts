@@ -176,11 +176,15 @@ describe("report", () => {
   it("renders Markdown and HTML without trailing whitespace", () => {
     const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 0 });
     const markdown = renderMarkdown(report);
+    const summary = renderSummaryMarkdown(report);
     const html = renderHtml(report);
 
     expect(markdown).toMatch(/\n$/);
     expect(markdown).not.toMatch(/\n\n$/);
+    expect(summary).toMatch(/\n$/);
+    expect(summary).not.toMatch(/\n\n$/);
     expect(linesWithTrailingWhitespace(markdown)).toEqual([]);
+    expect(linesWithTrailingWhitespace(summary)).toEqual([]);
     expect(linesWithTrailingWhitespace(html)).toEqual([]);
   });
 

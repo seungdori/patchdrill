@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, evidenceCommand, parseArgs } from "../src/cli.js";
+import { dashboardCommand, demoCommand, evidenceCommand, parseArgs } from "../src/cli.js";
 import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
@@ -104,6 +104,20 @@ describe("cli", () => {
     expect(html).toContain("2 latest");
     expect(html).toContain("2026-06-01T00:00:00.000Z");
     expect(html).toContain("Latest CLI finding");
+  });
+
+  it("writes a compact summary in demo output", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const output = join(root, "demo");
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    demoCommand(parseArgs(["demo", "--scenario", "risky-agent-pr", "--output", output]));
+    const summary = readFileSync(join(output, "patchdrill-demo-summary.md"), "utf8");
+
+    expect(summary).toContain("# PatchDrill Summary");
+    expect(summary).toContain("**FAIL** - risk 94/100");
+    expect(summary).toContain("Privileged workflow checks out pull request code");
   });
 
   it("writes an evidence manifest from saved report artifacts", () => {

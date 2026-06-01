@@ -6,7 +6,7 @@ import { createDemoReport, demoScenarioNames, isDemoScenario, type DemoScenario 
 import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest, type EvidenceArtifactKind, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
-import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
+import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
@@ -163,17 +163,20 @@ export function demoCommand(parsed: ParsedArgs): void {
   const outputDir = resolve(process.cwd(), output);
   mkdirSync(outputDir, { recursive: true });
   const files = {
+    summaryMarkdown: join(outputDir, "patchdrill-demo-summary.md"),
     markdown: join(outputDir, "patchdrill-demo.md"),
     json: join(outputDir, "patchdrill-demo.json"),
     sarif: join(outputDir, "patchdrill-demo.sarif"),
     html: join(outputDir, "patchdrill-demo.html")
   };
+  writeFileSync(files.summaryMarkdown, renderSummaryMarkdown(report), "utf8");
   writeFileSync(files.markdown, renderMarkdown(report), "utf8");
   writeFileSync(files.json, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   writeFileSync(files.sarif, renderSarif(report), "utf8");
   writeFileSync(files.html, renderHtml(report), "utf8");
 
   console.log(`Wrote demo artifacts to ${output}`);
+  console.log(`- ${files.summaryMarkdown}`);
   console.log(`- ${files.markdown}`);
   console.log(`- ${files.json}`);
   console.log(`- ${files.sarif}`);

@@ -25,6 +25,13 @@ steps:
 
 PatchDrill finds an existing bot comment containing the marker and updates it. If no marker is present, it creates a new comment. The comment uses the compact summary by default, while the full Markdown, JSON, SARIF, and HTML reports remain available as workflow artifacts.
 
+To preview the comment body without opening a pull request, run:
+
+```bash
+patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+cat patchdrill-risky-demo/patchdrill-demo-summary.md
+```
+
 ## Permissions
 
 The workflow needs `pull-requests: write` to create or update PR comments. Keep other permissions least-privileged.

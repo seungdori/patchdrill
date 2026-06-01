@@ -92,3 +92,4 @@
 - Added evidence manifest regeneration for finalized artifacts and CI verification before upload.
 - Added a `risky-agent-pr` demo scenario for showing fail-state agentic PR evidence without a live repository.
 - Made PR comment upserts fork-safe by warning instead of failing when GitHub token permissions prevent commenting.
+- Added compact PR comment preview files to demo artifacts.

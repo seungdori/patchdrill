@@ -32,7 +32,7 @@ describe("demo", () => {
     expect(createDemoReport("risky-agent-pr").findings.some((finding) => finding.severity === "critical")).toBe(true);
   });
 
-  it("writes Markdown, JSON, SARIF, and HTML artifacts", () => {
+  it("writes summary, Markdown, JSON, SARIF, and HTML artifacts", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-demo-"));
     tempDirs.push(root);
     const output = join(root, "artifacts");
@@ -40,11 +40,13 @@ describe("demo", () => {
 
     demoCommand(parseArgs(["demo", "--output", output]));
 
+    const summary = join(output, "patchdrill-demo-summary.md");
     const markdown = join(output, "patchdrill-demo.md");
     const json = join(output, "patchdrill-demo.json");
     const sarif = join(output, "patchdrill-demo.sarif");
     const html = join(output, "patchdrill-demo.html");
-    expect([markdown, json, sarif, html].every((path) => existsSync(path))).toBe(true);
+    expect([summary, markdown, json, sarif, html].every((path) => existsSync(path))).toBe(true);
+    expect(readFileSync(summary, "utf8")).toContain("PatchDrill Summary");
     expect(readFileSync(markdown, "utf8")).toContain("PatchDrill Report");
     expect(JSON.parse(readFileSync(json, "utf8"))).toMatchObject({ schemaVersion: "1" });
     expect(JSON.parse(readFileSync(sarif, "utf8"))).toMatchObject({ version: "2.1.0" });
@@ -61,8 +63,11 @@ describe("demo", () => {
     demoCommand(parseArgs(["demo", "--scenario", "risky-agent-pr", "--output", output]));
 
     const markdown = readFileSync(join(output, "patchdrill-demo.md"), "utf8");
+    const summary = readFileSync(join(output, "patchdrill-demo-summary.md"), "utf8");
     const report = JSON.parse(readFileSync(join(output, "patchdrill-demo.json"), "utf8")) as ReturnType<typeof createDemoReport>;
     expect(markdown).toContain("Privileged workflow checks out pull request code");
+    expect(summary).toContain("**FAIL** - risk 94/100");
+    expect(summary).toContain("Privileged workflow checks out pull request code");
     expect(report.summary.status).toBe("fail");
     expect(report.summary.failedCommandCount).toBe(1);
   });

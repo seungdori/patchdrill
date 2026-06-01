@@ -270,7 +270,6 @@ export function renderSummaryMarkdown(report: PatchReport): string {
   lines.push("");
 
   lines.push("Full Markdown, JSON, SARIF, and HTML reports remain available as CI artifacts when configured.");
-  lines.push("");
 
   return `${lines.join("\n")}\n`;
 }

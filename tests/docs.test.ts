@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createDemoReport } from "../src/demo.js";
-import { renderHtml, renderMarkdown, renderSarif } from "../src/report.js";
+import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "../src/report.js";
 
 describe("documentation examples", () => {
   it("keeps the example report risk and confidence scores consistent", () => {
@@ -22,6 +22,7 @@ describe("documentation examples", () => {
   it("keeps committed demo artifacts synchronized with the demo renderer", () => {
     const report = createDemoReport();
 
+    expect(readFileSync("examples/demo/patchdrill-demo-summary.md", "utf8")).toBe(renderSummaryMarkdown(report));
     expect(readFileSync("examples/demo/patchdrill-demo.md", "utf8")).toBe(renderMarkdown(report));
     expect(readFileSync("examples/demo/patchdrill-demo.json", "utf8")).toBe(`${JSON.stringify(report, null, 2)}\n`);
     expect(readFileSync("examples/demo/patchdrill-demo.sarif", "utf8")).toBe(renderSarif(report));
@@ -31,6 +32,7 @@ describe("documentation examples", () => {
   it("keeps committed risky PR demo artifacts synchronized with the demo renderer", () => {
     const report = createDemoReport("risky-agent-pr");
 
+    expect(readFileSync("examples/risky-agent-pr/patchdrill-demo-summary.md", "utf8")).toBe(renderSummaryMarkdown(report));
     expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.md", "utf8")).toBe(renderMarkdown(report));
     expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.json", "utf8")).toBe(`${JSON.stringify(report, null, 2)}\n`);
     expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.sarif", "utf8")).toBe(renderSarif(report));

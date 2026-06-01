@@ -8,6 +8,7 @@ patchdrill demo --scenario risky-agent-pr --output examples/risky-agent-pr
 
 This scenario shows a fail-state agent-authored pull request with privileged workflow, secret-looking value, agent-instruction, billing, missing-test, dependency, and failed-command evidence.
 
+- `patchdrill-demo-summary.md`: compact PR comment and step-summary preview.
 - `patchdrill-demo.md`: reviewer-facing Markdown report.
 - `patchdrill-demo.json`: machine-readable report contract.
 - `patchdrill-demo.sarif`: GitHub code scanning upload format.

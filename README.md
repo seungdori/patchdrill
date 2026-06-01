@@ -157,7 +157,7 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
   --html patchdrill-dashboard.html
 ```
 
-See committed demo outputs in [examples/demo](examples/demo).
+See committed demo outputs in [examples/demo](examples/demo), including `patchdrill-demo-summary.md` as the PR comment preview.
 
 Add repeated JSON reports in oldest-to-newest order to show run trends:
 
