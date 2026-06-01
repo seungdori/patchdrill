@@ -1,8 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import { findAffectedWorkspacePackages, planCommands } from "../src/planner.js";
 import type { ChangedFile, ProjectSignal } from "../src/types.js";
 
+const tempDirs: string[] = [];
+
+function tempRoot(): string {
+  const root = mkdtempSync(join(tmpdir(), "patchdrill-planner-"));
+  tempDirs.push(root);
+  return root;
+}
+
 describe("planCommands", () => {
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("uses package manager scripts for Node changes", () => {
     const files: ChangedFile[] = [
       { path: "src/index.ts", status: "modified", additions: 10, deletions: 2, binary: false }
@@ -57,10 +74,25 @@ describe("planCommands", () => {
     );
   });
 
-  it("adds Bazel graph-wide verification", () => {
+  it("narrows Bazel verification to the nearest changed package", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "src", "app"), { recursive: true });
+    writeFileSync(join(root, "src", "app", "BUILD.bazel"), "java_library(name = \"app\")\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "src/app/BUILD.bazel", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "bazel", manifestPath: "MODULE.bazel" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["bazel test //src/app/...", "bazel build //src/app/..."]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["bazel-changed-tests"]);
+  });
+
+  it("keeps Bazel graph-wide verification for root metadata changes", () => {
     const commands = planCommands(
       process.cwd(),
-      [{ path: "src/app/BUILD.bazel", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ path: "MODULE.bazel", status: "modified", additions: 4, deletions: 1, binary: false }],
       [{ ecosystem: "bazel", manifestPath: "MODULE.bazel" }]
     );
 
@@ -68,10 +100,25 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["bazel-tests"]);
   });
 
-  it("adds Buck graph-wide verification", () => {
+  it("narrows Buck verification to the nearest changed package", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "src", "app"), { recursive: true });
+    writeFileSync(join(root, "src", "app", "BUCK"), "python_library(name = \"app\")\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "src/app/BUCK", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "buck", manifestPath: ".buckconfig" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["buck2 test //src/app/...", "buck2 build //src/app/..."]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["buck-changed-tests"]);
+  });
+
+  it("keeps Buck graph-wide verification for root metadata changes", () => {
     const commands = planCommands(
       process.cwd(),
-      [{ path: "src/app/BUCK", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ path: ".buckconfig", status: "modified", additions: 4, deletions: 1, binary: false }],
       [{ ecosystem: "buck", manifestPath: ".buckconfig" }]
     );
 

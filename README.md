@@ -198,8 +198,8 @@ PatchDrill detects project shape from repo manifests:
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`, Compose files | `docker build .` |
 | Kubernetes | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `kubernetes/`, `manifests/` | `helm lint .`, `kubectl kustomize .`, `kubectl apply --dry-run=client -f k8s` |
-| Bazel | `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel`, `.bazelrc` | `bazel test //...`, `bazel build //...` |
-| Buck2 | `.buckconfig`, `BUCK`, `BUCK.v2` | `buck2 test //...`, `buck2 build //...` |
+| Bazel | `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel`, `.bazelrc` | `bazel test //path/...`, `bazel build //path/...`, graph-wide fallback for root metadata |
+| Buck2 | `.buckconfig`, `BUCK`, `BUCK.v2` | `buck2 test //path/...`, `buck2 build //path/...`, graph-wide fallback for root metadata |
 | Pants | `pants.toml` | `pants --changed-since=HEAD --changed-dependents=transitive test` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 

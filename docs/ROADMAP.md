@@ -70,6 +70,7 @@
 - ASP.NET Core detection with .NET build and publish planning.
 - FastAPI app entrypoint detection with import-smoke planning.
 - GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
+- Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 
 ## Contribution Targets
 
@@ -79,6 +80,6 @@ PatchDrill needs real-world fixtures from:
 - FastAPI route-level changed-test targeting.
 - .NET solution and test-project targeting.
 - Android variant-aware task narrowing.
-- Bazel/Buck changed-target narrowing beyond graph-wide defaults.
+- Bazel/Buck downstream affected-target query planning beyond changed-package defaults.
 - Mobile apps.
 - Xcode scheme-aware iOS and macOS app test planning.

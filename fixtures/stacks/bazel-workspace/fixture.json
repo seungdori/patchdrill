@@ -1,7 +1,7 @@
 {
   "name": "bazel-workspace",
   "expectedEcosystems": ["bazel"],
-  "expectedCommands": ["bazel test //...", "bazel build //..."],
+  "expectedCommands": ["bazel test //src/app/...", "bazel build //src/app/..."],
   "baseFiles": [
     {
       "path": "MODULE.bazel",

@@ -119,10 +119,10 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       addKubernetesPlans(plans, root, paths);
     }
     if (signal.ecosystem === "bazel" && touchesBazel(paths)) {
-      addBazelPlans(plans, root);
+      addBazelPlans(plans, root, paths);
     }
     if (signal.ecosystem === "buck" && touchesBuck(paths)) {
-      addBuckPlans(plans, root);
+      addBuckPlans(plans, root, paths);
     }
     if (signal.ecosystem === "pants" && touchesPants(paths)) {
       addPantsPlans(plans, root, options.changedSince ?? "HEAD");
@@ -393,44 +393,102 @@ function addKubernetesPlans(plans: CommandPlan[], root: string, paths: string[])
   }
 }
 
-function addBazelPlans(plans: CommandPlan[], root: string): void {
+function addBazelPlans(plans: CommandPlan[], root: string, paths: string[]): void {
   const bazel = existsSync(join(root, "bazelisk")) ? "./bazelisk" : existsSync(join(root, "bazel")) ? "./bazel" : "bazel";
+  const targets = bazelChangedTargetPatterns(root, paths);
+  const targetArgs = targets.join(" ");
+  const narrowed = targetArgs !== "//...";
   pushUnique(plans, {
-    id: "bazel-tests",
-    label: "Bazel tests",
-    command: `${bazel} test //...`,
-    reason: "Bazel workspace files changed, so all test targets should run through Bazel's target graph.",
+    id: narrowed ? "bazel-changed-tests" : "bazel-tests",
+    label: narrowed ? "Bazel changed-package tests" : "Bazel tests",
+    command: `${bazel} test ${targetArgs}`,
+    reason: narrowed
+      ? "Bazel source or package files changed, so the nearest recursive target patterns should run through Bazel."
+      : "Bazel workspace metadata changed or no nearest package was found, so all test targets should run through Bazel's target graph.",
     ecosystem: "bazel",
     required: true
   });
   pushUnique(plans, {
-    id: "bazel-build",
-    label: "Bazel build",
-    command: `${bazel} build //...`,
-    reason: "Bazel build graph should still analyze and build after workspace or source changes.",
+    id: narrowed ? "bazel-changed-build" : "bazel-build",
+    label: narrowed ? "Bazel changed-package build" : "Bazel build",
+    command: `${bazel} build ${targetArgs}`,
+    reason: narrowed
+      ? "Bazel changed packages should still analyze and build with their recursive target patterns."
+      : "Bazel build graph should still analyze and build after workspace or source changes.",
     ecosystem: "bazel",
     required: false
   });
 }
 
-function addBuckPlans(plans: CommandPlan[], root: string): void {
+function addBuckPlans(plans: CommandPlan[], root: string, paths: string[]): void {
   const buck = existsSync(join(root, "buck2")) ? "./buck2" : "buck2";
+  const targets = buckChangedTargetPatterns(root, paths);
+  const targetArgs = targets.join(" ");
+  const narrowed = targetArgs !== "//...";
   pushUnique(plans, {
-    id: "buck-tests",
-    label: "Buck tests",
-    command: `${buck} test //...`,
-    reason: "Buck target files changed, so test targets should run through Buck's target graph.",
+    id: narrowed ? "buck-changed-tests" : "buck-tests",
+    label: narrowed ? "Buck changed-package tests" : "Buck tests",
+    command: `${buck} test ${targetArgs}`,
+    reason: narrowed
+      ? "Buck source or package files changed, so the nearest recursive target patterns should run through Buck."
+      : "Buck workspace metadata changed or no nearest package was found, so test targets should run through Buck's target graph.",
     ecosystem: "buck",
     required: true
   });
   pushUnique(plans, {
-    id: "buck-build",
-    label: "Buck build",
-    command: `${buck} build //...`,
-    reason: "Buck build graph should still analyze and build after target or source changes.",
+    id: narrowed ? "buck-changed-build" : "buck-build",
+    label: narrowed ? "Buck changed-package build" : "Buck build",
+    command: `${buck} build ${targetArgs}`,
+    reason: narrowed
+      ? "Buck changed packages should still analyze and build with their recursive target patterns."
+      : "Buck build graph should still analyze and build after target or source changes.",
     ecosystem: "buck",
     required: false
   });
+}
+
+function bazelChangedTargetPatterns(root: string, paths: string[]): string[] {
+  if (touchesBazelRootMetadata(paths)) return ["//..."];
+  const patterns = new Set<string>();
+  for (const path of paths) {
+    if (!touchesBazel([path])) continue;
+    const packageRoot = nearestManifestRoot(root, path, ["BUILD.bazel", "BUILD"]);
+    if (!packageRoot) return ["//..."];
+    const pattern = bazelTargetPattern(packageRoot);
+    if (!pattern) return ["//..."];
+    patterns.add(pattern);
+  }
+  return patterns.size > 0 ? [...patterns].sort() : ["//..."];
+}
+
+function buckChangedTargetPatterns(root: string, paths: string[]): string[] {
+  if (touchesBuckRootMetadata(paths)) return ["//..."];
+  const patterns = new Set<string>();
+  for (const path of paths) {
+    if (!touchesBuck([path])) continue;
+    const packageRoot = nearestManifestRoot(root, path, ["BUCK", "BUCK.v2"]);
+    if (!packageRoot) return ["//..."];
+    const pattern = buckTargetPattern(packageRoot);
+    if (!pattern) return ["//..."];
+    patterns.add(pattern);
+  }
+  return patterns.size > 0 ? [...patterns].sort() : ["//..."];
+}
+
+function bazelTargetPattern(packageRoot: string): string | undefined {
+  if (packageRoot === ".") return "//:all";
+  if (!isBuildTargetPackagePath(packageRoot)) return undefined;
+  return `//${packageRoot}/...`;
+}
+
+function buckTargetPattern(packageRoot: string): string | undefined {
+  if (packageRoot === ".") return "//:";
+  if (!isBuildTargetPackagePath(packageRoot)) return undefined;
+  return `//${packageRoot}/...`;
+}
+
+function isBuildTargetPackagePath(path: string): boolean {
+  return /^[A-Za-z0-9_./+=,@~-]+$/.test(path) && !path.includes("//") && !path.split("/").includes("..");
 }
 
 export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signals: ProjectSignal[]): WorkspacePackage[] {
@@ -882,8 +940,16 @@ function touchesBazel(paths: string[]): boolean {
   );
 }
 
+function touchesBazelRootMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === "MODULE.bazel" || path === "WORKSPACE" || path === "WORKSPACE.bazel" || path === ".bazelrc");
+}
+
 function touchesBuck(paths: string[]): boolean {
   return paths.some((path) => path === ".buckconfig" || path === "BUCK" || path === "BUCK.v2" || path.endsWith("/BUCK") || path.endsWith("/BUCK.v2") || isSourceLikePath(path));
+}
+
+function touchesBuckRootMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === ".buckconfig");
 }
 
 function isKubernetesPath(path: string): boolean {

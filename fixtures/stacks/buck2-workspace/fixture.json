@@ -1,7 +1,7 @@
 {
   "name": "buck2-workspace",
   "expectedEcosystems": ["buck"],
-  "expectedCommands": ["buck2 test //...", "buck2 build //..."],
+  "expectedCommands": ["buck2 test //src/app/...", "buck2 build //src/app/..."],
   "baseFiles": [
     {
       "path": ".buckconfig",
