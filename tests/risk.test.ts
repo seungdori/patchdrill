@@ -482,6 +482,45 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags cloud OIDC credential exchange jobs without environment protection", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/deploy.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/deploy.yml", line: 9, content: "      id-token: write" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/deploy.yml",
+            content: [
+              "on:",
+              "  push:",
+              "    branches: [main]",
+              "jobs:",
+              "  deploy:",
+              "    runs-on: ubuntu-latest",
+              "    permissions:",
+              "      contents: read",
+              "      id-token: write",
+              "    steps:",
+              "      - uses: aws-actions/configure-aws-credentials@172239021f7ba04fe7327647b213799853a9eb89",
+              "        with:",
+              "          role-to-assume: arn:aws:iam::123456789012:role/deploy"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.cloud-oidc-without-environment",
+        severity: "medium",
+        file: ".github/workflows/deploy.yml",
+        line: 11
+      })
+    );
+  });
+
   it("flags Python requirements files as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],

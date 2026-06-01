@@ -81,3 +81,4 @@
 - Added Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
 - Added Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
 - Added nested local reusable workflow loading so changed workflows expose downstream reusable workflow secret and OIDC trust-boundary findings.
+- Added cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.

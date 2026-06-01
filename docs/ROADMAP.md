@@ -89,11 +89,11 @@
 - Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
 - Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
 - Nested local reusable workflow loading for downstream reusable workflow secret and OIDC trust-boundary findings.
+- Cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Cloud-provider OIDC policy fixtures.
 - Bazel/Buck query output promotion into executable downstream test target plans.
 - Xcode destination selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.

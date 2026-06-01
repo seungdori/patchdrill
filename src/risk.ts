@@ -700,6 +700,7 @@ function workflowOidcTrustBoundaryFindings(file: string, lines: AddedLine[]): Ri
 
     const directChildren = workflowDirectChildLines(job.lines, job.indent);
     const environmentLine = directChildren.find((line) => readYamlScalar(line.content)?.key === "environment");
+    const cloudOidcLine = workflowCloudOidcCredentialLine(job.lines);
     if (environmentLine) {
       findings.push({
         ruleId: "workflow.environment-oidc-token",
@@ -710,6 +711,18 @@ function workflowOidcTrustBoundaryFindings(file: string, lines: AddedLine[]): Ri
         line: oidcPermissionLine.line,
         remediation: "Verify the environment protection rules, cloud OIDC subject/audience conditions, and branch restrictions before merging.",
         tags: ["ci", "github-actions", "oidc", "environment", "deployment"]
+      });
+    }
+    if (cloudOidcLine && !environmentLine) {
+      findings.push({
+        ruleId: "workflow.cloud-oidc-without-environment",
+        severity: "medium",
+        title: "Cloud OIDC credential exchange lacks environment protection",
+        detail: `Job "${job.jobId}" grants id-token: write and uses a cloud credential exchange action without a GitHub environment gate.`,
+        file,
+        line: cloudOidcLine.line,
+        remediation: "Bind cloud OIDC roles to protected GitHub environments or verify equivalent branch, subject, and audience restrictions in the cloud identity policy.",
+        tags: ["ci", "github-actions", "oidc", "cloud", "deployment"]
       });
     }
 
@@ -742,6 +755,25 @@ function workflowOidcTrustBoundaryFindings(file: string, lines: AddedLine[]): Ri
   }
 
   return findings;
+}
+
+function workflowCloudOidcCredentialLine(lines: AddedLine[]): AddedLine | undefined {
+  return lines.find((line) => workflowUsesCloudOidcCredentialAction(line.content));
+}
+
+function workflowUsesCloudOidcCredentialAction(content: string): boolean {
+  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  if (!match?.[1]) return false;
+  const action = match[1].split("@", 1)[0]?.toLowerCase();
+  return Boolean(
+    action &&
+      [
+        "aws-actions/configure-aws-credentials",
+        "azure/login",
+        "google-github-actions/auth",
+        "hashicorp/vault-action"
+      ].includes(action)
+  );
 }
 
 function firstEffectiveOidcPermissionLine(lines: AddedLine[], workflowPermission: WorkflowPermissionState): AddedLine | undefined {
