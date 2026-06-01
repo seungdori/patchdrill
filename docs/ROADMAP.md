@@ -38,6 +38,7 @@
 - `uv.lock` dependency diff summaries.
 - `Pipfile.lock` dependency diff summaries.
 - `bun.lock` dependency diff summaries.
+- `Gemfile` dependency diff summaries.
 - `Gemfile.lock` dependency diff summaries.
 - `composer.lock` dependency diff summaries.
 - `composer.json` dependency diff summaries.

@@ -699,6 +699,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags Gemfile as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "Gemfile", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "Gemfile"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

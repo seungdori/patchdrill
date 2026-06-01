@@ -1232,6 +1232,85 @@ PLATFORMS
     ]);
   });
 
+  it("reports Gemfile dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-gemfile-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGemfile(
+      root,
+      `
+source "https://rubygems.org"
+
+gem "rails", "~> 7.1"
+gem "oldgem", "~> 0.1"
+
+group :development, :test do
+  gem "rspec-rails", "~> 6.1"
+end
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGemfile(
+      root,
+      `
+source "https://rubygems.org"
+
+gem "rails", "~> 7.2"
+gem "puma", ">= 6.4", require: false
+
+group :development, :test do
+  gem "rspec-rails", "~> 7.0"
+end
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "Gemfile", status: "modified", additions: 6, deletions: 6, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "Gemfile",
+        packageName: "oldgem",
+        packagePath: "gem",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "~> 0.1"
+      },
+      {
+        file: "Gemfile",
+        packageName: "puma",
+        packagePath: "gem",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: ">= 6.4"
+      },
+      {
+        file: "Gemfile",
+        packageName: "rails",
+        packagePath: "gem",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "~> 7.1",
+        after: "~> 7.2"
+      },
+      {
+        file: "Gemfile",
+        packageName: "rspec-rails",
+        packagePath: "group:development,test",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "~> 6.1",
+        after: "~> 7.0"
+      }
+    ]);
+  });
+
   it("reports composer.lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-composer-lock-"));
     tempDirs.push(root);
@@ -1410,6 +1489,10 @@ function writePipfileLock(root: string, contents: unknown): void {
 
 function writeGemfileLock(root: string, contents: string): void {
   writeFileSync(join(root, "Gemfile.lock"), contents.trimStart());
+}
+
+function writeGemfile(root: string, contents: string): void {
+  writeFileSync(join(root, "Gemfile"), contents.trimStart());
 }
 
 function writeComposerLock(root: string, contents: unknown): void {

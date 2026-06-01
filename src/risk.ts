@@ -649,6 +649,7 @@ function isDependencyManifest(path: string): boolean {
   return (
     fileName === "pyproject.toml" ||
     fileName === "composer.json" ||
+    fileName === "Gemfile" ||
     /^requirements([-.].*)?\.txt$/i.test(fileName) ||
     /^.*[-.]requirements\.txt$/i.test(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||

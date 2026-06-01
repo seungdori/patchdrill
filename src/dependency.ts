@@ -62,6 +62,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffPackageJson(file.path, before ?? {}, after ?? {}));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Gemfile"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGemfile(pair.before);
+    const after = parseGemfile(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parsePackageLock(pair.before);
@@ -273,6 +280,47 @@ function parseComposerJson(value: string | undefined): PackageJson | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseGemfile(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const blockStack: Array<{ kind: "group" | "other"; groups: string[] }> = [];
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const line = stripRubyComment(rawLine).trim();
+    if (!line) continue;
+
+    const groupMatch = /^group\s+(.+?)\s+do\b/.exec(line);
+    if (groupMatch?.[1]) {
+      blockStack.push({ kind: "group", groups: readGemfileGroups(groupMatch[1]) });
+      continue;
+    }
+    if (/^end\b/.test(line)) {
+      blockStack.pop();
+      continue;
+    }
+    if (/\bdo\b/.test(line) && !/^gem\s/.test(line)) {
+      blockStack.push({ kind: "other", groups: [] });
+      continue;
+    }
+
+    const gem = parseGemfileGemLine(line);
+    if (!gem) continue;
+    const groups = blockStack.flatMap((block) => (block.kind === "group" ? block.groups : []));
+    const dependencyType = gemfileDependencyType(groups);
+    const packagePath = groups.length > 0 ? `group:${groups.join(",")}` : "gem";
+    const key = `${dependencyType}:${packagePath}:${gem.name.toLowerCase()}`;
+    packages.set(key, {
+      name: gem.name,
+      key,
+      spec: gem.spec,
+      packagePath,
+      dependencyType
+    });
+  }
+
+  return packages.size > 0 ? packages : undefined;
 }
 
 function parseRequirements(value: string | undefined): Map<string, RequirementPackage> | undefined {
@@ -660,6 +708,64 @@ function isRequirementsFile(path: string): boolean {
 function isDotnetDependencyManifest(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return /\.(csproj|fsproj|vbproj)$/i.test(fileName) || fileName === "Directory.Packages.props";
+}
+
+function stripRubyComment(line: string): string {
+  let quote: string | undefined;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const previous = line[index - 1];
+    if ((char === '"' || char === "'") && previous !== "\\") {
+      quote = quote === char ? undefined : quote ?? char;
+      continue;
+    }
+    if (char === "#" && !quote) return line.slice(0, index);
+  }
+  return line;
+}
+
+function readGemfileGroups(value: string): string[] {
+  const groups: string[] = [];
+  for (const match of value.matchAll(/(?::([A-Za-z0-9_]+)|["']([^"']+)["'])/g)) {
+    const group = match[1] ?? match[2];
+    if (group) groups.push(group);
+  }
+  return groups;
+}
+
+function parseGemfileGemLine(line: string): { name: string; spec: string } | undefined {
+  const match = /^gem\s+(['"])([^'"]+)\1\s*(?:,\s*(.*))?$/.exec(line);
+  if (!match?.[2]) return undefined;
+  const constraints = readGemfileStringArguments(match[3] ?? "");
+  return {
+    name: match[2],
+    spec: constraints.length > 0 ? constraints.join(", ") : "*"
+  };
+}
+
+function readGemfileStringArguments(value: string): string[] {
+  const constraints: string[] = [];
+  let index = 0;
+  while (index < value.length) {
+    while (/[\s,]/.test(value[index] ?? "")) index += 1;
+    const quote = value[index];
+    if (quote !== '"' && quote !== "'") break;
+    index += 1;
+    let current = "";
+    while (index < value.length) {
+      const char = value[index];
+      if (char === quote && value[index - 1] !== "\\") break;
+      current += char;
+      index += 1;
+    }
+    if (current) constraints.push(current);
+    if (value[index] === quote) index += 1;
+  }
+  return constraints;
+}
+
+function gemfileDependencyType(groups: string[]): DependencyChange["dependencyType"] {
+  return groups.some((group) => group === "development" || group === "test") ? "devDependencies" : "dependencies";
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {
