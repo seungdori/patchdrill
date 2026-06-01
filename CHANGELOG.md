@@ -64,3 +64,4 @@
 - Added GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 - Added Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 - Added .NET project-aware test, build, and ASP.NET Core publish plans using `ProjectReference` relationships.
+- Added Android Gradle variant-aware test, assemble, and lint planning from changed source sets.

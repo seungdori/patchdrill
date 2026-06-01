@@ -202,7 +202,29 @@ describe("planCommands", () => {
     );
 
     expect(commands.map((command) => command.command)).toEqual(["gradle testDebugUnitTest", "gradle assembleDebug", "gradle lintDebug"]);
-    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-unit-tests"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-debug-unit-tests"]);
+  });
+
+  it("uses Android release source sets to select release tasks", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/src/release/kotlin/com/acme/ReleaseOnly.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testReleaseUnitTest", "gradle assembleRelease", "gradle lintRelease"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-release-unit-tests"]);
+  });
+
+  it("uses Android flavor build variant source sets when present", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/src/freeDebug/java/com/acme/Feature.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testFreeDebugUnitTest", "gradle assembleFreeDebug", "gradle lintFreeDebug"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-free-debug-unit-tests"]);
   });
 
   it("adds .NET build verification", () => {

@@ -52,7 +52,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       addJavaPlans(plans, root, signal);
     }
     if (signal.ecosystem === "android" && touchesAndroid(paths)) {
-      addAndroidPlans(plans, root);
+      addAndroidPlans(plans, root, paths);
     }
     if (signal.ecosystem === "ruby" && touches(paths, [".rb", "Gemfile", "Gemfile.lock"])) {
       pushUnique(plans, {
@@ -418,32 +418,62 @@ function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal)
   }
 }
 
-function addAndroidPlans(plans: CommandPlan[], root: string): void {
+function addAndroidPlans(plans: CommandPlan[], root: string, paths: string[]): void {
   const gradle = gradleCommand(root);
+  const variant = androidVariantFromPaths(paths) ?? "Debug";
+  const variantSlug = slug(androidVariantSlug(variant));
   pushUnique(plans, {
-    id: "android-unit-tests",
-    label: "Android unit tests",
-    command: `${gradle} testDebugUnitTest`,
-    reason: "Android source, resources, manifest, or Gradle metadata changed, so debug JVM unit tests should run through the Android Gradle plugin.",
+    id: `android-${variantSlug}-unit-tests`,
+    label: `Android ${variant} unit tests`,
+    command: `${gradle} test${variant}UnitTest`,
+    reason: `Android source, resources, manifest, or Gradle metadata changed, so ${variant} JVM unit tests should run through the Android Gradle plugin.`,
     ecosystem: "android",
     required: true
   });
   pushUnique(plans, {
-    id: "android-assemble-debug",
-    label: "Android debug assemble",
-    command: `${gradle} assembleDebug`,
-    reason: "Android changes should still compile resources, manifests, generated code, and the debug artifact.",
+    id: `android-${variantSlug}-assemble`,
+    label: `Android ${variant} assemble`,
+    command: `${gradle} assemble${variant}`,
+    reason: `Android changes should still compile resources, manifests, generated code, and the ${variant} artifact.`,
     ecosystem: "android",
     required: false
   });
   pushUnique(plans, {
-    id: "android-lint-debug",
-    label: "Android lint",
-    command: `${gradle} lintDebug`,
-    reason: "Android lint catches manifest, resource, API, and lifecycle issues that normal JVM tests can miss.",
+    id: `android-${variantSlug}-lint`,
+    label: `Android ${variant} lint`,
+    command: `${gradle} lint${variant}`,
+    reason: `Android ${variant} lint catches manifest, resource, API, and lifecycle issues that normal JVM tests can miss.`,
     ecosystem: "android",
     required: false
   });
+}
+
+function androidVariantFromPaths(paths: string[]): string | undefined {
+  const variants = new Set<string>();
+  for (const path of paths) {
+    const sourceSet = androidSourceSet(path);
+    if (!sourceSet) continue;
+    const variant = androidVariantFromSourceSet(sourceSet);
+    if (variant) variants.add(variant);
+  }
+  return variants.size === 1 ? [...variants][0] : undefined;
+}
+
+function androidSourceSet(path: string): string | undefined {
+  return /(^|\/)src\/([^/]+)\//.exec(path)?.[2];
+}
+
+function androidVariantFromSourceSet(sourceSet: string): string | undefined {
+  if (sourceSet === "main") return undefined;
+  if (sourceSet === "debug" || sourceSet === "testDebug" || sourceSet === "androidTestDebug") return "Debug";
+  if (sourceSet === "release" || sourceSet === "testRelease" || sourceSet === "androidTestRelease") return "Release";
+  const match = /^(?:test|androidTest)?([A-Za-z][A-Za-z0-9]*?)(Debug|Release)$/.exec(sourceSet);
+  if (!match?.[1] || !match[2]) return undefined;
+  return `${pascalCase(match[1])}${match[2]}`;
+}
+
+function androidVariantSlug(variant: string): string {
+  return variant.replace(/([a-z0-9])([A-Z])/g, "$1-$2");
 }
 
 type JavaBuildTool = "maven" | "gradle";
@@ -1195,6 +1225,10 @@ function pushUnique(plans: CommandPlan[], plan: CommandPlan): void {
 function quoteShell(value: string): string {
   if (/^[A-Za-z0-9_./@=:-]+$/.test(value)) return value;
   return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function pascalCase(value: string): string {
+  return value ? `${value[0]?.toUpperCase()}${value.slice(1)}` : value;
 }
 
 function slug(value: string): string {
