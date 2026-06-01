@@ -10,7 +10,7 @@ PatchDrill is split into deterministic modules:
 | `src/policy.ts` | Loads `.patchdrill.yml/json`, filters ignored paths, and merges repo-specific commands/rules. |
 | `src/project.ts` | Discovers ecosystem signals, package managers, task runners, solution filters, and workspace dependency graphs from manifests. |
 | `src/dependency.ts` | Extracts package.json, requirements.txt, NuGet PackageReference/PackageVersion, npm, pnpm, Yarn, Bun, Go, Cargo, Poetry, Pipfile, Bundler, and Composer dependency additions, removals, and version updates. |
-| `src/planner.ts` | Turns changed files, workspace package impact, and project signals into a verification command plan. |
+| `src/planner.ts` | Turns changed files, workspace package impact, project signals, and platform metadata into a verification command plan. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set. |
 | `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |

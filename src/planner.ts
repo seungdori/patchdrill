@@ -488,7 +488,7 @@ function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal)
 
 function addAndroidPlans(plans: CommandPlan[], root: string, paths: string[]): void {
   const gradle = gradleCommand(root);
-  const variant = androidVariantFromPaths(paths) ?? "Debug";
+  const variant = androidVariantFromPaths(root, paths) ?? "Debug";
   const variantSlug = slug(androidVariantSlug(variant));
   pushUnique(plans, {
     id: `android-${variantSlug}-unit-tests`,
@@ -516,12 +516,12 @@ function addAndroidPlans(plans: CommandPlan[], root: string, paths: string[]): v
   });
 }
 
-function androidVariantFromPaths(paths: string[]): string | undefined {
+function androidVariantFromPaths(root: string, paths: string[]): string | undefined {
   const variants = new Set<string>();
   for (const path of paths) {
     const sourceSet = androidSourceSet(path);
     if (!sourceSet) continue;
-    const variant = androidVariantFromSourceSet(sourceSet);
+    const variant = androidVariantFromSourceSet(sourceSet) ?? androidVariantFromFlavorSourceSet(root, path, sourceSet);
     if (variant) variants.add(variant);
   }
   return variants.size === 1 ? [...variants][0] : undefined;
@@ -538,6 +538,88 @@ function androidVariantFromSourceSet(sourceSet: string): string | undefined {
   const match = /^(?:test|androidTest)?([A-Za-z][A-Za-z0-9]*?)(Debug|Release)$/.exec(sourceSet);
   if (!match?.[1] || !match[2]) return undefined;
   return `${pascalCase(match[1])}${match[2]}`;
+}
+
+interface AndroidGradleModel {
+  productFlavors: string[];
+  buildTypes: string[];
+}
+
+function androidVariantFromFlavorSourceSet(root: string, path: string, sourceSet: string): string | undefined {
+  const normalizedSourceSet = sourceSet.replace(/^(?:test|androidTest)(?=[A-Z])/, (prefix) => (prefix === "test" || prefix === "androidTest" ? "" : prefix));
+  const model = readAndroidGradleModel(root, path);
+  if (model.productFlavors.length === 0) return undefined;
+  if (!androidSourceSetMatchesFlavors(normalizedSourceSet, model.productFlavors)) return undefined;
+  const buildType = model.buildTypes.find((candidate) => candidate.toLowerCase() === "debug") ?? model.buildTypes[0] ?? "debug";
+  return `${pascalCase(normalizedSourceSet)}${pascalCase(buildType)}`;
+}
+
+function readAndroidGradleModel(root: string, path: string): AndroidGradleModel {
+  const moduleRoot = nearestManifestRoot(root, path, ["build.gradle", "build.gradle.kts"]) ?? ".";
+  const content = ["build.gradle", "build.gradle.kts"]
+    .map((fileName) => readText(root, joinPath(moduleRoot === "." ? "" : moduleRoot, fileName)))
+    .join("\n");
+  const productFlavors = gradleNamedBlockChildren(content, "productFlavors");
+  const explicitBuildTypes = gradleNamedBlockChildren(content, "buildTypes");
+  const buildTypes = uniqueStrings([...explicitBuildTypes, "debug", "release"]);
+  return { productFlavors, buildTypes };
+}
+
+function androidSourceSetMatchesFlavors(sourceSet: string, productFlavors: string[]): boolean {
+  const flavorNames = productFlavors.map((flavor) => pascalCase(flavor)).sort((a, b) => b.length - a.length);
+  let remaining = pascalCase(sourceSet);
+  if (remaining.length === 0) return false;
+  while (remaining.length > 0) {
+    const match = flavorNames.find((flavor) => remaining.startsWith(flavor));
+    if (!match) return false;
+    remaining = remaining.slice(match.length);
+  }
+  return true;
+}
+
+function gradleNamedBlockChildren(content: string, blockName: string): string[] {
+  const body = gradleBlockBody(content, blockName);
+  if (!body) return [];
+  const names: string[] = [];
+  let depth = 0;
+  for (const rawLine of body.split(/\r?\n/)) {
+    const line = rawLine.replace(/\/\/.*$/, "");
+    if (depth === 0) {
+      const directBlock = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(line);
+      const factoryBlock = /^\s*(?:create|maybeCreate|register)\s*\(\s*["']([^"']+)["']\s*\)/.exec(line);
+      const name = directBlock?.[1] ?? factoryBlock?.[1];
+      if (name) names.push(name);
+    }
+    depth += countChar(line, "{") - countChar(line, "}");
+    if (depth < 0) depth = 0;
+  }
+  return uniqueStrings(names);
+}
+
+function gradleBlockBody(content: string, blockName: string): string | undefined {
+  const match = new RegExp(`\\b${escapeRegExp(blockName)}\\s*\\{`, "m").exec(content);
+  if (!match) return undefined;
+  const start = match.index + match[0].length;
+  let depth = 1;
+  for (let index = start; index < content.length; index += 1) {
+    const char = content[index];
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (depth === 0) return content.slice(start, index);
+  }
+  return undefined;
+}
+
+function countChar(value: string, char: string): number {
+  return [...value].filter((candidate) => candidate === char).length;
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function androidVariantSlug(variant: string): string {

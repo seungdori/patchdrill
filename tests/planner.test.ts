@@ -248,6 +248,62 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-free-debug-unit-tests"]);
   });
 
+  it("uses Android product flavor source sets to select flavor debug tasks", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(
+      join(root, "app", "build.gradle"),
+      [
+        "plugins { id 'com.android.application' }",
+        "android {",
+        "  flavorDimensions 'tier'",
+        "  productFlavors {",
+        "    free { dimension 'tier' }",
+        "    paid { dimension 'tier' }",
+        "  }",
+        "}"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/src/free/java/com/acme/Feature.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testFreeDebugUnitTest", "gradle assembleFreeDebug", "gradle lintFreeDebug"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-free-debug-unit-tests"]);
+  });
+
+  it("uses Android multi-flavor combination source sets to select debug tasks", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(
+      join(root, "app", "build.gradle.kts"),
+      [
+        "plugins { id(\"com.android.application\") }",
+        "android {",
+        "  flavorDimensions += listOf(\"api\", \"mode\")",
+        "  productFlavors {",
+        "    create(\"minApi24\") { dimension = \"api\" }",
+        "    create(\"minApi21\") { dimension = \"api\" }",
+        "    create(\"demo\") { dimension = \"mode\" }",
+        "    create(\"full\") { dimension = \"mode\" }",
+        "  }",
+        "}"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/src/minApi24Demo/kotlin/com/acme/Feature.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle.kts" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testMinApi24DemoDebugUnitTest", "gradle assembleMinApi24DemoDebug", "gradle lintMinApi24DemoDebug"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-min-api24-demo-debug-unit-tests"]);
+  });
+
   it("adds .NET build verification", () => {
     const commands = planCommands(
       process.cwd(),
