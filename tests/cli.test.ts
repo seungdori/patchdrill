@@ -20,10 +20,10 @@ describe("cli", () => {
       command: "scan",
       flags: { html: "patchdrill-dashboard.html" }
     });
-    expect(parseArgs(["dashboard", "--json", "patchdrill-report.json", "--output", "patchdrill-dashboard.html"])).toEqual({
+    expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
       command: "dashboard",
       flags: {
-        json: "patchdrill-report.json",
+        json: ["previous.json", "current.json"],
         output: "patchdrill-dashboard.html"
       },
       positionals: []
@@ -43,32 +43,62 @@ describe("cli", () => {
 
     expect(html).toContain("<title>PatchDrill Dashboard</title>");
     expect(html).toContain("CLI finding");
+    expect(html).not.toContain("Run Trend");
     expect(log).toHaveBeenCalledWith(`Wrote ${htmlPath}`);
+  });
+
+  it("writes a multi-run dashboard trend from repeated JSON reports", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const previousPath = join(root, "previous.json");
+    const currentPath = join(root, "current.json");
+    const htmlPath = join(root, "dashboard.html");
+    writeFileSync(previousPath, JSON.stringify(exampleReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 10, failedCommandCount: 0 })), "utf8");
+    writeFileSync(
+      currentPath,
+      JSON.stringify(exampleReport({ generatedAt: "2026-06-02T00:00:00.000Z", riskScore: 35, failedCommandCount: 1, title: "Latest CLI finding" })),
+      "utf8"
+    );
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    dashboardCommand(parseArgs(["dashboard", "--json", previousPath, "--json", currentPath, "--output", htmlPath]));
+    const html = readFileSync(htmlPath, "utf8");
+
+    expect(html).toContain("Run Trend");
+    expect(html).toContain("risk +25, failed checks +1");
+    expect(html).toContain("2 latest");
+    expect(html).toContain("2026-06-01T00:00:00.000Z");
+    expect(html).toContain("Latest CLI finding");
   });
 });
 
-function exampleReport(): PatchReport {
+function exampleReport(overrides: { generatedAt?: string; riskScore?: number; failedCommandCount?: number; title?: string } = {}): PatchReport {
+  const riskScore = overrides.riskScore ?? 25;
+  const failedCommandCount = overrides.failedCommandCount ?? 0;
   return {
     schemaVersion: "1",
-    generatedAt: "2026-06-01T00:00:00.000Z",
+    generatedAt: overrides.generatedAt ?? "2026-06-01T00:00:00.000Z",
     root: "/repo",
     summary: {
-      status: "warn",
-      riskScore: 25,
+      status: failedCommandCount > 0 ? "fail" : riskScore > 0 ? "warn" : "pass",
+      riskScore,
       confidenceScore: 75,
       changedFileCount: 1,
       additions: 2,
       deletions: 0,
       requiredCommandCount: 1,
-      failedCommandCount: 0
+      failedCommandCount
     },
     changedFiles: [{ path: "src/cli.ts", status: "modified", additions: 2, deletions: 0, binary: false }],
     addedLines: 2,
     projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
     affectedPackages: [],
     dependencyChanges: [],
-    findings: [{ ruleId: "cli.finding", severity: "medium", title: "CLI finding", detail: "Dashboard command changed." }],
+    findings: [{ ruleId: "cli.finding", severity: "medium", title: overrides.title ?? "CLI finding", detail: "Dashboard command changed." }],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "CLI changed.", ecosystem: "node", required: true }],
-    commandResults: []
+    commandResults:
+      failedCommandCount > 0
+        ? [{ id: "test", command: "npm test", exitCode: 1, durationMs: 1000, stdout: "", stderr: "failed" }]
+        : []
   };
 }

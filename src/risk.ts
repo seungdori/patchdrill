@@ -198,7 +198,19 @@ const severityWeights: Record<Severity, number> = {
 
 export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandResult[], options: RiskOptions = {}): RiskAssessment {
   const findings: RiskFinding[] = [];
-  let risk = changedFiles.length === 0 ? 0 : 10;
+  let risk = 0;
+
+  if (changedFiles.length > 0) {
+    risk += 10;
+    findings.push({
+      ruleId: "patch.changed-files",
+      severity: "info",
+      title: "Patch changes repository files",
+      detail: `${changedFiles.length} changed file${changedFiles.length === 1 ? "" : "s"} require review and verification evidence.`,
+      remediation: "Review the changed files and run the inferred verification plan before merge.",
+      tags: ["review"]
+    });
+  }
 
   const totalAdditions = changedFiles.reduce((sum, file) => sum + file.additions, 0);
   const totalDeletions = changedFiles.reduce((sum, file) => sum + file.deletions, 0);

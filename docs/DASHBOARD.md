@@ -18,9 +18,19 @@ Re-render a dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+Render a dashboard with CI artifact history by passing reports in oldest-to-newest order. The last `--json` is the current report used for the main dashboard, and earlier reports populate the run trend table.
+
+```bash
+patchdrill dashboard \
+  --json reports/patchdrill-previous.json \
+  --json reports/patchdrill-current.json \
+  --output patchdrill-dashboard.html
+```
+
 The dashboard includes:
 
 - Status, risk, confidence, changed-file, required-check, and added-line summary metrics.
+- Multi-run risk and failed-check trends when repeated JSON reports are provided.
 - Findings with severity, rule IDs, locations, tags, and remediation.
 - Verification plans and command results.
 - Changed files, project signals, policy context, baseline context, owner context, and dependency changes.

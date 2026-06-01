@@ -158,4 +158,49 @@ describe("report", () => {
     expect(html).toContain("failed &amp; unsafe");
     expect(html).not.toContain("Unsafe <script>alert(1)</script>");
   });
+
+  it("renders run trends for dashboard history", () => {
+    const previous = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 0 });
+    const latest = htmlReport({ generatedAt: "2026-06-02T00:00:00.000Z", riskScore: 32, failedCommandCount: 1, head: "feature" });
+
+    const html = renderHtml(latest, { history: [previous, latest] });
+
+    expect(html).toContain("Run Trend");
+    expect(html).toContain("risk +20, failed checks +1");
+    expect(html).toContain("1</td>");
+    expect(html).toContain("2 latest");
+    expect(html).toContain("2026-06-01T00:00:00.000Z");
+    expect(html).toContain("feature");
+  });
 });
+
+function htmlReport(overrides: { generatedAt: string; riskScore: number; failedCommandCount: number; head?: string }): PatchReport {
+  return {
+    schemaVersion: "1",
+    generatedAt: overrides.generatedAt,
+    root: "/repo",
+    base: "origin/main",
+    ...(overrides.head ? { head: overrides.head } : {}),
+    summary: {
+      status: overrides.failedCommandCount > 0 ? "fail" : "warn",
+      riskScore: overrides.riskScore,
+      confidenceScore: 70,
+      changedFileCount: 1,
+      additions: 4,
+      deletions: 1,
+      requiredCommandCount: 1,
+      failedCommandCount: overrides.failedCommandCount
+    },
+    changedFiles: [{ path: "src/app.ts", status: "modified", additions: 4, deletions: 1, binary: false }],
+    addedLines: 4,
+    projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
+    affectedPackages: [],
+    dependencyChanges: [],
+    findings: [{ ruleId: "example", severity: "medium", title: "Example finding", detail: "Example detail." }],
+    commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "Source changed.", ecosystem: "node", required: true }],
+    commandResults:
+      overrides.failedCommandCount > 0
+        ? [{ id: "test", command: "npm test", exitCode: 1, durationMs: 1000, stdout: "", stderr: "failed" }]
+        : []
+  };
+}

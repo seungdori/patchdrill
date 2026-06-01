@@ -13,7 +13,7 @@ const severities: Severity[] = ["info", "low", "medium", "high", "critical"];
 
 export interface ParsedArgs {
   command: string;
-  flags: Record<string, string | boolean>;
+  flags: Record<string, string | boolean | string[]>;
   positionals: string[];
 }
 
@@ -55,23 +55,36 @@ async function main(): Promise<void> {
 }
 
 async function scanCommand(parsed: ParsedArgs): Promise<void> {
-  const cliFailOn = typeof parsed.flags["fail-on"] === "string" ? readSeverity(parsed.flags["fail-on"], "critical") : undefined;
-  const cliMaxRisk = typeof parsed.flags["max-risk"] === "string" ? readMaxRisk(parsed.flags["max-risk"]) : undefined;
-  const cliMaxRiskDelta = typeof parsed.flags["max-risk-delta"] === "string" ? readMaxRiskDelta(parsed.flags["max-risk-delta"]) : undefined;
-  const cliMaxOutputChars = typeof parsed.flags["max-output-chars"] === "string" ? readPositiveInteger(parsed.flags["max-output-chars"], "max output chars") : undefined;
-  const cliCommandTimeoutMs = typeof parsed.flags["command-timeout-ms"] === "string" ? readPositiveInteger(parsed.flags["command-timeout-ms"], "command timeout ms") : undefined;
+  const cliFailOnValue = flagString(parsed, "fail-on");
+  const cliMaxRiskValue = flagString(parsed, "max-risk");
+  const cliMaxRiskDeltaValue = flagString(parsed, "max-risk-delta");
+  const cliMaxOutputCharsValue = flagString(parsed, "max-output-chars");
+  const cliCommandTimeoutMsValue = flagString(parsed, "command-timeout-ms");
+  const base = flagString(parsed, "base");
+  const head = flagString(parsed, "head");
+  const configPath = flagString(parsed, "config");
+  const baselinePath = flagString(parsed, "baseline");
+  const markdownPath = flagString(parsed, "markdown");
+  const jsonPath = flagString(parsed, "json");
+  const sarifPath = flagString(parsed, "sarif");
+  const htmlPath = flagString(parsed, "html");
+  const cliFailOn = cliFailOnValue ? readSeverity(cliFailOnValue, "critical") : undefined;
+  const cliMaxRisk = cliMaxRiskValue ? readMaxRisk(cliMaxRiskValue) : undefined;
+  const cliMaxRiskDelta = cliMaxRiskDeltaValue ? readMaxRiskDelta(cliMaxRiskDeltaValue) : undefined;
+  const cliMaxOutputChars = cliMaxOutputCharsValue ? readPositiveInteger(cliMaxOutputCharsValue, "max output chars") : undefined;
+  const cliCommandTimeoutMs = cliCommandTimeoutMsValue ? readPositiveInteger(cliCommandTimeoutMsValue, "command timeout ms") : undefined;
   const report = await scan({
     cwd: process.cwd(),
-    ...(typeof parsed.flags.base === "string" ? { base: parsed.flags.base } : {}),
-    ...(typeof parsed.flags.head === "string" ? { head: parsed.flags.head } : {}),
-    ...(typeof parsed.flags.config === "string" ? { configPath: parsed.flags.config } : {}),
-    ...(typeof parsed.flags.baseline === "string" ? { baselinePath: parsed.flags.baseline } : {}),
+    ...(base ? { base } : {}),
+    ...(head ? { head } : {}),
+    ...(configPath ? { configPath } : {}),
+    ...(baselinePath ? { baselinePath } : {}),
     run: Boolean(parsed.flags.run),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
-    ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
-    ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {}),
-    ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {}),
-    ...(typeof parsed.flags.html === "string" ? { htmlPath: parsed.flags.html } : {}),
+    ...(markdownPath ? { markdownPath } : {}),
+    ...(jsonPath ? { jsonPath } : {}),
+    ...(sarifPath ? { sarifPath } : {}),
+    ...(htmlPath ? { htmlPath } : {}),
     ...(cliMaxOutputChars !== undefined ? { maxOutputChars: cliMaxOutputChars } : {}),
     ...(cliCommandTimeoutMs !== undefined ? { commandTimeoutMs: cliCommandTimeoutMs } : {})
   });
@@ -95,21 +108,24 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
 }
 
 export function dashboardCommand(parsed: ParsedArgs): void {
-  if (typeof parsed.flags.json !== "string") {
+  const jsonPaths = flagStrings(parsed, "json");
+  if (jsonPaths.length === 0) {
     throw new Error("dashboard requires --json <report.json>.");
   }
 
-  const output = typeof parsed.flags.output === "string" ? parsed.flags.output : "patchdrill-dashboard.html";
-  const report = JSON.parse(readFileSync(parsed.flags.json, "utf8")) as PatchReport;
+  const output = flagString(parsed, "output") ?? "patchdrill-dashboard.html";
+  const reports = jsonPaths.map((path) => JSON.parse(readFileSync(path, "utf8")) as PatchReport);
+  const report = reports[reports.length - 1];
+  if (!report) throw new Error("dashboard requires at least one JSON report.");
   const resolved = resolve(process.cwd(), output);
   mkdirSync(dirname(resolved), { recursive: true });
-  writeFileSync(resolved, renderHtml(report), "utf8");
+  writeFileSync(resolved, renderHtml(report, reports.length > 1 ? { history: reports } : undefined), "utf8");
   console.log(`Wrote ${output}`);
 }
 
 function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
-  const policyPack = readPolicyPack(parsed.flags["policy-pack"]);
+  const policyPack = readPolicyPack(flagString(parsed, "policy-pack"));
   const path = writeGitHubWorkflow(root, Boolean(parsed.flags.force));
   console.log(`Created ${path}`);
   if (parsed.flags.policy || parsed.flags["policy-pack"]) {
@@ -143,9 +159,10 @@ function schemaCommand(parsed: ParsedArgs): void {
   }
 
   const schema = readSchema(requested);
-  if (typeof parsed.flags.output === "string") {
-    writeFileSync(parsed.flags.output, schema, "utf8");
-    console.log(`Wrote ${parsed.flags.output}`);
+  const output = flagString(parsed, "output");
+  if (output) {
+    writeFileSync(output, schema, "utf8");
+    console.log(`Wrote ${output}`);
     return;
   }
 
@@ -175,7 +192,7 @@ function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOpti
 }
 
 export function parseArgs(args: string[]): ParsedArgs {
-  const flags: Record<string, string | boolean> = {};
+  const flags: Record<string, string | boolean | string[]> = {};
   const positionals: string[] = [];
   let command = "scan";
 
@@ -187,14 +204,14 @@ export function parseArgs(args: string[]): ParsedArgs {
       const key = rawKey ?? "";
       if (!key) continue;
       if (inlineValue !== undefined) {
-        flags[key] = inlineValue;
+        addFlag(flags, key, inlineValue);
       } else {
         const next = args[index + 1];
         if (next && !next.startsWith("-") && takesValue(key)) {
-          flags[key] = next;
+          addFlag(flags, key, next);
           index += 1;
         } else {
-          flags[key] = true;
+          addFlag(flags, key, true);
         }
       }
       continue;
@@ -207,6 +224,34 @@ export function parseArgs(args: string[]): ParsedArgs {
   }
 
   return { command, flags, positionals };
+}
+
+function addFlag(flags: Record<string, string | boolean | string[]>, key: string, value: string | boolean): void {
+  const existing = flags[key];
+  if (existing === undefined) {
+    flags[key] = value;
+    return;
+  }
+  const next = typeof value === "string" ? value : String(value);
+  if (Array.isArray(existing)) {
+    existing.push(next);
+    return;
+  }
+  flags[key] = [typeof existing === "string" ? existing : String(existing), next];
+}
+
+function flagString(parsed: ParsedArgs, key: string): string | undefined {
+  const value = parsed.flags[key];
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value[value.length - 1];
+  return undefined;
+}
+
+function flagStrings(parsed: ParsedArgs, key: string): string[] {
+  const value = parsed.flags[key];
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value;
+  return [];
 }
 
 function takesValue(flag: string): boolean {
@@ -297,7 +342,7 @@ function printHelp(): void {
 
 Usage:
   patchdrill scan [options]
-  patchdrill dashboard --json <report.json> [--output <dashboard.html>]
+  patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill schema [policy|report] [--output <path>]

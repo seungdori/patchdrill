@@ -121,6 +121,12 @@ Create a static dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+Add repeated JSON reports in oldest-to-newest order to show run trends:
+
+```bash
+patchdrill dashboard --json previous-report.json --json patchdrill-report.json --output patchdrill-dashboard.html
+```
+
 Use the GitHub Action with PR comments:
 
 ```yaml
@@ -171,7 +177,7 @@ patchdrill init --policy-pack regulated
 
 ```text
 patchdrill scan [options]
-patchdrill dashboard --json <report.json> [--output <dashboard.html>]
+patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report] [--output <path>]
@@ -240,6 +246,7 @@ PatchDrill scores a patch from 0 to 100. Higher is riskier.
 
 The current deterministic rules look for:
 
+- Any changed files that need review and verification evidence.
 - Secret-bearing files such as `.env` and private keys.
 - Secret-looking values added inside the diff, including private keys and common token formats.
 - Prompt-injection instructions added to agent-visible files such as `AGENTS.md`, issue templates, and Markdown docs.
@@ -366,7 +373,6 @@ PatchDrill summarizes dependency changes from changed `package.json`, `requireme
 
 - Broader first-party fixture coverage for common open-source stacks.
 - More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, and Go workspaces.
-- Multi-run static dashboard trends for CI artifact history.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
 - Optional LLM summary mode that never replaces deterministic findings.
 

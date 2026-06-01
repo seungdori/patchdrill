@@ -3,6 +3,22 @@ import { assessRisk } from "../src/risk.js";
 import type { ChangedFile } from "../src/types.js";
 
 describe("assessRisk", () => {
+  it("explains the base changed-file risk", () => {
+    const assessment = assessRisk(
+      [{ path: "README.md", status: "modified", additions: 1, deletions: 1, binary: false }],
+      []
+    );
+
+    expect(assessment.riskScore).toBe(10);
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "patch.changed-files",
+        severity: "info",
+        title: "Patch changes repository files"
+      })
+    );
+  });
+
   it("flags high-impact auth changes and missing tests", () => {
     const files: ChangedFile[] = [
       { path: "src/auth/session.ts", status: "modified", additions: 20, deletions: 5, binary: false }

@@ -15,6 +15,10 @@ export interface GateOptions {
   maxRiskDelta?: number;
 }
 
+export interface HtmlOptions {
+  history?: PatchReport[];
+}
+
 export function shouldFail(report: PatchReport, options: GateOptions): boolean {
   if (report.summary.failedCommandCount > 0) return true;
   if (report.summary.riskScore > options.maxRisk) return true;
@@ -196,7 +200,7 @@ export function renderMarkdown(report: PatchReport): string {
   return `${lines.join("\n")}\n`;
 }
 
-export function renderHtml(report: PatchReport): string {
+export function renderHtml(report: PatchReport, options: HtmlOptions = {}): string {
   const summary = report.summary;
   const statusLabel = summary.status.toUpperCase();
   const statusTone = htmlStatusTone(summary.status);
@@ -391,6 +395,18 @@ export function renderHtml(report: PatchReport): string {
 
     .bar .fail {
       background: var(--fail);
+    }
+
+    .trend-table td,
+    .trend-table th {
+      white-space: nowrap;
+    }
+
+    .trend-risk {
+      align-items: center;
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 54px minmax(120px, 1fr);
     }
 
     .pill {
@@ -593,6 +609,8 @@ export function renderHtml(report: PatchReport): string {
       ${htmlMetric("Added lines", report.addedLines, "Diff lines scanned for risky content.")}
     </div>
 
+    ${htmlRunTrend(options.history)}
+
     <section>
       <div class="section-heading">
         <h2>Findings</h2>
@@ -640,6 +658,39 @@ export function renderHtml(report: PatchReport): string {
 </body>
 </html>
 `;
+}
+
+function htmlRunTrend(history: PatchReport[] | undefined): string {
+  if (!history || history.length <= 1) return "";
+  const previous = history[history.length - 2];
+  const latest = history[history.length - 1];
+  const riskDelta = previous && latest ? latest.summary.riskScore - previous.summary.riskScore : 0;
+  const failedDelta = previous && latest ? latest.summary.failedCommandCount - previous.summary.failedCommandCount : 0;
+  const deltaTone = riskDelta > 0 || failedDelta > 0 ? "warn" : riskDelta < 0 || failedDelta < 0 ? "pass" : "info";
+  const table = htmlTable(
+    ["Run", "Status", "Risk", "Confidence", "Changed", "Required", "Failed", "Generated", "Base", "Head"],
+    history.map((run, index) => [
+      escapeHtml(index === history.length - 1 ? `${index + 1} latest` : `${index + 1}`),
+      `<span class="pill ${htmlStatusTone(run.summary.status)}">${escapeHtml(run.summary.status)}</span>`,
+      `<div class="trend-risk"><span>${escapeHtml(`${run.summary.riskScore}/100`)}</span>${htmlScoreBar(run.summary.riskScore, htmlStatusTone(run.summary.status))}</div>`,
+      escapeHtml(`${run.summary.confidenceScore}/100`),
+      escapeHtml(`${run.summary.changedFileCount} (+${run.summary.additions}/-${run.summary.deletions})`),
+      escapeHtml(run.summary.requiredCommandCount),
+      escapeHtml(run.summary.failedCommandCount),
+      escapeHtml(run.generatedAt),
+      escapeHtml(run.base ?? ""),
+      escapeHtml(run.head ?? "")
+    ]),
+    "No historical runs provided."
+  ).replace('class="table-wrap"', 'class="table-wrap trend-table"');
+
+  return `<section>
+      <div class="section-heading">
+        <h2>Run Trend</h2>
+        <span class="pill ${deltaTone}">risk ${formatDelta(riskDelta)}, failed checks ${formatDelta(failedDelta)}</span>
+      </div>
+      ${table}
+    </section>`;
 }
 
 export function renderSarif(report: PatchReport): string {
