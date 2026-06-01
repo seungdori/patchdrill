@@ -52,3 +52,17 @@ For CI, upload the HTML alongside the JSON and Markdown artifacts:
       ${{ steps.patchdrill.outputs.report-json }}
       ${{ steps.patchdrill.outputs.report-html }}
 ```
+
+If your workflow downloads one or more previous JSON report artifacts before running PatchDrill, pass them through `dashboard-history`. PatchDrill appends the current JSON report automatically and re-renders the HTML dashboard with the trend table:
+
+```yaml
+- uses: seungdori/patchdrill@v0
+  id: patchdrill
+  with:
+    base: origin/${{ github.base_ref }}
+    json: patchdrill-report.json
+    html: patchdrill-dashboard.html
+    dashboard-history: |
+      reports/patchdrill-previous.json
+      reports/patchdrill-last-green.json
+```

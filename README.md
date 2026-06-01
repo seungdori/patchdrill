@@ -326,6 +326,9 @@ jobs:
           html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
+          # Optional: newline-separated previous JSON reports downloaded from earlier artifacts.
+          # dashboard-history: |
+          #   reports/patchdrill-previous.json
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
@@ -372,7 +375,7 @@ PatchDrill summarizes dependency changes from changed `package.json`, `requireme
 ## Roadmap
 
 - Broader first-party fixture coverage for common open-source stacks.
-- More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, and Go workspaces.
+- More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck workspaces.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
 - Optional LLM summary mode that never replaces deterministic findings.
 

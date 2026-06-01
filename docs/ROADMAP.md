@@ -8,7 +8,6 @@
 ## Later
 
 - Expand language-aware changed-test matching with framework-specific conventions.
-- Expand the static dashboard into a multi-run trend view for CI artifact history.
 - Optional MCP server for coding agents.
 - Optional LLM summarization that can only summarize deterministic findings.
 - Rule confidence calibration from anonymized fixture corpora.
@@ -93,6 +92,8 @@
 - Cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
 - Xcode scheme target-platform detection with macOS test destinations, mobile generic build destinations, and destination discovery planning.
 - Rails, RSpec, Composer script, Laravel, PHPUnit, and PHP syntax fallback command planning.
+- Multi-run static dashboard trends for CI artifact history.
+- GitHub Action `dashboard-history` input for re-rendering trend dashboards from previous JSON report artifacts.
 
 ## Contribution Targets
 
