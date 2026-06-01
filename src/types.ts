@@ -187,6 +187,7 @@ export interface ScanOptions {
   base?: string;
   head?: string;
   run?: boolean;
+  runOptional?: boolean;
   failOn?: Severity;
   configPath?: string;
   baselinePath?: string;

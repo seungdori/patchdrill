@@ -68,18 +68,24 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const jsonPath = flagString(parsed, "json");
   const sarifPath = flagString(parsed, "sarif");
   const htmlPath = flagString(parsed, "html");
+  const run = Boolean(parsed.flags.run);
+  const runOptional = Boolean(parsed.flags["run-optional"]);
   const cliFailOn = cliFailOnValue ? readSeverity(cliFailOnValue, "critical") : undefined;
   const cliMaxRisk = cliMaxRiskValue ? readMaxRisk(cliMaxRiskValue) : undefined;
   const cliMaxRiskDelta = cliMaxRiskDeltaValue ? readMaxRiskDelta(cliMaxRiskDeltaValue) : undefined;
   const cliMaxOutputChars = cliMaxOutputCharsValue ? readPositiveInteger(cliMaxOutputCharsValue, "max output chars") : undefined;
   const cliCommandTimeoutMs = cliCommandTimeoutMsValue ? readPositiveInteger(cliCommandTimeoutMsValue, "command timeout ms") : undefined;
+  if (runOptional && !run) {
+    throw new Error("--run-optional requires --run.");
+  }
   const report = await scan({
     cwd: process.cwd(),
     ...(base ? { base } : {}),
     ...(head ? { head } : {}),
     ...(configPath ? { configPath } : {}),
     ...(baselinePath ? { baselinePath } : {}),
-    run: Boolean(parsed.flags.run),
+    run,
+    ...(runOptional ? { runOptional: true } : {}),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
     ...(markdownPath ? { markdownPath } : {}),
     ...(jsonPath ? { jsonPath } : {}),
@@ -171,12 +177,13 @@ function schemaCommand(parsed: ParsedArgs): void {
 
 function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
   const required = report.commandPlan.filter((command) => command.required);
+  const optional = report.commandPlan.filter((command) => !command.required);
   const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
   const lines = [
     `PatchDrill Gate ${gateStatus} - assessment ${report.summary.status.toUpperCase()}, risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
     `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}${gateOptions.maxRiskDelta !== undefined ? `, max-risk-delta ${gateOptions.maxRiskDelta}` : ""}`,
     `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
-    `Required commands: ${required.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
+    `Required commands: ${required.length}, optional commands: ${optional.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
     `Added lines inspected: ${report.addedLines}`
   ];
   if (report.findings.length > 0) {
@@ -186,7 +193,7 @@ function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOpti
     }
   }
   if (required.length > 0 && report.commandResults.length === 0) {
-    lines.push("Run with --run to execute required verification commands.");
+    lines.push("Run with --run to execute required verification commands. Add --run-optional to include optional checks.");
   }
   return lines.join("\n");
 }
@@ -353,6 +360,7 @@ Options:
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
   --run               Execute required inferred verification commands
+  --run-optional      With --run, also execute optional verification commands
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
   --sarif <path>      Write a SARIF report for GitHub code scanning

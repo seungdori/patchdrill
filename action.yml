@@ -38,6 +38,10 @@ inputs:
     description: Execute required verification commands.
     required: false
     default: "false"
+  run-optional:
+    description: Execute optional inferred verification commands when run is true.
+    required: false
+    default: "false"
   markdown:
     description: Markdown report output path.
     required: false
@@ -112,6 +116,7 @@ runs:
         PATCHDRILL_CONFIG: ${{ inputs.config }}
         PATCHDRILL_BASELINE: ${{ inputs.baseline }}
         PATCHDRILL_RUN: ${{ inputs.run }}
+        PATCHDRILL_RUN_OPTIONAL: ${{ inputs.run-optional }}
         PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
@@ -130,6 +135,9 @@ runs:
         )
         if [ "$PATCHDRILL_RUN" = "true" ]; then
           args+=(--run)
+        fi
+        if [ "$PATCHDRILL_RUN_OPTIONAL" = "true" ]; then
+          args+=(--run-optional)
         fi
         if [ -n "$PATCHDRILL_CONFIG" ]; then
           args+=(--config "$PATCHDRILL_CONFIG")

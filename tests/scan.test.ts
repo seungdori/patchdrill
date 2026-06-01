@@ -103,6 +103,36 @@ rules:
     });
   });
 
+  it("runs optional policy commands only when runOptional is enabled", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+requiredCommands:
+  - id: required-policy
+    command: node -e "console.log('required-policy')"
+optionalCommands:
+  - id: optional-policy
+    command: node -e "console.log('optional-policy')"
+`
+    );
+    writeFileSync(join(root, "README.md"), "# Test\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    const requiredOnly = await scan({ cwd: root, run: true });
+    const withOptional = await scan({ cwd: root, run: true, runOptional: true });
+
+    expect(requiredOnly.commandPlan.map((command) => command.id)).toEqual(["required-policy", "optional-policy"]);
+    expect(requiredOnly.commandResults.map((result) => result.id)).toEqual(["required-policy"]);
+    expect(withOptional.commandResults.map((result) => result.id)).toEqual(["required-policy", "optional-policy"]);
+  });
+
   it("uses full workflow context for privileged pull_request_target checkout findings", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

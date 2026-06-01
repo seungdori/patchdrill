@@ -12,7 +12,7 @@ PatchDrill is split into deterministic modules:
 | `src/dependency.ts` | Extracts package.json, requirements.txt, NuGet PackageReference/PackageVersion, npm, pnpm, Yarn, Bun, Go, Cargo, Poetry, Pipfile, Bundler, and Composer dependency additions, removals, and version updates. |
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, and platform metadata into a verification command plan. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including whole-workflow GitHub Actions trust-boundary checks. |
-| `src/runner.ts` | Executes required commands when `--run` is set. |
+| `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
 | `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |
 | `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
@@ -30,7 +30,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
               dependency diff enrichment
                                       |
                                       v
-                           optional command runner
+                           opt-in command runner
                                       |
                                       v
                     risk assessment -> baseline comparison

@@ -5,10 +5,13 @@ describe("types", () => {
   it("includes static HTML dashboard output in scan options", () => {
     const options = acceptScanOptions({
       cwd: "/repo",
+      run: true,
+      runOptional: true,
       htmlPath: "patchdrill-dashboard.html"
     });
 
     expect(options.htmlPath).toBe("patchdrill-dashboard.html");
+    expect(options.runOptional).toBe(true);
   });
 
   it("includes Kubernetes as a supported project ecosystem", () => {

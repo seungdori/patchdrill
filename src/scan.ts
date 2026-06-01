@@ -34,6 +34,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     ? await runCommandPlan(commandPlan, {
         cwd: root,
         maxOutputChars: options.maxOutputChars ?? 20_000,
+        ...(options.runOptional ? { includeOptional: true } : {}),
         ...(options.commandTimeoutMs !== undefined ? { commandTimeoutMs: options.commandTimeoutMs } : {})
       })
     : [];

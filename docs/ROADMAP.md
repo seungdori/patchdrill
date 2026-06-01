@@ -97,6 +97,7 @@
 - Framework-specific changed-test matching for Rails/RSpec, Python app packages, JVM source sets, and Laravel unit/feature tests.
 - Node script alias planning for typecheck, unit, and optional browser/e2e verification scripts.
 - uv-managed Python fixture and optional Ruff, mypy, and Pyright static-analysis planning.
+- `--run-optional` CLI and GitHub Action opt-in for executing optional verification commands.
 
 ## Contribution Targets
 

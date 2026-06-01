@@ -2,6 +2,33 @@ import { describe, expect, it } from "vitest";
 import { runCommandPlan } from "../src/runner.js";
 
 describe("runCommandPlan", () => {
+  it("skips optional commands by default and includes them only when requested", async () => {
+    const plans = [
+      {
+        id: "required",
+        label: "Required",
+        command: "node -e \"console.log('required')\"",
+        reason: "Required proof.",
+        ecosystem: "general" as const,
+        required: true
+      },
+      {
+        id: "optional",
+        label: "Optional",
+        command: "node -e \"console.log('optional')\"",
+        reason: "Optional proof.",
+        ecosystem: "general" as const,
+        required: false
+      }
+    ];
+
+    const defaultResults = await runCommandPlan(plans, { cwd: process.cwd(), maxOutputChars: 200 });
+    const optionalResults = await runCommandPlan(plans, { cwd: process.cwd(), maxOutputChars: 200, includeOptional: true });
+
+    expect(defaultResults.map((result) => result.id)).toEqual(["required"]);
+    expect(optionalResults.map((result) => result.id)).toEqual(["required", "optional"]);
+  });
+
   it("marks truncated command output and keeps the tail", async () => {
     const results = await runCommandPlan(
       [

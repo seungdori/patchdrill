@@ -10,6 +10,9 @@ describe("composite action", () => {
     expect(action).toContain("default: patchdrill-dashboard.html");
     expect(action).toContain("dashboard-history:");
     expect(action).toContain("PATCHDRILL_DASHBOARD_HISTORY");
+    expect(action).toContain("run-optional:");
+    expect(action).toContain("PATCHDRILL_RUN_OPTIONAL");
+    expect(action).toContain("args+=(--run-optional)");
     expect(action).toContain("report-html:");
     expect(action).toContain("PATCHDRILL_HTML");
     expect(action).toContain('--html "$PATCHDRILL_HTML"');

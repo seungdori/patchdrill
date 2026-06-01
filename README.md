@@ -54,12 +54,12 @@ Example summary:
 ```text
 PatchDrill WARN - risk 42/100, confidence 58/100
 Changed files: 4, +121/-18
-Required commands: 3
+Required commands: 3, optional commands: 1
 Added lines inspected: 121
 Top findings:
 - [high] High-impact product area changed (src/auth/session.ts)
 - [medium] Source changed without test changes
-Run with --run to execute required verification commands.
+Run with --run to execute required verification commands. Add --run-optional to include optional checks.
 ```
 
 ## Install
@@ -103,6 +103,12 @@ Run the inferred required commands:
 
 ```bash
 patchdrill scan --base origin/main --run
+```
+
+Include optional checks such as browser/e2e and static-analysis plans:
+
+```bash
+patchdrill scan --base origin/main --run --run-optional
 ```
 
 Write reports:
@@ -192,6 +198,7 @@ Options:
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
 | `--run` | Execute required inferred verification commands. |
+| `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
@@ -385,7 +392,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions are new ecosys
 
 ## Security
 
-PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell, so review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
+PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
 
 ## License
 

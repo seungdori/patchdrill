@@ -71,7 +71,7 @@ rules:
 | `maxRisk` | Default numeric risk threshold when `--max-risk` is not passed. |
 | `ignoredPaths` | Glob patterns removed from changed-file and added-line analysis. |
 | `requiredCommands` | Commands PatchDrill runs when `--run` is set. |
-| `optionalCommands` | Commands shown in the report but not executed by default. |
+| `optionalCommands` | Commands shown in the report and run only when both `--run` and `--run-optional` are set. |
 | `rules` | Path-based findings with custom severity, weight, remediation, and tags. |
 
 ## Glob Support

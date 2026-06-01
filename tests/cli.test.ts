@@ -20,6 +20,10 @@ describe("cli", () => {
       command: "scan",
       flags: { html: "patchdrill-dashboard.html" }
     });
+    expect(parseArgs(["scan", "--run", "--run-optional"])).toMatchObject({
+      command: "scan",
+      flags: { run: true, "run-optional": true }
+    });
     expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
       command: "dashboard",
       flags: {

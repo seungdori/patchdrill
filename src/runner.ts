@@ -4,13 +4,14 @@ import type { CommandPlan, CommandResult } from "./types.js";
 export interface RunOptions {
   cwd: string;
   maxOutputChars: number;
+  includeOptional?: boolean;
   commandTimeoutMs?: number;
 }
 
 export async function runCommandPlan(plans: CommandPlan[], options: RunOptions): Promise<CommandResult[]> {
   const results: CommandResult[] = [];
   for (const plan of plans) {
-    if (!plan.required) continue;
+    if (!plan.required && !options.includeOptional) continue;
     results.push(await runShellCommand(plan.id, plan.command, options));
   }
   return results;

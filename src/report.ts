@@ -205,6 +205,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
   const statusLabel = summary.status.toUpperCase();
   const statusTone = htmlStatusTone(summary.status);
   const requiredCommands = report.commandPlan.filter((command) => command.required);
+  const optionalCommands = report.commandPlan.filter((command) => !command.required);
   const failedCommands = report.commandResults.filter((result) => result.exitCode !== 0);
   const context = [
     report.base ? `Base: ${report.base}` : undefined,
@@ -605,7 +606,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
       ${htmlMetric("Risk score", `${summary.riskScore}/100`, "Higher means more review proof is needed.", htmlScoreBar(summary.riskScore, statusTone))}
       ${htmlMetric("Confidence", `${summary.confidenceScore}/100`, "Higher means stronger verification evidence.", htmlScoreBar(summary.confidenceScore, "pass"))}
       ${htmlMetric("Changed files", summary.changedFileCount, `+${summary.additions} / -${summary.deletions}`)}
-      ${htmlMetric("Required checks", summary.requiredCommandCount, `${failedCommands.length} failed`)}
+      ${htmlMetric("Required checks", summary.requiredCommandCount, `${optionalCommands.length} optional, ${failedCommands.length} failed`)}
       ${htmlMetric("Added lines", report.addedLines, "Diff lines scanned for risky content.")}
     </div>
 
@@ -622,7 +623,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
     <section>
       <div class="section-heading">
         <h2>Verification Plan</h2>
-        <span class="pill ${requiredCommands.length > 0 ? "info" : "pass"}">${escapeHtml(requiredCommands.length)} required</span>
+        <span class="pill ${requiredCommands.length > 0 ? "info" : "pass"}">${escapeHtml(requiredCommands.length)} required, ${escapeHtml(optionalCommands.length)} optional</span>
       </div>
       ${htmlVerificationPlan(report)}
     </section>
