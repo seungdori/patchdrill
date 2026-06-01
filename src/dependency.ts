@@ -22,6 +22,7 @@ interface ManifestDependency {
   key: string;
   spec: string;
   packagePath: string;
+  dependencyType?: DependencyChange["dependencyType"];
 }
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
@@ -39,6 +40,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const after = parseRequirements(pair.after);
     if (!before && !after) continue;
     changes.push(...diffRequirementPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pyproject.toml"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parsePyprojectDependencies(pair.before);
+    const after = parsePyprojectDependencies(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
   for (const file of changedFiles.filter((candidate) => isDotnetDependencyManifest(candidate.path))) {
     const pair = readFilePair(options, file.path);
@@ -202,12 +210,13 @@ function diffManifestDependencies(file: string, before: Map<string, ManifestDepe
     if (beforePackage?.spec === afterPackage?.spec) continue;
     const packageName = afterPackage?.name ?? beforePackage?.name ?? key;
     const packagePath = afterPackage?.packagePath ?? beforePackage?.packagePath;
+    const dependencyType = afterPackage?.dependencyType ?? beforePackage?.dependencyType ?? "dependencies";
     if (!beforePackage && afterPackage) {
       changes.push({
         file,
         packageName,
         ...(packagePath ? { packagePath } : {}),
-        dependencyType: "dependencies",
+        dependencyType,
         changeType: "added",
         after: afterPackage.spec
       });
@@ -216,7 +225,7 @@ function diffManifestDependencies(file: string, before: Map<string, ManifestDepe
         file,
         packageName,
         ...(packagePath ? { packagePath } : {}),
-        dependencyType: "dependencies",
+        dependencyType,
         changeType: "removed",
         before: beforePackage.spec
       });
@@ -225,7 +234,7 @@ function diffManifestDependencies(file: string, before: Map<string, ManifestDepe
         file,
         packageName,
         ...(packagePath ? { packagePath } : {}),
-        dependencyType: "dependencies",
+        dependencyType,
         changeType: "updated",
         before: beforePackage.spec,
         after: afterPackage.spec
@@ -255,6 +264,42 @@ function parseRequirements(value: string | undefined): Map<string, RequirementPa
     if (!parsed) continue;
     packages.set(parsed.key, parsed);
   }
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parsePyprojectDependencies(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const lines = value.split(/\r?\n/);
+  let section = "";
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = stripTomlComment(lines[index] ?? "").trim();
+    if (!trimmed) continue;
+    const sectionMatch = /^\[([A-Za-z0-9_.-]+)\]$/.exec(trimmed);
+    if (sectionMatch?.[1]) {
+      section = sectionMatch[1];
+      continue;
+    }
+
+    if (section === "project" && /^dependencies\s*=/.test(trimmed)) {
+      const result = readTomlStringArray(lines, index);
+      index = result.endIndex;
+      for (const spec of result.items) addPyprojectDependency(packages, "project.dependencies", "dependencies", spec);
+      continue;
+    }
+
+    if (section === "project.optional-dependencies") {
+      const match = /^([A-Za-z0-9_.-]+)\s*=/.exec(trimmed);
+      if (!match?.[1]) continue;
+      const result = readTomlStringArray(lines, index);
+      index = result.endIndex;
+      for (const spec of result.items) {
+        addPyprojectDependency(packages, `project.optional-dependencies.${match[1]}`, "optionalDependencies", spec);
+      }
+    }
+  }
+
   return packages.size > 0 ? packages : undefined;
 }
 
@@ -659,6 +704,57 @@ function requirementPackagePath(item: RequirementPackage | undefined): string | 
   const marker = item.key.split(";", 2)[1];
   if (marker) return `${item.displayName}; ${marker}`;
   return normalizePythonPackageName(item.displayName) === item.displayName ? undefined : item.displayName;
+}
+
+function addPyprojectDependency(
+  packages: Map<string, ManifestDependency>,
+  packagePath: string,
+  dependencyType: DependencyChange["dependencyType"],
+  spec: string
+): void {
+  const parsed = parseRequirementLine(spec.trim());
+  if (!parsed) return;
+  packages.set(`${dependencyType}:${packagePath}:${parsed.key}`, {
+    name: parsed.name,
+    key: `${dependencyType}:${packagePath}:${parsed.key}`,
+    spec: parsed.spec,
+    packagePath,
+    dependencyType
+  });
+}
+
+function readTomlStringArray(lines: string[], startIndex: number): { items: string[]; endIndex: number } {
+  let buffer = stripTomlComment(lines[startIndex] ?? "");
+  let endIndex = startIndex;
+  while (!buffer.includes("]") && endIndex + 1 < lines.length) {
+    endIndex += 1;
+    buffer += `\n${stripTomlComment(lines[endIndex] ?? "")}`;
+  }
+  return { items: readQuotedStrings(buffer), endIndex };
+}
+
+function readQuotedStrings(value: string): string[] {
+  const items: string[] = [];
+  const pattern = /"((?:\\.|[^"\\])*)"|'([^']*)'/g;
+  for (const match of value.matchAll(pattern)) {
+    const raw = match[1] ?? match[2];
+    if (!raw) continue;
+    items.push(raw.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+  }
+  return items;
+}
+
+function stripTomlComment(value: string): string {
+  let quote: '"' | "'" | undefined;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    const previous = value[index - 1];
+    if ((char === '"' || char === "'") && previous !== "\\") {
+      quote = quote === char ? undefined : quote ?? char;
+    }
+    if (char === "#" && !quote) return value.slice(0, index);
+  }
+  return value;
 }
 
 function readPipfileSection(result: Map<string, LockPackage>, section: "default" | "develop", value: unknown): void {

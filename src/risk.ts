@@ -647,6 +647,7 @@ function joinPath(...parts: string[]): string {
 function isDependencyManifest(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return (
+    fileName === "pyproject.toml" ||
     /^requirements([-.].*)?\.txt$/i.test(fileName) ||
     /^.*[-.]requirements\.txt$/i.test(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||

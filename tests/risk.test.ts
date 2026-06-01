@@ -654,6 +654,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags pyproject.toml as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "pyproject.toml", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "pyproject.toml"
+      })
+    );
+  });
+
   it("flags .NET package manifests as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "Directory.Packages.props", status: "modified", additions: 2, deletions: 1, binary: false }],

@@ -116,6 +116,95 @@ uvicorn[standard]==0.29.0 ; python_version >= "3.10"
     ]);
   });
 
+  it("reports PEP 621 pyproject dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-pyproject-deps-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePyproject(
+      root,
+      `
+[project]
+name = "api"
+version = "0.1.0"
+dependencies = [
+  "FastAPI>=0.100,<1",
+  "old-package==0.1.0",
+  "requests==2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.0.0",
+]
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePyproject(
+      root,
+      `
+[project]
+name = "api"
+version = "0.1.0"
+dependencies = [
+  "fastapi>=0.100,<1",
+  "requests==2.32.0",
+  "rich==13.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.1.0",
+]
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "pyproject.toml", status: "modified", additions: 7, deletions: 7, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "pyproject.toml",
+        packageName: "old-package",
+        packagePath: "project.dependencies",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "==0.1.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "requests",
+        packagePath: "project.dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "==2.31.0",
+        after: "==2.32.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "rich",
+        packagePath: "project.dependencies",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "==13.7.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "pytest",
+        packagePath: "project.optional-dependencies.dev",
+        dependencyType: "optionalDependencies",
+        changeType: "updated",
+        before: "==8.0.0",
+        after: "==8.1.0"
+      }
+    ]);
+  });
+
   it("reports .NET PackageReference additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-dotnet-deps-"));
     tempDirs.push(root);
@@ -1116,6 +1205,10 @@ function writePackageLock(root: string, contents: unknown): void {
 
 function writeRequirements(root: string, contents: string): void {
   writeFileSync(join(root, "requirements.txt"), contents.trimStart());
+}
+
+function writePyproject(root: string, contents: string): void {
+  writeFileSync(join(root, "pyproject.toml"), contents.trimStart());
 }
 
 function writePnpmLock(root: string, contents: string): void {

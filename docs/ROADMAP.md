@@ -50,6 +50,7 @@
 - Current-format example report covering Markdown sections.
 - GitHub issue forms and pull request template for contributor intake.
 - `schemaVersion` in JSON and Markdown reports.
+- `pyproject.toml` PEP 621 dependency diff summaries.
 - Native Turborepo and Nx task-runner plans for affected Node workspaces.
 - Binary `bun.lockb` migration guidance for legacy Bun projects.
 - Organization policy packs for regulated and agentic-code teams.
