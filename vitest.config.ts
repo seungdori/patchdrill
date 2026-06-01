@@ -4,13 +4,10 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
-    // Git-backed suites spawn many repositories; serial files avoid worker heartbeat flakes under prepack load.
+    // Git-backed suites spawn many repositories; one fork avoids worker heartbeat flakes under prepack load.
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true
-      }
-    },
+    maxWorkers: 1,
+    isolate: false,
     fileParallelism: false,
     testTimeout: 60_000,
     coverage: {

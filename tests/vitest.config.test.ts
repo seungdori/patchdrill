@@ -6,15 +6,17 @@ describe("vitest config", () => {
     const testConfig = config as {
       test?: {
         fileParallelism?: boolean;
+        isolate?: boolean;
+        maxWorkers?: number;
         pool?: string;
-        poolOptions?: { forks?: { singleFork?: boolean } };
         testTimeout?: number;
       };
     };
 
     expect(testConfig.test?.fileParallelism).toBe(false);
     expect(testConfig.test?.pool).toBe("forks");
-    expect(testConfig.test?.poolOptions?.forks?.singleFork).toBe(true);
+    expect(testConfig.test?.maxWorkers).toBe(1);
+    expect(testConfig.test?.isolate).toBe(false);
     expect(testConfig.test?.testTimeout).toBe(60_000);
   });
 });
