@@ -84,13 +84,13 @@
 - Workflow trust-boundary findings for reusable workflows that use `secrets: inherit`, including mutable remote reusable workflow refs.
 - Workflow trust-boundary findings for `pull_request_target` OIDC token minting, environment-scoped OIDC jobs, and remote reusable workflows receiving caller OIDC permissions.
 - .NET solution filter targeting for very large solutions.
+- FastAPI dependency override test targeting for changed dependency helper functions.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
 - Nested reusable workflow propagation and cloud-provider OIDC policy fixtures.
-- FastAPI dependency-override test selection from dependency call sites.
 - .NET solution filter selection from multiple overlapping filters.
 - Android variantFilter and generated source set awareness.
 - Bazel/Buck query output promotion into executable downstream test target plans.

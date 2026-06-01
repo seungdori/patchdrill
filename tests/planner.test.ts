@@ -244,6 +244,50 @@ describe("planCommands", () => {
     });
   });
 
+  it("targets FastAPI dependency override tests for changed dependency helpers", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "app"), { recursive: true });
+    mkdirSync(join(root, "tests"), { recursive: true });
+    writeFileSync(
+      join(root, "app", "dependencies.py"),
+      ["async def get_current_user():", "    return {\"id\": \"real\"}", ""].join("\n")
+    );
+    writeFileSync(
+      join(root, "tests", "test_auth.py"),
+      [
+        "from app.main import app",
+        "from app.dependencies import get_current_user",
+        "",
+        "async def override_current_user():",
+        "    return {\"id\": \"test\"}",
+        "",
+        "app.dependency_overrides[get_current_user] = override_current_user",
+        "",
+        "def test_auth_route():",
+        "    assert True",
+        ""
+      ].join("\n")
+    );
+    writeFileSync(
+      join(root, "tests", "test_unrelated.py"),
+      ["from app.main import app", "app.dependency_overrides[object] = object", "def test_other():", "    assert True", ""].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/dependencies.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "python -m pytest tests/test_auth.py",
+      "python -m compileall .",
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\"",
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; targets = ['app.dependencies']; [importlib.import_module(target) for target in targets]\""
+    ]);
+    expect(commands.find((command) => command.id === "python-targeted-tests")?.reason).toContain("matching changed-test or FastAPI dependency override targets");
+  });
+
   it("does not plan FastAPI import smoke for invalid entrypoint syntax", () => {
     const commands = planCommands(
       process.cwd(),

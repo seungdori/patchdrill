@@ -188,7 +188,7 @@ PatchDrill detects project shape from repo manifests:
 | Ecosystem | Signals | Typical commands |
 | --- | --- | --- |
 | Node | `package.json`, lockfiles, scripts | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` |
-| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `manage.py`, `FastAPI()`, FastAPI routers/dependencies | `python -m pytest tests/test_module.py`, `python -m pytest`, `python manage.py test`, `python -m compileall .`, FastAPI app and changed-module import smoke |
+| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `manage.py`, `FastAPI()`, FastAPI routers/dependencies | `python -m pytest tests/test_module.py`, FastAPI dependency override test targets, `python -m pytest`, `python manage.py test`, `python -m compileall .`, FastAPI app and changed-module import smoke |
 | Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |

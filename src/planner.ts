@@ -19,7 +19,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       if (isDjangoProject(root, signal)) {
         addDjangoPlans(plans);
       } else {
-        addPythonPlans(plans, root, paths);
+        addPythonPlans(plans, root, paths, signal);
         if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, paths, signal.entrypoint);
       }
     }
@@ -346,13 +346,15 @@ function readText(root: string, path: string): string {
   }
 }
 
-function addPythonPlans(plans: CommandPlan[], root: string, paths: string[]): void {
-  const testTargets = pythonChangedTestTargets(root, paths);
+function addPythonPlans(plans: CommandPlan[], root: string, paths: string[], signal?: ProjectSignal): void {
+  const testTargets = pythonChangedTestTargets(root, paths, signal);
   pushUnique(plans, {
     id: testTargets.length > 0 ? "python-targeted-tests" : "python-tests",
     label: testTargets.length > 0 ? "Python targeted tests" : "Python tests",
     command: testTargets.length > 0 ? `python -m pytest ${testTargets.map(quoteShell).join(" ")}` : "python -m pytest",
-    reason: testTargets.length > 0 ? "Python source changes have matching changed-test targets on disk." : "Python files or Python project metadata changed.",
+    reason: testTargets.length > 0
+      ? "Python source changes have matching changed-test or FastAPI dependency override targets on disk."
+      : "Python files or Python project metadata changed.",
     ecosystem: "python",
     required: true
   });
@@ -366,7 +368,7 @@ function addPythonPlans(plans: CommandPlan[], root: string, paths: string[]): vo
   });
 }
 
-function pythonChangedTestTargets(root: string, paths: string[]): string[] {
+function pythonChangedTestTargets(root: string, paths: string[], signal?: ProjectSignal): string[] {
   const targets = new Set<string>();
   for (const path of paths) {
     if (!path.endsWith(".py")) continue;
@@ -378,7 +380,95 @@ function pythonChangedTestTargets(root: string, paths: string[]): string[] {
       if (existsSync(join(root, candidate))) targets.add(candidate);
     }
   }
+  if (signal?.framework === "fastapi") {
+    for (const target of fastApiDependencyOverrideTestTargets(root, paths)) targets.add(target);
+  }
   return [...targets].sort();
+}
+
+interface FastApiDependencyModule {
+  module: string;
+  functionNames: string[];
+}
+
+function fastApiDependencyOverrideTestTargets(root: string, paths: string[]): string[] {
+  const dependencyModules = paths
+    .filter((path) => isFastApiDependencyPath(path))
+    .map((path) => ({
+      module: pythonImportModuleName(path),
+      functionNames: pythonDefinedFunctionNames(root, path)
+    }))
+    .filter((target): target is FastApiDependencyModule => Boolean(target.module) && target.functionNames.length > 0);
+  if (dependencyModules.length === 0) return [];
+
+  return findFilesWithExtension(root, ".py", 7)
+    .filter((path) => isPythonTestPath(path))
+    .filter((path) => testOverridesFastApiDependency(readText(root, path), dependencyModules))
+    .sort();
+}
+
+function isFastApiDependencyPath(path: string): boolean {
+  if (!path.endsWith(".py")) return false;
+  return /(^|\/)(dependencies|deps)\.py$/.test(path) || /(^|\/)(dependencies|deps)\//.test(path);
+}
+
+function pythonDefinedFunctionNames(root: string, path: string): string[] {
+  const names = new Set<string>();
+  const content = readText(root, path);
+  for (const match of content.matchAll(/^\s*(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/gm)) {
+    if (match[1]) names.add(match[1]);
+  }
+  return [...names].sort();
+}
+
+function testOverridesFastApiDependency(content: string, dependencyModules: FastApiDependencyModule[]): boolean {
+  if (!content.includes("dependency_overrides")) return false;
+  const overrideRefs = fastApiDependencyOverrideRefs(content);
+  if (overrideRefs.length === 0) return false;
+
+  return dependencyModules.some((dependencyModule) => {
+    const imports = pythonImportsForModule(content, dependencyModule.module);
+    for (const ref of overrideRefs) {
+      const [qualifier, name] = splitPythonAttributeRef(ref);
+      if (name && imports.moduleAliases.has(qualifier) && dependencyModule.functionNames.includes(name)) return true;
+      if (!name && imports.directNames.has(qualifier) && dependencyModule.functionNames.includes(qualifier)) return true;
+    }
+    return false;
+  });
+}
+
+function fastApiDependencyOverrideRefs(content: string): string[] {
+  const refs = new Set<string>();
+  for (const match of content.matchAll(/dependency_overrides\s*\[\s*([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s*\]/g)) {
+    if (match[1]) refs.add(match[1]);
+  }
+  return [...refs].sort();
+}
+
+function pythonImportsForModule(content: string, moduleName: string): { directNames: Set<string>; moduleAliases: Set<string> } {
+  const directNames = new Set<string>();
+  const moduleAliases = new Set<string>();
+  const escapedModule = escapeRegExp(moduleName);
+
+  for (const match of content.matchAll(new RegExp(`^\\s*from\\s+${escapedModule}\\s+import\\s+(.+)$`, "gm"))) {
+    const imports = match[1] ?? "";
+    for (const imported of imports.split(",")) {
+      const name = imported.trim().replace(/[()]/g, "").split(/\s+as\s+/i).at(-1)?.trim();
+      if (name && /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) directNames.add(name);
+    }
+  }
+
+  for (const match of content.matchAll(new RegExp(`^\\s*import\\s+${escapedModule}\\s+as\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*$`, "gm"))) {
+    if (match[1]) moduleAliases.add(match[1]);
+  }
+
+  return { directNames, moduleAliases };
+}
+
+function splitPythonAttributeRef(value: string): [string, string | undefined] {
+  const dotIndex = value.lastIndexOf(".");
+  if (dotIndex < 0) return [value, undefined];
+  return [value.slice(0, dotIndex), value.slice(dotIndex + 1)];
 }
 
 function pythonTestCandidates(path: string): string[] {
