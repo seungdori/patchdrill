@@ -111,6 +111,17 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects uv-managed Python projects", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "uv.lock"), "");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      manifestPath: "uv.lock"
+    });
+  });
+
   it("detects FastAPI app entrypoints", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

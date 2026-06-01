@@ -20,7 +20,7 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
 
-  const pythonManifestPath = firstExisting(root, ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]);
+  const pythonManifestPath = firstExisting(root, ["pyproject.toml", "uv.lock", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]);
   if (pythonManifestPath) {
     const framework = detectPythonFramework(root);
     const entrypoint = detectPythonEntrypoint(root, framework);

@@ -305,6 +305,43 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
   });
 
+  it("uses Python environment runners and optional static analysis plans", () => {
+    const root = tempRoot();
+    writeFileSync(
+      join(root, "pyproject.toml"),
+      [
+        "[project]",
+        "dependencies = [\"pytest\", \"ruff\", \"mypy\", \"pyright\"]",
+        "",
+        "[tool.ruff]",
+        "line-length = 120",
+        "",
+        "[tool.mypy]",
+        "strict = true",
+        "",
+        "[tool.pyright]",
+        "typeCheckingMode = \"strict\"",
+        ""
+      ].join("\n")
+    );
+    writeFileSync(join(root, "uv.lock"), "");
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/service.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", manifestPath: "pyproject.toml" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "uv run pytest",
+      "python -m compileall .",
+      "uv run ruff check .",
+      "uv run mypy .",
+      "uv run pyright"
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
+  });
+
   it("targets matching pytest files for Python source changes", () => {
     const root = tempRoot();
     mkdirSync(join(root, "app", "routers"), { recursive: true });

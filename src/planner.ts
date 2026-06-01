@@ -454,10 +454,11 @@ function readText(root: string, path: string): string {
 
 function addPythonPlans(plans: CommandPlan[], root: string, paths: string[], signal?: ProjectSignal): void {
   const testTargets = pythonChangedTestTargets(root, paths, signal);
+  const python = pythonToolRunner(root);
   pushUnique(plans, {
     id: testTargets.length > 0 ? "python-targeted-tests" : "python-tests",
     label: testTargets.length > 0 ? "Python targeted tests" : "Python tests",
-    command: testTargets.length > 0 ? `python -m pytest ${testTargets.map(quoteShell).join(" ")}` : "python -m pytest",
+    command: testTargets.length > 0 ? `${pythonCommand(python, "pytest")} ${testTargets.map(quoteShell).join(" ")}` : pythonCommand(python, "pytest"),
     reason: testTargets.length > 0
       ? "Python source changes have matching changed-test or FastAPI dependency override targets on disk."
       : "Python files or Python project metadata changed.",
@@ -472,6 +473,7 @@ function addPythonPlans(plans: CommandPlan[], root: string, paths: string[], sig
     ecosystem: "python",
     required: true
   });
+  addPythonStaticAnalysisPlans(plans, root, python);
 }
 
 function addRubyPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {
@@ -517,6 +519,87 @@ function rubyUsesRSpec(root: string): boolean {
 
 function railsCommand(root: string): string {
   return existsSync(join(root, "bin", "rails")) ? "bin/rails" : "bundle exec rails";
+}
+
+type PythonToolRunner = "python" | "uv" | "poetry" | "pipenv";
+
+function pythonToolRunner(root: string): PythonToolRunner {
+  if (existsSync(join(root, "uv.lock"))) return "uv";
+  if (existsSync(join(root, "poetry.lock"))) return "poetry";
+  if (existsSync(join(root, "Pipfile")) || existsSync(join(root, "Pipfile.lock"))) return "pipenv";
+  return "python";
+}
+
+function pythonCommand(runner: PythonToolRunner, tool: string, args = ""): string {
+  const suffix = args ? ` ${args}` : "";
+  if (runner === "uv") return `uv run ${tool}${suffix}`;
+  if (runner === "poetry") return `poetry run ${tool}${suffix}`;
+  if (runner === "pipenv") return `pipenv run ${tool}${suffix}`;
+  return `python -m ${tool}${suffix}`;
+}
+
+function addPythonStaticAnalysisPlans(plans: CommandPlan[], root: string, runner: PythonToolRunner): void {
+  if (pythonUsesRuff(root)) {
+    pushUnique(plans, {
+      id: "python-ruff",
+      label: "Python Ruff lint",
+      command: pythonCommand(runner, "ruff", "check ."),
+      reason: "Python Ruff configuration or dependency metadata was detected.",
+      ecosystem: "python",
+      required: false
+    });
+  }
+  if (pythonUsesMypy(root)) {
+    pushUnique(plans, {
+      id: "python-mypy",
+      label: "Python mypy types",
+      command: pythonCommand(runner, "mypy", "."),
+      reason: "Python mypy configuration or dependency metadata was detected.",
+      ecosystem: "python",
+      required: false
+    });
+  }
+  if (pythonUsesPyright(root)) {
+    pushUnique(plans, {
+      id: "python-pyright",
+      label: "Python Pyright types",
+      command: pythonCommand(runner, "pyright"),
+      reason: "Python Pyright configuration or dependency metadata was detected.",
+      ecosystem: "python",
+      required: false
+    });
+  }
+}
+
+function pythonUsesRuff(root: string): boolean {
+  return (
+    existsSync(join(root, "ruff.toml")) ||
+    existsSync(join(root, ".ruff.toml")) ||
+    pythonConfigMentions(root, /\[tool\.ruff(?:\.|\])/i) ||
+    pythonManifestMentions(root, "ruff")
+  );
+}
+
+function pythonUsesMypy(root: string): boolean {
+  return (
+    existsSync(join(root, "mypy.ini")) ||
+    existsSync(join(root, ".mypy.ini")) ||
+    pythonConfigMentions(root, /\[(?:tool\.mypy|mypy(?:-[^\]]+)?)\]/i) ||
+    pythonManifestMentions(root, "mypy")
+  );
+}
+
+function pythonUsesPyright(root: string): boolean {
+  return existsSync(join(root, "pyrightconfig.json")) || pythonConfigMentions(root, /\[tool\.pyright\]/i) || pythonManifestMentions(root, "pyright");
+}
+
+function pythonConfigMentions(root: string, pattern: RegExp): boolean {
+  return ["pyproject.toml", "setup.cfg"].some((path) => pattern.test(readText(root, path)));
+}
+
+function pythonManifestMentions(root: string, tool: string): boolean {
+  const pattern = new RegExp(`(^|[^a-z0-9_.-])${escapeRegExp(tool.toLowerCase())}([^a-z0-9_.-]|$)`, "i");
+  return ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg"].some((path) => pattern.test(readText(root, path).toLowerCase().replaceAll("_", "-")));
 }
 
 function addPhpPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
@@ -2015,7 +2098,26 @@ function touchesNode(paths: string[]): boolean {
 
 function touchesPython(paths: string[], root: string, signal?: ProjectSignal): boolean {
   if (isDjangoProject(root, signal) && paths.some(isDjangoRelevantPath)) return true;
-  return touches(paths, [".py", "pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]) || existsSync(join(root, "pytest.ini"));
+  return (
+    touches(paths, [
+      ".py",
+      "pyproject.toml",
+      "requirements.txt",
+      "setup.py",
+      "setup.cfg",
+      "manage.py",
+      "pytest.ini",
+      "uv.lock",
+      "poetry.lock",
+      "Pipfile",
+      "Pipfile.lock",
+      "ruff.toml",
+      ".ruff.toml",
+      "mypy.ini",
+      ".mypy.ini",
+      "pyrightconfig.json"
+    ]) || existsSync(join(root, "pytest.ini"))
+  );
 }
 
 function isDjangoProject(root: string, signal?: ProjectSignal): boolean {

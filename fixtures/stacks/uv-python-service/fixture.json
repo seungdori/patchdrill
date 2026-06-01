@@ -1,0 +1,47 @@
+{
+  "name": "uv-python-service",
+  "expectedEcosystems": ["python"],
+  "expectedCommands": [
+    "uv run pytest tests/test_service.py",
+    "python -m compileall .",
+    "uv run ruff check .",
+    "uv run mypy .",
+    "uv run pyright"
+  ],
+  "baseFiles": [
+    {
+      "path": "pyproject.toml",
+      "lines": [
+        "[project]",
+        "dependencies = [\"pytest\", \"ruff\", \"mypy\", \"pyright\"]",
+        "",
+        "[tool.ruff]",
+        "line-length = 120",
+        "",
+        "[tool.mypy]",
+        "strict = true",
+        "",
+        "[tool.pyright]",
+        "typeCheckingMode = \"strict\""
+      ]
+    },
+    {
+      "path": "uv.lock",
+      "lines": []
+    },
+    {
+      "path": "app/service.py",
+      "lines": ["def ok():", "    return True"]
+    },
+    {
+      "path": "tests/test_service.py",
+      "lines": ["def test_ok():", "    assert True"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/service.py",
+      "lines": ["def ok():", "    return False"]
+    }
+  ]
+}

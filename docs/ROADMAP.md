@@ -96,6 +96,7 @@
 - GitHub Action `dashboard-history` input for re-rendering trend dashboards from previous JSON report artifacts.
 - Framework-specific changed-test matching for Rails/RSpec, Python app packages, JVM source sets, and Laravel unit/feature tests.
 - Node script alias planning for typecheck, unit, and optional browser/e2e verification scripts.
+- uv-managed Python fixture and optional Ruff, mypy, and Pyright static-analysis planning.
 
 ## Contribution Targets
 

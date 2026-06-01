@@ -26,7 +26,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, Spring Boot, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
+- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, Spring Boot, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
@@ -214,7 +214,7 @@ PatchDrill detects project shape from repo manifests:
 | Ecosystem | Signals | Typical commands |
 | --- | --- | --- |
 | Node | `package.json`, lockfiles, scripts | `npm run typecheck`, `npm run check:types`, `npm run lint`, `npm run test`, `npm run test:unit`, `npm run build`, optional `npm run test:e2e` |
-| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `manage.py`, `FastAPI()`, FastAPI routers/dependencies | `python -m pytest tests/test_module.py`, FastAPI dependency override test targets, `python -m pytest`, `python manage.py test`, `python -m compileall .`, FastAPI app and changed-module import smoke |
+| Python | `pyproject.toml`, `uv.lock`, `requirements.txt`, `setup.py`, `manage.py`, `FastAPI()`, FastAPI routers/dependencies, Ruff/mypy/Pyright config | `uv run pytest tests/test_module.py`, `python -m pytest`, `python manage.py test`, `python -m compileall .`, optional `uv run ruff check .`, optional `uv run mypy .`, optional `uv run pyright`, FastAPI app and changed-module import smoke |
 | Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |
