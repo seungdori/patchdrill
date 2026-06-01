@@ -1,0 +1,32 @@
+{
+  "name": "java-maven",
+  "expectedEcosystems": ["java"],
+  "expectedCommands": ["./mvnw test"],
+  "baseFiles": [
+    {
+      "path": "pom.xml",
+      "lines": [
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">",
+        "  <modelVersion>4.0.0</modelVersion>",
+        "  <groupId>com.acme</groupId>",
+        "  <artifactId>api</artifactId>",
+        "  <version>1.0.0</version>",
+        "</project>"
+      ]
+    },
+    {
+      "path": "mvnw",
+      "lines": ["#!/bin/sh", "echo maven wrapper"]
+    },
+    {
+      "path": "src/main/java/com/acme/Api.java",
+      "lines": ["package com.acme;", "public class Api { public boolean ok() { return true; } }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/main/java/com/acme/Api.java",
+      "lines": ["package com.acme;", "public class Api { public boolean ok() { return false; } }"]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "spring-boot-maven",
+  "expectedEcosystems": ["java"],
+  "expectedCommands": ["./mvnw test", "./mvnw package -DskipTests"],
+  "baseFiles": [
+    {
+      "path": "pom.xml",
+      "lines": [
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">",
+        "  <modelVersion>4.0.0</modelVersion>",
+        "  <groupId>com.acme</groupId>",
+        "  <artifactId>api</artifactId>",
+        "  <version>1.0.0</version>",
+        "  <parent>",
+        "    <groupId>org.springframework.boot</groupId>",
+        "    <artifactId>spring-boot-starter-parent</artifactId>",
+        "    <version>3.3.0</version>",
+        "  </parent>",
+        "  <dependencies>",
+        "    <dependency>",
+        "      <groupId>org.springframework.boot</groupId>",
+        "      <artifactId>spring-boot-starter-web</artifactId>",
+        "    </dependency>",
+        "  </dependencies>",
+        "</project>"
+      ]
+    },
+    {
+      "path": "mvnw",
+      "lines": ["#!/bin/sh", "echo maven wrapper"]
+    },
+    {
+      "path": "src/main/java/com/acme/ApiApplication.java",
+      "lines": ["package com.acme;", "public class ApiApplication { public boolean ready() { return true; } }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/main/java/com/acme/ApiApplication.java",
+      "lines": ["package com.acme;", "public class ApiApplication { public boolean ready() { return false; } }"]
+    }
+  ]
+}

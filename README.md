@@ -26,7 +26,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, Spring Boot, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
+- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Maven/Gradle, Spring Boot Maven/Gradle, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 

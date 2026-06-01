@@ -86,3 +86,4 @@
 - Added GitHub Actions annotation output for findings through `--github-annotations` and the composite Action, with dedicated documentation.
 - Updated generated workflows to make annotations and step summaries explicit.
 - Added compact Markdown summaries for GitHub step summaries and PR comments.
+- Added first-party Maven and Spring Boot Maven stack fixtures.
