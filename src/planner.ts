@@ -854,12 +854,28 @@ function addAndroidPlans(plans: CommandPlan[], root: string, paths: string[]): v
 function androidVariantFromPaths(root: string, paths: string[]): string | undefined {
   const variants = new Set<string>();
   for (const path of paths) {
+    const generatedVariant = androidGeneratedVariantFromPath(root, path);
+    if (generatedVariant) {
+      variants.add(androidEnabledVariant(root, path, generatedVariant));
+      continue;
+    }
     const sourceSet = androidSourceSet(path);
     if (!sourceSet) continue;
     const variant = androidVariantFromSourceSet(sourceSet) ?? androidVariantFromFlavorSourceSet(root, path, sourceSet);
-    if (variant) variants.add(variant);
+    if (variant) variants.add(androidEnabledVariant(root, path, variant));
   }
   return variants.size === 1 ? [...variants][0] : undefined;
+}
+
+function androidGeneratedVariantFromPath(root: string, path: string): string | undefined {
+  const segments = path.split("/");
+  const buildIndex = segments.findIndex((segment, index) => segment === "build" && segments[index + 1] === "generated");
+  if (buildIndex < 0) return undefined;
+  for (const segment of segments.slice(buildIndex + 2)) {
+    const variant = androidVariantFromSourceSet(segment) ?? androidVariantFromFlavorSourceSet(root, path, segment);
+    if (variant) return variant;
+  }
+  return undefined;
 }
 
 function androidSourceSet(path: string): string | undefined {
@@ -878,6 +894,7 @@ function androidVariantFromSourceSet(sourceSet: string): string | undefined {
 interface AndroidGradleModel {
   productFlavors: string[];
   buildTypes: string[];
+  disabledVariants: string[];
 }
 
 function androidVariantFromFlavorSourceSet(root: string, path: string, sourceSet: string): string | undefined {
@@ -889,6 +906,12 @@ function androidVariantFromFlavorSourceSet(root: string, path: string, sourceSet
   return `${pascalCase(normalizedSourceSet)}${pascalCase(buildType)}`;
 }
 
+function androidEnabledVariant(root: string, path: string, variant: string): string {
+  const model = readAndroidGradleModel(root, path);
+  if (!model.disabledVariants.includes(variant)) return variant;
+  return androidFallbackEnabledVariant(variant, model) ?? variant;
+}
+
 function readAndroidGradleModel(root: string, path: string): AndroidGradleModel {
   const moduleRoot = nearestManifestRoot(root, path, ["build.gradle", "build.gradle.kts"]) ?? ".";
   const content = ["build.gradle", "build.gradle.kts"]
@@ -897,7 +920,99 @@ function readAndroidGradleModel(root: string, path: string): AndroidGradleModel 
   const productFlavors = gradleNamedBlockChildren(content, "productFlavors");
   const explicitBuildTypes = gradleNamedBlockChildren(content, "buildTypes");
   const buildTypes = uniqueStrings([...explicitBuildTypes, "debug", "release"]);
-  return { productFlavors, buildTypes };
+  const disabledVariants = androidDisabledVariants(content, productFlavors, buildTypes);
+  return { productFlavors, buildTypes, disabledVariants };
+}
+
+function androidDisabledVariants(content: string, productFlavors: string[], buildTypes: string[]): string[] {
+  const variants = new Set<string>();
+  for (const snippet of androidDisabledVariantSnippets(content)) {
+    const mentionedBuildTypes = androidMentionedBuildTypes(snippet, buildTypes);
+    const mentionedFlavors = androidMentionedFlavors(snippet, productFlavors);
+    const targetBuildTypes = mentionedBuildTypes.length > 0 ? mentionedBuildTypes : buildTypes;
+    const targetFlavorSets = mentionedFlavors.length > 0 ? [mentionedFlavors] : [[]];
+    for (const flavorSet of targetFlavorSets) {
+      for (const buildType of targetBuildTypes) {
+        variants.add(androidVariantName(flavorSet, buildType));
+      }
+    }
+  }
+  return [...variants].sort();
+}
+
+function androidDisabledVariantSnippets(content: string): string[] {
+  const snippets: string[] = [];
+  const variantFilter = gradleBlockBody(content, "variantFilter");
+  if (variantFilter) snippets.push(...androidVariantFilterDisabledSnippets(variantFilter));
+
+  for (const match of content.matchAll(/beforeVariants\s*\(\s*selector\(\)([\s\S]*?)\)\s*\{([\s\S]*?)\}/g)) {
+    const selector = match[1] ?? "";
+    const body = match[2] ?? "";
+    if (/\benable\s*=\s*false\b/.test(body)) snippets.push(`${selector}\n${body}`);
+  }
+  return snippets;
+}
+
+function androidVariantFilterDisabledSnippets(content: string): string[] {
+  const snippets: string[] = [];
+  for (const match of content.matchAll(/if\s*\(([\s\S]*?)\)\s*\{([\s\S]*?)\}/g)) {
+    const condition = match[1] ?? "";
+    const body = match[2] ?? "";
+    if (/(setIgnore\s*\(\s*true\s*\)|ignore\s*=\s*true)/.test(body)) snippets.push(`${condition}\n${body}`);
+  }
+  if (snippets.length === 0 && /(setIgnore\s*\(\s*true\s*\)|ignore\s*=\s*true)/.test(content)) snippets.push(content);
+  return snippets;
+}
+
+function androidMentionedBuildTypes(content: string, buildTypes: string[]): string[] {
+  const mentioned = new Set<string>();
+  for (const match of content.matchAll(/buildType\.name\s*(?:==|=)\s*["']([^"']+)["']/g)) {
+    if (match[1]) mentioned.add(match[1]);
+  }
+  for (const match of content.matchAll(/withBuildType\s*\(\s*["']([^"']+)["']\s*\)/g)) {
+    if (match[1]) mentioned.add(match[1]);
+  }
+  return filterKnownGradleNames([...mentioned], buildTypes);
+}
+
+function androidMentionedFlavors(content: string, productFlavors: string[]): string[] {
+  const mentioned = new Set<string>();
+  for (const match of content.matchAll(/flavors\*\.\s*name\.contains\s*\(\s*["']([^"']+)["']\s*\)/g)) {
+    if (match[1]) mentioned.add(match[1]);
+  }
+  for (const match of content.matchAll(/withFlavor\s*\(\s*["'][^"']+["']\s*(?:to|,)\s*["']([^"']+)["']\s*\)/g)) {
+    if (match[1]) mentioned.add(match[1]);
+  }
+  return filterKnownGradleNames([...mentioned], productFlavors);
+}
+
+function filterKnownGradleNames(values: string[], knownValues: string[]): string[] {
+  if (knownValues.length === 0) return values;
+  const known = new Map(knownValues.map((value) => [value.toLowerCase(), value]));
+  return values.map((value) => known.get(value.toLowerCase())).filter((value): value is string => Boolean(value));
+}
+
+function androidVariantName(flavors: string[], buildType: string): string {
+  return `${flavors.map(pascalCase).join("")}${pascalCase(buildType)}`;
+}
+
+function androidFallbackEnabledVariant(variant: string, model: AndroidGradleModel): string | undefined {
+  const buildType = androidVariantBuildType(variant, model.buildTypes);
+  if (!buildType) return undefined;
+  const flavorPrefix = variant.slice(0, -pascalCase(buildType).length);
+  const preferredBuildTypes = uniqueStrings([...model.buildTypes.filter((candidate) => candidate.toLowerCase() === "debug"), ...model.buildTypes]);
+  for (const candidateBuildType of preferredBuildTypes) {
+    const candidate = `${flavorPrefix}${pascalCase(candidateBuildType)}`;
+    if (!model.disabledVariants.includes(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function androidVariantBuildType(variant: string, buildTypes: string[]): string | undefined {
+  return buildTypes
+    .map((buildType) => ({ raw: buildType, pascal: pascalCase(buildType) }))
+    .sort((a, b) => b.pascal.length - a.pascal.length)
+    .find((buildType) => variant.endsWith(buildType.pascal))?.raw;
 }
 
 function androidSourceSetMatchesFlavors(sourceSet: string, productFlavors: string[]): boolean {

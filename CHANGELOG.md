@@ -79,3 +79,4 @@
 - Added FastAPI dependency override test targeting for changed dependency helper functions.
 - Added .NET solution-filter selection for changed projects when multiple overlapping `.slnf` files exist.
 - Added Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
+- Added Android generated-source variant detection and `variantFilter` disabled-variant avoidance.

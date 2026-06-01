@@ -192,7 +192,7 @@ PatchDrill detects project shape from repo manifests:
 | Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |
-| Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml`, build types, product flavors, variant source sets | `./gradlew testDebugUnitTest`, `./gradlew testReleaseUnitTest`, `./gradlew testFreeDebugUnitTest`, `./gradlew testMinApi24DemoDebugUnitTest`, `./gradlew assemble<Variant>`, `./gradlew lint<Variant>` |
+| Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml`, build types, product flavors, `variantFilter`, variant source sets, generated source paths | `./gradlew testDebugUnitTest`, `./gradlew testReleaseUnitTest`, `./gradlew testFreeDebugUnitTest`, `./gradlew testMinApi24DemoDebugUnitTest`, `./gradlew assemble<Variant>`, `./gradlew lint<Variant>` |
 | .NET | `global.json`, `.slnf`, `.sln`, `.csproj`, `ProjectReference` | `dotnet test App.slnf`, `dotnet test tests/Api.Tests/Api.Tests.csproj`, `dotnet build src/Api/Api.csproj --no-restore`, `dotnet publish src/Api/Api.csproj --no-restore` |
 | Swift | `Package.swift`, `Package.resolved`, `*.swift` | `swift test`, `swift build` |
 | Xcode | `.xcworkspace`, `.xcodeproj`, shared `.xcscheme`, `.xctestplan`, Apple app source/resources | `xcodebuild -workspace App.xcworkspace -scheme App -testPlan AppTests test`, `xcodebuild -project App.xcodeproj -scheme App build` |

@@ -437,6 +437,49 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-min-api24-demo-debug-unit-tests"]);
   });
 
+  it("uses Android generated source paths to select build variants", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/build/generated/source/kapt/release/com/acme/GeneratedMapper.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testReleaseUnitTest", "gradle assembleRelease", "gradle lintRelease"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-release-unit-tests"]);
+  });
+
+  it("avoids Android variants disabled by variantFilter", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(
+      join(root, "app", "build.gradle"),
+      [
+        "plugins { id 'com.android.application' }",
+        "android {",
+        "  flavorDimensions 'tier'",
+        "  productFlavors {",
+        "    free { dimension 'tier' }",
+        "    paid { dimension 'tier' }",
+        "  }",
+        "  variantFilter { variant ->",
+        "    if (variant.flavors*.name.contains('paid') && variant.buildType.name == 'release') {",
+        "      setIgnore(true)",
+        "    }",
+        "  }",
+        "}"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/src/paidRelease/java/com/acme/PaidOnly.kt", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testPaidDebugUnitTest", "gradle assemblePaidDebug", "gradle lintPaidDebug"]);
+    expect(commands[0]?.reason).toContain("PaidDebug JVM unit tests");
+  });
+
   it("adds .NET build verification", () => {
     const commands = planCommands(
       process.cwd(),
