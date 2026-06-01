@@ -75,6 +75,8 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
   if (exists(root, "Package.swift")) add({ ecosystem: "swift", manifestPath: "Package.swift" });
+  const xcodeManifestPath = findXcodeManifestPath(root);
+  if (xcodeManifestPath) add({ ecosystem: "xcode", manifestPath: xcodeManifestPath });
   if (exists(root, "Dockerfile") || exists(root, "compose.yaml") || exists(root, "docker-compose.yml")) {
     add({
       ecosystem: "docker",
@@ -222,6 +224,10 @@ function findAndroidManifestPath(root: string): string | undefined {
   if (nestedBuildFile) return nestedBuildFile;
   if (hasFileNamed(root, "AndroidManifest.xml", 5)) return "AndroidManifest.xml";
   return undefined;
+}
+
+function findXcodeManifestPath(root: string): string | undefined {
+  return findDirectoryWithExtension(root, ".xcworkspace", 3) ?? findDirectoryWithExtension(root, ".xcodeproj", 3);
 }
 
 function androidManifestMentions(root: string, path: string): boolean {
@@ -617,6 +623,10 @@ function findFileWithExtension(root: string, extension: string, maxDepth: number
   return walkForExtensionPath(root, root, extension, maxDepth, 0);
 }
 
+function findDirectoryWithExtension(root: string, extension: string, maxDepth: number): string | undefined {
+  return walkForDirectoryExtensionPath(root, root, extension, maxDepth, 0);
+}
+
 function walkForExtension(directory: string, extension: string, maxDepth: number, depth: number): boolean {
   if (depth > maxDepth) return false;
   try {
@@ -645,6 +655,23 @@ function walkForExtensionPath(root: string, directory: string, extension: string
         const match = walkForExtensionPath(root, path, extension, maxDepth, depth + 1);
         if (match) return match;
       }
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function walkForDirectoryExtensionPath(root: string, directory: string, extension: string, maxDepth: number, depth: number): string | undefined {
+  if (depth > maxDepth) return undefined;
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.name.endsWith(extension)) return relativePath(root, path);
+      const match = walkForDirectoryExtensionPath(root, path, extension, maxDepth, depth + 1);
+      if (match) return match;
     }
   } catch {
     return undefined;

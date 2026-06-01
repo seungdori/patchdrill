@@ -42,6 +42,15 @@ describe("types", () => {
     expect(signal.ecosystem).toBe("swift");
   });
 
+  it("includes Xcode as a supported project ecosystem", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "xcode",
+      manifestPath: "App.xcodeproj"
+    };
+
+    expect(signal.ecosystem).toBe("xcode");
+  });
+
   it("includes Python framework and entrypoint metadata", () => {
     const signal: ProjectSignal = {
       ecosystem: "python",

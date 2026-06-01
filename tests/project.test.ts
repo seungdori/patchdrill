@@ -74,6 +74,19 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Xcode projects with shared schemes", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    mkdirSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(join(root, "App.xcodeproj", "project.pbxproj"), "// !$*UTF8*$!\n");
+    writeFileSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes", "App.xcscheme"), "<Scheme></Scheme>\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "xcode",
+      manifestPath: "App.xcodeproj"
+    });
+  });
+
   it("detects Django projects from manage.py", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

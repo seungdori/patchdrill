@@ -37,11 +37,13 @@ describe("schemas", () => {
     expect(reportSchema.$defs.ecosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("buck");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("swift");
+    expect(reportSchema.$defs.ecosystem?.enum).toContain("xcode");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("android");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("kubernetes");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("buck");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
+    expect(reportSchema.$defs.commandEcosystem?.enum).toContain("xcode");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("android");
     expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "aspnet-core"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
@@ -123,6 +125,10 @@ describe("schemas", () => {
         {
           ecosystem: "android",
           manifestPath: "app/build.gradle"
+        },
+        {
+          ecosystem: "xcode",
+          manifestPath: "App.xcodeproj"
         },
         {
           ecosystem: "dotnet",

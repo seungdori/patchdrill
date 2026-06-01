@@ -1,0 +1,28 @@
+{
+  "name": "xcode-app",
+  "expectedEcosystems": ["xcode"],
+  "expectedCommands": [
+    "xcodebuild -project App.xcodeproj -scheme App test",
+    "xcodebuild -project App.xcodeproj -scheme App build"
+  ],
+  "baseFiles": [
+    {
+      "path": "App.xcodeproj/project.pbxproj",
+      "lines": ["// !$*UTF8*$!"]
+    },
+    {
+      "path": "App.xcodeproj/xcshareddata/xcschemes/App.xcscheme",
+      "lines": ["<Scheme LastUpgradeVersion=\"1600\" version=\"1.7\"></Scheme>"]
+    },
+    {
+      "path": "App/ContentView.swift",
+      "lines": ["import SwiftUI", "struct ContentView: View {", "  var body: some View { Text(\"Hello\") }", "}"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "App/ContentView.swift",
+      "lines": ["import SwiftUI", "struct ContentView: View {", "  var body: some View { Text(\"Hello, PatchDrill\") }", "}"]
+    }
+  ]
+}

@@ -39,6 +39,7 @@ export interface ProjectSignal {
     | "php"
     | "dotnet"
     | "swift"
+    | "xcode"
     | "terraform"
     | "docker"
     | "kubernetes"

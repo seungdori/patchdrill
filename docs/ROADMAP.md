@@ -64,6 +64,7 @@
 - First-party stack fixtures for Kustomize, Java/Gradle, and .NET services.
 - Bazel and Buck2 workspace detection with graph-wide verification planning.
 - Swift Package Manager verification planning.
+- Xcode project/workspace detection with shared-scheme verification planning.
 - Django framework detection with `manage.py test` and `manage.py check` planning.
 - Spring Boot framework detection with Gradle `bootJar` packaging plans.
 - Android Gradle detection with debug unit test, assemble, and lint planning.
@@ -91,5 +92,4 @@ PatchDrill needs real-world fixtures from:
 - .NET solution filter selection from multiple overlapping filters.
 - Android variantFilter and generated source set awareness.
 - Bazel/Buck downstream affected-target query planning beyond changed-package defaults.
-- Mobile apps.
-- Xcode scheme-aware iOS and macOS app test planning.
+- Xcode destination and test-plan selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.

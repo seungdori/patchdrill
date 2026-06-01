@@ -95,6 +95,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         required: false
       });
     }
+    if (signal.ecosystem === "xcode" && touchesXcode(paths)) {
+      addXcodePlans(plans, root, paths, signal);
+    }
     if (signal.ecosystem === "terraform" && paths.some((path) => path.endsWith(".tf") || path.endsWith(".tfvars"))) {
       pushUnique(plans, {
         id: "terraform-validate",
@@ -473,6 +476,74 @@ function addFastApiPlans(plans: CommandPlan[], paths: string[], entrypoint: stri
 
 function isPythonEntrypoint(value: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+}
+
+function addXcodePlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
+  const schemes = xcodeTargetSchemes(root, paths, signal.manifestPath);
+  const subject = xcodeBuildSubject(signal.manifestPath);
+  if (schemes.length === 0) {
+    pushUnique(plans, {
+      id: "xcode-list-schemes",
+      label: "Xcode scheme listing",
+      command: `xcodebuild ${subject} -list`,
+      reason: "Xcode project files changed, but no shared scheme was found in the repository. List schemes before choosing a build or test command.",
+      ecosystem: "xcode",
+      required: false,
+      packagePath: signal.manifestPath
+    });
+    return;
+  }
+
+  for (const scheme of schemes) {
+    pushUnique(plans, {
+      id: `xcode-${slug(scheme)}-tests`,
+      label: `${scheme} Xcode tests`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme)} test`,
+      reason: `${scheme} is an Xcode shared scheme for ${signal.manifestPath}, so changed app or test files should run through xcodebuild test.`,
+      ecosystem: "xcode",
+      required: true,
+      packageName: scheme,
+      packagePath: signal.manifestPath
+    });
+    pushUnique(plans, {
+      id: `xcode-${slug(scheme)}-build`,
+      label: `${scheme} Xcode build`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme)} build`,
+      reason: `${scheme} should still compile through Xcode after project, source, resource, or signing metadata changes.`,
+      ecosystem: "xcode",
+      required: false,
+      packageName: scheme,
+      packagePath: signal.manifestPath
+    });
+  }
+}
+
+function xcodeBuildSubject(manifestPath: string): string {
+  if (manifestPath.endsWith(".xcworkspace")) return `-workspace ${quoteShell(manifestPath)}`;
+  return `-project ${quoteShell(manifestPath)}`;
+}
+
+function xcodeTargetSchemes(root: string, paths: string[], manifestPath: string): string[] {
+  const changedSchemeNames = paths.filter((path) => path.endsWith(".xcscheme")).map((path) => basename(path, ".xcscheme"));
+  if (changedSchemeNames.length > 0) return uniqueStrings(changedSchemeNames).sort();
+
+  const manifestSchemes = xcodeSharedSchemeNames(root, manifestPath);
+  if (manifestSchemes.length > 0) return manifestSchemes;
+
+  return findFilesWithExtension(root, ".xcscheme", 7)
+    .filter((path) => path.includes("/xcshareddata/xcschemes/"))
+    .map((path) => basename(path, ".xcscheme"))
+    .filter(Boolean)
+    .sort();
+}
+
+function xcodeSharedSchemeNames(root: string, manifestPath: string): string[] {
+  const schemeRoot = joinPath(manifestPath, "xcshareddata", "xcschemes");
+  return findFilesWithExtension(root, ".xcscheme", 7)
+    .filter((path) => path.startsWith(`${schemeRoot}/`))
+    .map((path) => basename(path, ".xcscheme"))
+    .filter(Boolean)
+    .sort();
 }
 
 function fastApiChangedImportModules(paths: string[]): string[] {
@@ -1297,6 +1368,28 @@ function touchesAndroid(paths: string[]): boolean {
     path === "gradlew" ||
     path.startsWith("gradle/") ||
     /(^|\/)(res|assets|aidl|jni|cpp)\//.test(path)
+  );
+}
+
+function touchesXcode(paths: string[]): boolean {
+  return paths.some((path) =>
+    touches([path], [
+      ".swift",
+      ".m",
+      ".mm",
+      ".h",
+      ".hpp",
+      ".storyboard",
+      ".xib",
+      ".plist",
+      ".xcconfig",
+      ".entitlements",
+      ".xcscheme",
+      "Package.resolved",
+      "project.pbxproj"
+    ]) ||
+    path.includes(".xcodeproj/") ||
+    path.includes(".xcworkspace/")
   );
 }
 

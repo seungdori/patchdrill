@@ -137,6 +137,41 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["swift-tests"]);
   });
 
+  it("adds Xcode scheme-aware project verification", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes", "App.xcscheme"), "<Scheme></Scheme>\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "App/Sources/ContentView.swift", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "xcode", manifestPath: "App.xcodeproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "xcodebuild -project App.xcodeproj -scheme App test",
+      "xcodebuild -project App.xcodeproj -scheme App build"
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["xcode-app-tests"]);
+  });
+
+  it("adds Xcode scheme-aware workspace verification", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "App.xcworkspace", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(join(root, "App.xcworkspace", "xcshareddata", "xcschemes", "App QA.xcscheme"), "<Scheme></Scheme>\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "App/AppDelegate.swift", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "xcode", manifestPath: "App.xcworkspace" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "xcodebuild -workspace App.xcworkspace -scheme 'App QA' test",
+      "xcodebuild -workspace App.xcworkspace -scheme 'App QA' build"
+    ]);
+  });
+
   it("adds Django framework verification", () => {
     const commands = planCommands(
       process.cwd(),
