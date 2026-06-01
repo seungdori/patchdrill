@@ -19,6 +19,19 @@ describe("types", () => {
 
     expect(signal.ecosystem).toBe("kubernetes");
   });
+
+  it("includes Bazel and Buck as supported project ecosystems", () => {
+    const bazel: ProjectSignal = {
+      ecosystem: "bazel",
+      manifestPath: "MODULE.bazel"
+    };
+    const buck: ProjectSignal = {
+      ecosystem: "buck",
+      manifestPath: ".buckconfig"
+    };
+
+    expect([bazel.ecosystem, buck.ecosystem]).toEqual(["bazel", "buck"]);
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

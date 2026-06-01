@@ -1,0 +1,25 @@
+{
+  "name": "buck2-workspace",
+  "expectedEcosystems": ["buck"],
+  "expectedCommands": ["buck2 test //...", "buck2 build //..."],
+  "baseFiles": [
+    {
+      "path": ".buckconfig",
+      "lines": ["[cells]", "  root = ."]
+    },
+    {
+      "path": "src/app/BUCK",
+      "lines": ["python_library(", "    name = \"app\",", "    srcs = [\"app.py\"],", ")"]
+    },
+    {
+      "path": "src/app/app.py",
+      "lines": ["def ok():", "    return True"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/app/app.py",
+      "lines": ["def ok():", "    return False"]
+    }
+  ]
+}

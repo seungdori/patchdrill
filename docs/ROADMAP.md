@@ -3,7 +3,7 @@
 ## Near Term
 
 - Expand first-party fixtures toward the full top 20 open-source stacks.
-- Expand native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, and Go workspaces.
+- Expand native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck workspaces.
 
 ## Later
 
@@ -62,6 +62,7 @@
 - Composite GitHub Action support for HTML dashboard artifacts.
 - Kubernetes and Helm manifest verification planning.
 - First-party stack fixtures for Kustomize, Java/Gradle, and .NET services.
+- Bazel and Buck2 workspace detection with graph-wide verification planning.
 
 ## Contribution Targets
 
@@ -70,5 +71,5 @@ PatchDrill needs real-world fixtures from:
 - Django/FastAPI.
 - Spring Boot and Gradle.
 - .NET services.
-- Bazel or Buck monorepos.
+- Bazel/Buck changed-target narrowing beyond graph-wide defaults.
 - Mobile apps.

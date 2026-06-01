@@ -16,7 +16,7 @@ npx patchdrill scan --base origin/main --run \
 
 ## Why Star It
 
-- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, Go, Maven, Gradle, dotnet, Terraform, Docker, Kubernetes, and Helm.
+- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, Go, Maven, Gradle, dotnet, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
@@ -24,7 +24,7 @@ npx patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, .NET, Pants, Cargo, and Go repository shapes.
+- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, .NET, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
@@ -196,6 +196,8 @@ PatchDrill detects project shape from repo manifests:
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`, Compose files | `docker build .` |
 | Kubernetes | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `kubernetes/`, `manifests/` | `helm lint .`, `kubectl kustomize .`, `kubectl apply --dry-run=client -f k8s` |
+| Bazel | `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel`, `.bazelrc` | `bazel test //...`, `bazel build //...` |
+| Buck2 | `.buckconfig`, `BUCK`, `BUCK.v2` | `buck2 test //...`, `buck2 build //...` |
 | Pants | `pants.toml` | `pants --changed-since=HEAD --changed-dependents=transitive test` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 

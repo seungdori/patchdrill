@@ -64,6 +64,10 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
   if (exists(root, "pants.toml")) add({ ecosystem: "pants", manifestPath: "pants.toml" });
+  const bazelManifestPath = findBazelManifestPath(root);
+  if (bazelManifestPath) add({ ecosystem: "bazel", manifestPath: bazelManifestPath });
+  const buckManifestPath = findBuckManifestPath(root);
+  if (buckManifestPath) add({ ecosystem: "buck", manifestPath: buckManifestPath });
   if (hasTerraform(root)) add({ ecosystem: "terraform", manifestPath: "*.tf" });
   const kubernetesManifestPath = findKubernetesManifestPath(root);
   if (kubernetesManifestPath) add({ ecosystem: "kubernetes", manifestPath: kubernetesManifestPath });
@@ -506,6 +510,21 @@ function findKubernetesManifestPath(root: string): string | undefined {
   if (direct) return direct;
   if (hasFileNamed(root, "Chart.yaml", 3)) return "Chart.yaml";
   if (hasFileNamed(root, "kustomization.yaml", 3) || hasFileNamed(root, "kustomization.yml", 3)) return "kustomization.yaml";
+  return undefined;
+}
+
+function findBazelManifestPath(root: string): string | undefined {
+  const direct = firstExisting(root, ["MODULE.bazel", "WORKSPACE.bazel", "WORKSPACE", ".bazelrc"]);
+  if (direct) return direct;
+  if (exists(root, "pants.toml")) return undefined;
+  if (hasFileNamed(root, "BUILD.bazel", 3) || hasFileNamed(root, "BUILD", 3)) return "BUILD.bazel";
+  return undefined;
+}
+
+function findBuckManifestPath(root: string): string | undefined {
+  const direct = firstExisting(root, [".buckconfig", "BUCK", "BUCK.v2"]);
+  if (direct) return direct;
+  if (hasFileNamed(root, "BUCK", 3) || hasFileNamed(root, "BUCK.v2", 3)) return "BUCK";
   return undefined;
 }
 

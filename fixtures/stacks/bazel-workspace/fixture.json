@@ -1,0 +1,25 @@
+{
+  "name": "bazel-workspace",
+  "expectedEcosystems": ["bazel"],
+  "expectedCommands": ["bazel test //...", "bazel build //..."],
+  "baseFiles": [
+    {
+      "path": "MODULE.bazel",
+      "lines": ["module(name = \"api\")"]
+    },
+    {
+      "path": "src/app/BUILD.bazel",
+      "lines": ["java_library(", "    name = \"app\",", "    srcs = [\"App.java\"],", ")"]
+    },
+    {
+      "path": "src/app/App.java",
+      "lines": ["package app;", "public class App { public boolean ok() { return true; } }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/app/App.java",
+      "lines": ["package app;", "public class App { public boolean ok() { return false; } }"]
+    }
+  ]
+}

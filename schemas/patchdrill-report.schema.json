@@ -111,11 +111,11 @@
     },
     "ecosystem": {
       "type": "string",
-      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "kubernetes", "pants", "github-actions", "unknown"]
+      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "kubernetes", "bazel", "buck", "pants", "github-actions", "unknown"]
     },
     "commandEcosystem": {
       "type": "string",
-      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "kubernetes", "pants", "github-actions", "unknown", "general"]
+      "enum": ["node", "python", "rust", "go", "java", "ruby", "php", "dotnet", "terraform", "docker", "kubernetes", "bazel", "buck", "pants", "github-actions", "unknown", "general"]
     },
     "patchSummary": {
       "type": "object",

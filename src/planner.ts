@@ -121,6 +121,12 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
     if (signal.ecosystem === "kubernetes" && touchesKubernetes(paths)) {
       addKubernetesPlans(plans, root, paths);
     }
+    if (signal.ecosystem === "bazel" && touchesBazel(paths)) {
+      addBazelPlans(plans, root);
+    }
+    if (signal.ecosystem === "buck" && touchesBuck(paths)) {
+      addBuckPlans(plans, root);
+    }
     if (signal.ecosystem === "pants" && touchesPants(paths)) {
       addPantsPlans(plans, root, options.changedSince ?? "HEAD");
     }
@@ -219,6 +225,46 @@ function addKubernetesPlans(plans: CommandPlan[], root: string, paths: string[])
       required: true
     });
   }
+}
+
+function addBazelPlans(plans: CommandPlan[], root: string): void {
+  const bazel = existsSync(join(root, "bazelisk")) ? "./bazelisk" : existsSync(join(root, "bazel")) ? "./bazel" : "bazel";
+  pushUnique(plans, {
+    id: "bazel-tests",
+    label: "Bazel tests",
+    command: `${bazel} test //...`,
+    reason: "Bazel workspace files changed, so all test targets should run through Bazel's target graph.",
+    ecosystem: "bazel",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "bazel-build",
+    label: "Bazel build",
+    command: `${bazel} build //...`,
+    reason: "Bazel build graph should still analyze and build after workspace or source changes.",
+    ecosystem: "bazel",
+    required: false
+  });
+}
+
+function addBuckPlans(plans: CommandPlan[], root: string): void {
+  const buck = existsSync(join(root, "buck2")) ? "./buck2" : "buck2";
+  pushUnique(plans, {
+    id: "buck-tests",
+    label: "Buck tests",
+    command: `${buck} test //...`,
+    reason: "Buck target files changed, so test targets should run through Buck's target graph.",
+    ecosystem: "buck",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "buck-build",
+    label: "Buck build",
+    command: `${buck} build //...`,
+    reason: "Buck build graph should still analyze and build after target or source changes.",
+    ecosystem: "buck",
+    required: false
+  });
 }
 
 export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signals: ProjectSignal[]): WorkspacePackage[] {
@@ -621,6 +667,22 @@ function touchesPants(paths: string[]): boolean {
 
 function touchesKubernetes(paths: string[]): boolean {
   return paths.some(isKubernetesPath);
+}
+
+function touchesBazel(paths: string[]): boolean {
+  return paths.some((path) =>
+    path === "MODULE.bazel" ||
+    path === "WORKSPACE" ||
+    path === "WORKSPACE.bazel" ||
+    path === ".bazelrc" ||
+    path.endsWith("/BUILD") ||
+    path.endsWith("/BUILD.bazel") ||
+    isSourceLikePath(path)
+  );
+}
+
+function touchesBuck(paths: string[]): boolean {
+  return paths.some((path) => path === ".buckconfig" || path === "BUCK" || path === "BUCK.v2" || path.endsWith("/BUCK") || path.endsWith("/BUCK.v2") || isSourceLikePath(path));
 }
 
 function isKubernetesPath(path: string): boolean {

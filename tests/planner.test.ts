@@ -57,6 +57,28 @@ describe("planCommands", () => {
     );
   });
 
+  it("adds Bazel graph-wide verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/app/BUILD.bazel", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "bazel", manifestPath: "MODULE.bazel" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["bazel test //...", "bazel build //..."]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["bazel-tests"]);
+  });
+
+  it("adds Buck graph-wide verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/app/BUCK", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "buck", manifestPath: ".buckconfig" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["buck2 test //...", "buck2 build //..."]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["buck-tests"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

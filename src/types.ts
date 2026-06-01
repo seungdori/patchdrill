@@ -40,6 +40,8 @@ export interface ProjectSignal {
     | "terraform"
     | "docker"
     | "kubernetes"
+    | "bazel"
+    | "buck"
     | "pants"
     | "github-actions"
     | "unknown";
