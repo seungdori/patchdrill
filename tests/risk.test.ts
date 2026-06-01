@@ -294,6 +294,77 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags reusable workflows that inherit all caller secrets from full workflow context", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/deploy.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/deploy.yml", line: 8, content: "    with:" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/deploy.yml",
+            content: [
+              "name: Deploy",
+              "on:",
+              "  workflow_dispatch:",
+              "jobs:",
+              "  deploy:",
+              "    uses: octo-org/platform/.github/workflows/deploy.yml@v1",
+              "    secrets: inherit",
+              "    with:",
+              "      environment: production"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-inherited-secrets",
+        severity: "high",
+        file: ".github/workflows/deploy.yml",
+        line: 7
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-unpinned-secret-call",
+        severity: "critical",
+        file: ".github/workflows/deploy.yml",
+        line: 6
+      })
+    );
+  });
+
+  it("does not treat local or SHA-pinned reusable workflow secret calls as mutable remote secret calls", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/reuse.yml", status: "modified", additions: 2, deletions: 0, binary: false }],
+      [],
+      {
+        workflowFiles: [
+          {
+            file: ".github/workflows/reuse.yml",
+            content: [
+              "on:",
+              "  workflow_dispatch:",
+              "jobs:",
+              "  local:",
+              "    uses: ./.github/workflows/local.yml",
+              "    secrets: inherit",
+              "  pinned:",
+              "    uses: octo-org/platform/.github/workflows/deploy.yml@172239021f7ba04fe7327647b213799853a9eb89",
+              "    secrets: inherit"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings.filter((finding) => finding.ruleId === "workflow.reusable-inherited-secrets")).toHaveLength(2);
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.reusable-unpinned-secret-call");
+  });
+
   it("flags Python requirements files as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],

@@ -595,6 +595,7 @@ function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{
   for (const [file, lines] of workflowLinesByFile) {
     const finding = workflowHeadCheckoutFinding(file, lines, "New workflow lines combine the privileged pull_request_target event with checkout of attacker-controlled pull request code.");
     if (finding) findings.push(finding);
+    findings.push(...workflowReusableSecretFindings(file, lines));
   }
 
   for (const workflowFile of workflowFiles) {
@@ -605,6 +606,7 @@ function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{
       "The changed workflow combines the privileged pull_request_target event with checkout of attacker-controlled pull request code."
     );
     if (finding) findings.push(finding);
+    findings.push(...workflowReusableSecretFindings(workflowFile.file, lines));
   }
 
   return dedupeFindings(findings);
@@ -633,6 +635,148 @@ function workflowUsesCheckoutAction(content: string): boolean {
 
 function workflowUsesPullRequestHeadContext(content: string): boolean {
   return /\${{\s*(github\.event\.pull_request\.head\.(sha|ref|repo\.full_name)|github\.head_ref)\s*}}/i.test(content);
+}
+
+interface WorkflowReusableJob {
+  jobId: string;
+  uses: string;
+  usesLine: number;
+  secretsInheritLine: number;
+}
+
+function workflowReusableSecretFindings(file: string, lines: AddedLine[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  for (const job of workflowReusableSecretJobs(lines)) {
+    findings.push({
+      ruleId: "workflow.reusable-inherited-secrets",
+      severity: "high",
+      title: "Reusable workflow inherits all caller secrets",
+      detail: `Job "${job.jobId}" calls ${job.uses} with secrets: inherit, passing every caller-accessible organization, repository, and environment secret across a workflow boundary.`,
+      file,
+      line: job.secretsInheritLine,
+      remediation: "Pass only named secrets needed by the called workflow, and review the called workflow's repository, ref, permissions, and runner trust.",
+      tags: ["ci", "github-actions", "secrets", "trust-boundary"]
+    });
+
+    if (!reusableWorkflowUsesMutableRemoteRef(job.uses)) continue;
+    findings.push({
+      ruleId: "workflow.reusable-unpinned-secret-call",
+      severity: "critical",
+      title: "Mutable reusable workflow receives inherited secrets",
+      detail: `Job "${job.jobId}" passes inherited secrets to the remote reusable workflow ${job.uses}, but the workflow ref is not pinned to a full commit SHA.`,
+      file,
+      line: job.usesLine,
+      remediation: "Pin remote reusable workflows that receive secrets to a reviewed full-length commit SHA, or call a local workflow from the same commit.",
+      tags: ["ci", "github-actions", "supply-chain", "secrets", "trust-boundary"]
+    });
+  }
+  return findings;
+}
+
+function workflowReusableSecretJobs(lines: AddedLine[]): WorkflowReusableJob[] {
+  const jobs = workflowJobBlocks(lines);
+  return jobs.flatMap((job) => {
+    const directChildren = workflowDirectChildLines(job.lines, job.indent);
+    const usesLine = directChildren.find((line) => readYamlScalar(line.content)?.key === "uses");
+    const usesValue = usesLine ? readYamlScalar(usesLine.content)?.value : undefined;
+    if (!usesLine || !usesValue || !isReusableWorkflowUse(usesValue)) return [];
+    const secretsLine = directChildren.find((line) => {
+      const scalar = readYamlScalar(line.content);
+      return scalar?.key === "secrets" && unquoteYamlScalar(scalar.value).toLowerCase() === "inherit";
+    });
+    if (!secretsLine) return [];
+    return [
+      {
+        jobId: job.jobId,
+        uses: usesValue,
+        usesLine: usesLine.line,
+        secretsInheritLine: secretsLine.line
+      }
+    ];
+  });
+}
+
+function workflowJobBlocks(lines: AddedLine[]): Array<{ jobId: string; indent: number; lines: AddedLine[] }> {
+  const jobsLineIndex = lines.findIndex((line) => readYamlScalar(line.content)?.key === "jobs");
+  if (jobsLineIndex < 0) return [];
+
+  const jobsLine = lines[jobsLineIndex];
+  if (!jobsLine) return [];
+  const jobsIndent = indentation(jobsLine.content);
+  const jobIndent = lines.slice(jobsLineIndex + 1).find((line) => isYamlContentLine(line.content) && indentation(line.content) > jobsIndent);
+  if (!jobIndent) return [];
+  const directJobIndent = indentation(jobIndent.content);
+  const blocks: Array<{ jobId: string; indent: number; lines: AddedLine[] }> = [];
+  let current: { jobId: string; indent: number; lines: AddedLine[] } | undefined;
+
+  for (const line of lines.slice(jobsLineIndex + 1)) {
+    if (!isYamlContentLine(line.content)) {
+      if (current) current.lines.push(line);
+      continue;
+    }
+    const indent = indentation(line.content);
+    if (indent <= jobsIndent) break;
+    const scalar = readYamlScalar(line.content);
+    if (indent === directJobIndent && scalar && scalar.value.length === 0) {
+      if (current) blocks.push(current);
+      current = { jobId: scalar.key, indent, lines: [line] };
+      continue;
+    }
+    if (current) current.lines.push(line);
+  }
+
+  if (current) blocks.push(current);
+  return blocks;
+}
+
+function workflowDirectChildLines(lines: AddedLine[], parentIndent: number): AddedLine[] {
+  const childIndent = lines.find((line) => isYamlContentLine(line.content) && indentation(line.content) > parentIndent);
+  if (!childIndent) return [];
+  const directChildIndent = indentation(childIndent.content);
+  return lines.filter((line) => isYamlContentLine(line.content) && indentation(line.content) === directChildIndent);
+}
+
+function isReusableWorkflowUse(value: string): boolean {
+  const normalized = unquoteYamlScalar(value);
+  return normalized.startsWith("./.github/workflows/") || /^[^/\s]+\/[^/\s]+\/\.github\/workflows\/[^@\s]+(?:@[^@\s]+)?$/.test(normalized);
+}
+
+function reusableWorkflowUsesMutableRemoteRef(value: string): boolean {
+  const normalized = unquoteYamlScalar(value);
+  if (normalized.startsWith("./")) return false;
+  const atIndex = normalized.lastIndexOf("@");
+  if (atIndex < 0) return true;
+  const ref = normalized.slice(atIndex + 1);
+  return !/^[a-f0-9]{40}$/i.test(ref);
+}
+
+function readYamlScalar(content: string): { key: string; value: string } | undefined {
+  const withoutComment = stripYamlComment(content);
+  const match = /^\s*([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$/.exec(withoutComment);
+  if (!match?.[1]) return undefined;
+  return { key: match[1], value: match[2] ?? "" };
+}
+
+function stripYamlComment(content: string): string {
+  const hashIndex = content.indexOf("#");
+  return hashIndex >= 0 ? content.slice(0, hashIndex) : content;
+}
+
+function unquoteYamlScalar(value: string): string {
+  const trimmed = value.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function isYamlContentLine(content: string): boolean {
+  const trimmed = content.trim();
+  return trimmed.length > 0 && !trimmed.startsWith("#");
+}
+
+function indentation(content: string): number {
+  return /^\s*/.exec(content)?.[0].length ?? 0;
 }
 
 function clamp(value: number, min: number, max: number): number {

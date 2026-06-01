@@ -69,3 +69,4 @@
 - Added Python/FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
 - Added whole-file GitHub Actions context so privileged PR-head checkout findings work when only one side of the dangerous pattern is newly added.
 - Added NuGet PackageReference and central PackageVersion dependency change summaries.
+- Added context-aware GitHub Actions findings for reusable workflows that inherit all caller secrets, including mutable remote reusable workflow refs.

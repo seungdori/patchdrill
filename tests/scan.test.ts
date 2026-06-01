@@ -158,6 +158,63 @@ rules:
     );
   });
 
+  it("uses full workflow context for reusable workflow inherited-secret findings", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+    writeFileSync(
+      join(root, ".github", "workflows", "deploy.yml"),
+      [
+        "name: Deploy",
+        "on:",
+        "  workflow_dispatch:",
+        "jobs:",
+        "  deploy:",
+        "    uses: octo-org/platform/.github/workflows/deploy.yml@v1",
+        ""
+      ].join("\n")
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(
+      join(root, ".github", "workflows", "deploy.yml"),
+      [
+        "name: Deploy",
+        "on:",
+        "  workflow_dispatch:",
+        "jobs:",
+        "  deploy:",
+        "    uses: octo-org/platform/.github/workflows/deploy.yml@v1",
+        "    secrets: inherit",
+        ""
+      ].join("\n")
+    );
+
+    const report = await scan({ cwd: root });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-inherited-secrets",
+        severity: "high",
+        file: ".github/workflows/deploy.yml",
+        line: 7
+      })
+    );
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-unpinned-secret-call",
+        severity: "critical",
+        file: ".github/workflows/deploy.yml",
+        line: 6
+      })
+    );
+  });
+
   it("detects Node workspaces and reports affected packages", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

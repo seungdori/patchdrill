@@ -77,12 +77,13 @@
 - Python and FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
 - Whole-file GitHub Actions context analysis for changed workflows with pre-existing privileged triggers or checkout steps.
 - NuGet PackageReference and central PackageVersion dependency change summaries.
+- Workflow trust-boundary findings for reusable workflows that use `secrets: inherit`, including mutable remote reusable workflow refs.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Workflow trust-boundary modeling across reusable workflows and inherited secrets.
+- Deeper workflow trust-boundary modeling across nested reusable workflows, environments, and OIDC claims.
 - FastAPI dependency-override and router import graph targeting.
 - .NET solution filter targeting for very large solutions.
 - Android flavor-dimension parsing beyond explicit variant source sets.
