@@ -80,3 +80,4 @@
 - Added .NET solution-filter selection for changed projects when multiple overlapping `.slnf` files exist.
 - Added Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
 - Added Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
+- Added nested local reusable workflow loading so changed workflows expose downstream reusable workflow secret and OIDC trust-boundary findings.

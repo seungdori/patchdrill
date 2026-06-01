@@ -88,11 +88,12 @@
 - .NET solution-filter selection for changed projects when multiple overlapping `.slnf` files exist.
 - Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
 - Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
+- Nested local reusable workflow loading for downstream reusable workflow secret and OIDC trust-boundary findings.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Nested reusable workflow propagation and cloud-provider OIDC policy fixtures.
+- Cloud-provider OIDC policy fixtures.
 - Bazel/Buck query output promotion into executable downstream test target plans.
 - Xcode destination selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.

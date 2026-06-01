@@ -223,7 +223,7 @@ The current deterministic rules look for:
 - Prompt-injection instructions added to agent-visible files such as `AGENTS.md`, issue templates, and Markdown docs.
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
-- Workflow supply-chain risk: broad token writes, `pull_request_target`, inherited secrets, mutable reusable workflows receiving inherited secrets or caller OIDC permissions, environment-scoped OIDC deployment jobs, unpinned actions, remote script pipes, untrusted PR metadata interpolation, and privileged PR-head checkout combinations.
+- Workflow supply-chain risk: broad token writes, `pull_request_target`, inherited secrets, local reusable workflow fan-out to mutable remote reusable workflows, mutable reusable workflows receiving inherited secrets or caller OIDC permissions, environment-scoped OIDC deployment jobs, unpinned actions, remote script pipes, untrusted PR metadata interpolation, and privileged PR-head checkout combinations.
 - Dependency manifest and lockfile changes.
 - package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
 - Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.

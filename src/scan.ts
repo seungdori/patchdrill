@@ -120,13 +120,46 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
 }
 
 function readWorkflowFiles(gitOptions: { cwd: string; base?: string; head?: string }, changedFiles: PatchReport["changedFiles"]): Array<{ file: string; content: string }> {
-  const workflowFiles: Array<{ file: string; content: string }> = [];
+  const workflowFiles = new Map<string, string>();
+  const queue: string[] = [];
   for (const file of changedFiles) {
     if (!file.path.startsWith(".github/workflows/") || file.binary || file.status === "deleted") continue;
-    const after = readFilePair(gitOptions, file.path).after;
-    if (after !== undefined) workflowFiles.push({ file: file.path, content: after });
+    queue.push(file.path);
   }
-  return workflowFiles;
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const path = queue[index];
+    if (!path || workflowFiles.has(path)) continue;
+    const after = readFilePair(gitOptions, path).after;
+    if (after === undefined) continue;
+    workflowFiles.set(path, after);
+    for (const referencedPath of localReusableWorkflowReferences(after)) {
+      if (!workflowFiles.has(referencedPath)) queue.push(referencedPath);
+    }
+  }
+
+  return [...workflowFiles.entries()].map(([file, content]) => ({ file, content }));
+}
+
+function localReusableWorkflowReferences(content: string): string[] {
+  const references = new Set<string>();
+  for (const match of content.matchAll(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/gim)) {
+    const path = normalizeLocalReusableWorkflowPath(match[1] ?? "");
+    if (path) references.add(path);
+  }
+  return [...references].sort();
+}
+
+function normalizeLocalReusableWorkflowPath(value: string): string | undefined {
+  const normalized = value.trim().replaceAll("\\", "/");
+  const path = normalized.startsWith("./.github/workflows/")
+    ? normalized.slice(2)
+    : normalized.startsWith(".github/workflows/")
+      ? normalized
+      : undefined;
+  if (!path) return undefined;
+  if (path.includes("..")) return undefined;
+  return /^\.github\/workflows\/[^/]+\.ya?ml$/i.test(path) ? path : undefined;
 }
 
 function writeOutput(path: string, contents: string, root: string): void {
