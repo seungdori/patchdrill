@@ -37,6 +37,16 @@ PatchDrill answers four questions every reviewer asks:
 3. What should be run to prove this patch?
 4. What risk remains after the drill?
 
+PatchDrill is not another AI code reviewer. It does not ask a model whether a diff "looks good." It builds deterministic evidence:
+
+| If you need... | Use... |
+| --- | --- |
+| Broad reasoning, refactor suggestions, and design feedback | A frontier model or AI PR reviewer |
+| A repeatable CI gate with risk findings, required commands, JSON/SARIF output, and policy thresholds | PatchDrill |
+| Both | Run PatchDrill first, then give the report to a model or human reviewer |
+
+The boundary is intentional: models are good at judgment, while PatchDrill is good at producing the same reviewable safety evidence for the same patch every time.
+
 Example summary:
 
 ```text

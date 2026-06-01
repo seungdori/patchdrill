@@ -6,11 +6,17 @@ PatchDrill is designed for developers who already use AI coding agents and want 
 
 One-liner:
 
-> PatchDrill turns every AI-generated PR into a reviewable verification drill.
+> PatchDrill is a deterministic safety radar for AI-generated and human patches.
 
 Short pitch:
 
-> AI agents can write code quickly, but reviewers still need evidence. PatchDrill reads a git diff, infers what should be tested, flags risky areas, and writes a Markdown/JSON proof report for local review or CI.
+> AI agents can write code quickly, but reviewers still need evidence. PatchDrill reads a git diff, infers what should be tested, flags risky areas, and writes Markdown, JSON, SARIF, and HTML proof artifacts for local review or CI.
+
+Comparison:
+
+- AI PR reviewers judge whether a patch looks right.
+- Traditional CI runs commands that were already configured.
+- PatchDrill turns the patch itself into a repeatable verification plan, risk report, and policy gate.
 
 ## Launch Checklist
 
@@ -44,6 +50,7 @@ Show:
 
 - "No LLM required."
 - "Evidence over vibes."
+- "Not another AI reviewer. A deterministic safety gate."
 - "Works before your CI bill grows."
 - "Review the plan before running commands."
 - "Markdown for humans, JSON for bots, SARIF for GitHub."
