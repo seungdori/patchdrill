@@ -6,6 +6,7 @@ import { analyzeDependencyChanges } from "./dependency.js";
 import { renderEvidenceManifest, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot, readAddedLines, readChangedFiles, readFilePair } from "./git.js";
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
+import { analyzePackageScriptChanges } from "./package-scripts.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
 import { discoverProjectSignals } from "./project.js";
 import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "./report.js";
@@ -29,6 +30,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const projectSignals = discoverProjectSignals(root);
   const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
   const dependencyChanges = analyzeDependencyChanges(gitOptions, changedFiles);
+  const packageScriptChanges = analyzePackageScriptChanges(gitOptions, changedFiles);
   const workflowFiles = readWorkflowFiles(gitOptions, changedFiles);
   const commandPlan = mergePolicyCommands(planCommands(root, changedFiles, projectSignals, { changedSince: options.base ?? "HEAD" }), loadedPolicy.policy);
   const commandResults = options.run
@@ -42,6 +44,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const assessment = assessRisk(changedFiles, commandResults, {
     addedLines,
     workflowFiles,
+    packageScriptChanges,
     policy: loadedPolicy.policy
   });
   const additions = changedFiles.reduce((sum, file) => sum + file.additions, 0);

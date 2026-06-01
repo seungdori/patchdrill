@@ -1,5 +1,5 @@
 import { matchesPolicyRule } from "./policy.js";
-import type { AddedLine, ChangedFile, CommandResult, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
+import type { AddedLine, ChangedFile, CommandResult, PackageScriptChange, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
 
 export interface RiskAssessment {
   riskScore: number;
@@ -11,6 +11,7 @@ export interface RiskAssessment {
 export interface RiskOptions {
   addedLines?: AddedLine[];
   workflowFiles?: Array<{ file: string; content: string }>;
+  packageScriptChanges?: PackageScriptChange[];
   policy?: PatchPolicy;
 }
 
@@ -113,6 +114,32 @@ const AGENT_TOOL_ABUSE_PATTERNS: RegExp[] = [
   /\bchmod\s+777\b/i,
   /\b(delete|wipe|destroy)\s+(all\s+)?(files|database|cloud\s+resources|system)\b/i
 ];
+
+const PACKAGE_LIFECYCLE_SCRIPTS = new Set([
+  "preinstall",
+  "install",
+  "postinstall",
+  "prepare",
+  "prepublish",
+  "prepublishOnly",
+  "prepack",
+  "postpack",
+  "publish",
+  "postpublish"
+]);
+
+const VERIFICATION_SCRIPT_NAMES = new Set([
+  "test",
+  "test:unit",
+  "unit",
+  "check",
+  "typecheck",
+  "check:types",
+  "types",
+  "lint",
+  "build",
+  "verify"
+]);
 
 const WORKFLOW_ADDED_LINE_RULES: Array<{
   ruleId: string;
@@ -409,6 +436,11 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     findings.push(finding);
   }
 
+  for (const finding of packageScriptFindings(options.packageScriptChanges ?? [])) {
+    risk += severityWeights[finding.severity];
+    findings.push(finding);
+  }
+
   for (const rule of options.policy?.rules ?? []) {
     for (const file of changedFiles) {
       if (!matchesPolicyRule(file.path, rule)) continue;
@@ -625,6 +657,78 @@ function workflowUsesUnpinnedAction(content: string): boolean {
   if (refSeparator < 0) return true;
   const ref = action.slice(refSeparator + 1);
   return !/^[a-f0-9]{40}$/i.test(ref);
+}
+
+function packageScriptFindings(scriptChanges: PackageScriptChange[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  for (const change of scriptChanges) {
+    if (change.after && packageScriptPipesRemoteCode(change.after)) {
+      findings.push({
+        ruleId: "package-script.remote-script-pipe",
+        severity: "critical",
+        title: `Package script pipes remote code to shell: ${change.scriptName}`,
+        detail: `package.json script "${change.scriptName}" ${change.changeType === "added" ? "was added" : "was changed"} and downloads remote code directly into an interpreter.`,
+        file: change.file,
+        remediation: "Replace remote shell pipes with pinned package dependencies, checksum-verified downloads, or reviewed local scripts.",
+        tags: ["dependencies", "supply-chain", "package-script"]
+      });
+    }
+
+    if (change.after && isLifecyclePackageScript(change.scriptName)) {
+      findings.push({
+        ruleId: "package-script.lifecycle",
+        severity: "high",
+        title: `Package lifecycle script changed: ${change.scriptName}`,
+        detail: `package.json lifecycle script "${change.scriptName}" ${change.changeType === "added" ? "was added" : "was changed"}, creating code that can run during install, prepare, pack, or publish flows.`,
+        file: change.file,
+        remediation: "Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior.",
+        tags: ["dependencies", "supply-chain", "package-script"]
+      });
+    }
+
+    if (change.after && isVerificationPackageScript(change.scriptName) && isDisabledVerificationCommand(change.after)) {
+      findings.push({
+        ruleId: "package-script.disabled-verification",
+        severity: "high",
+        title: `Verification script disabled: ${change.scriptName}`,
+        detail: `package.json verification script "${change.scriptName}" now appears to exit successfully without running meaningful checks.`,
+        file: change.file,
+        remediation: "Restore the real verification command or explain why this repository no longer has that check.",
+        tags: ["testing", "ci", "package-script"]
+      });
+    }
+
+    if (change.changeType === "removed" && isVerificationPackageScript(change.scriptName)) {
+      findings.push({
+        ruleId: "package-script.removed-verification",
+        severity: "medium",
+        title: `Verification script removed: ${change.scriptName}`,
+        detail: `package.json verification script "${change.scriptName}" was removed, reducing the commands reviewers and CI can run by convention.`,
+        file: change.file,
+        remediation: "Replace the removed script with an equivalent check or update PatchDrill policy with the new required command.",
+        tags: ["testing", "ci", "package-script"]
+      });
+    }
+  }
+  return dedupeFindings(findings);
+}
+
+function isLifecyclePackageScript(scriptName: string): boolean {
+  return PACKAGE_LIFECYCLE_SCRIPTS.has(scriptName);
+}
+
+function isVerificationPackageScript(scriptName: string): boolean {
+  return VERIFICATION_SCRIPT_NAMES.has(scriptName) || /^test[:_-]/i.test(scriptName) || /^lint[:_-]/i.test(scriptName);
+}
+
+function isDisabledVerificationCommand(command: string): boolean {
+  const normalized = command.trim().toLowerCase();
+  if (/^(true|:|exit 0|node -e ['"]?process\.exit\(0\)['"]?)$/.test(normalized)) return true;
+  return /^echo\b.*&&\s*(true|exit 0)\s*$/i.test(normalized);
+}
+
+function packageScriptPipesRemoteCode(command: string): boolean {
+  return /\b(curl|wget)\b.+\|\s*(sudo\s+)?(sh|bash|zsh|python|node)\b/i.test(command);
 }
 
 function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{ file: string; content: string }>): RiskFinding[] {

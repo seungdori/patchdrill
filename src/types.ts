@@ -78,6 +78,16 @@ export interface DependencyChange {
   after?: string;
 }
 
+export type PackageScriptChangeType = "added" | "removed" | "updated";
+
+export interface PackageScriptChange {
+  file: string;
+  scriptName: string;
+  changeType: PackageScriptChangeType;
+  before?: string;
+  after?: string;
+}
+
 export interface CommandPlan {
   id: string;
   label: string;

@@ -54,6 +54,68 @@ describe("scan", () => {
     expect(report.findings.map((finding) => finding.title)).toContain("High-impact product area changed");
   });
 
+  it("reports risky package script changes from a real git diff", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify(
+        {
+          scripts: {
+            test: "vitest run",
+            lint: "eslint ."
+          }
+        },
+        null,
+        2
+      )
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify(
+        {
+          scripts: {
+            test: "true",
+            postinstall: "node scripts/install.js"
+          }
+        },
+        null,
+        2
+      )
+    );
+
+    const report = await scan({ cwd: root });
+
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.lifecycle",
+        title: "Package lifecycle script changed: postinstall",
+        file: "package.json"
+      })
+    );
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.disabled-verification",
+        title: "Verification script disabled: test",
+        file: "package.json"
+      })
+    );
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.removed-verification",
+        title: "Verification script removed: lint",
+        file: "package.json"
+      })
+    );
+  });
+
   it("applies policy ignore rules, commands, and policy findings", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);

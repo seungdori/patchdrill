@@ -110,6 +110,7 @@
 - Fork-safe PR comment handling that does not fail verification when comment permissions are unavailable.
 - Compact PR comment preview artifacts in demo output.
 - Generated PR workflows execute required verification commands with bounded per-command timeout.
+- Package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
 
 ## Contribution Targets
 

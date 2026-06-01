@@ -94,3 +94,4 @@
 - Made PR comment upserts fork-safe by warning instead of failing when GitHub token permissions prevent commenting.
 - Added compact PR comment preview files to demo artifacts.
 - Updated generated PR workflows to run required verification commands with a per-command timeout.
+- Added package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.

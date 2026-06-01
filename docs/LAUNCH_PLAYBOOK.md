@@ -27,6 +27,7 @@ Done for the public repository:
 - SARIF output, Markdown output, JSON output, static HTML dashboard output, and PR comment upsert mode.
 - Generated PR workflow runs inferred required commands with a per-command timeout.
 - README terminal demo asset showing the risk summary and portable report outputs.
+- Package automation script findings for install-time hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
 - Example report and release provenance documentation.
 
@@ -52,6 +53,7 @@ Show:
 - High-impact auth finding.
 - Missing test-change finding.
 - Inferred commands from `package.json`.
+- Package script findings when a patch changes install hooks or weakens test scripts.
 - Report artifact.
 - SARIF upload in GitHub code scanning.
 - `.patchdrill.yml` policy rule that requires owner review for a sensitive path.
@@ -65,3 +67,4 @@ Show:
 - "Review the plan before running commands."
 - "Markdown for humans, JSON for bots, SARIF for GitHub."
 - "Detects prompt-injection strings before agents ingest them."
+- "Catches install-time package scripts and no-op test rewrites."

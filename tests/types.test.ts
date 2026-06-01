@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ProjectSignal, ScanOptions } from "../src/types.js";
+import type { PackageScriptChange, ProjectSignal, ScanOptions } from "../src/types.js";
 
 describe("types", () => {
   it("includes static HTML dashboard output in scan options", () => {
@@ -112,6 +112,22 @@ describe("types", () => {
     };
 
     expect(signal.framework).toBe("aspnet-core");
+  });
+
+  it("includes package script change metadata", () => {
+    const change: PackageScriptChange = {
+      file: "package.json",
+      scriptName: "postinstall",
+      changeType: "added",
+      after: "node scripts/install.js"
+    };
+
+    expect(change).toEqual({
+      file: "package.json",
+      scriptName: "postinstall",
+      changeType: "added",
+      after: "node scripts/install.js"
+    });
   });
 });
 
