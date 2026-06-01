@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, demoCommand, evidenceCommand, parseArgs } from "../src/cli.js";
+import { dashboardCommand, demoCommand, evidenceCommand, parseArgs, renderExplainText } from "../src/cli.js";
 import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
@@ -118,6 +118,17 @@ describe("cli", () => {
     expect(summary).toContain("# PatchDrill Summary");
     expect(summary).toContain("**FAIL** - risk 94/100");
     expect(summary).toContain("Privileged workflow checks out pull request code");
+  });
+
+  it("explains the product boundary against AI PR reviewers", () => {
+    const text = renderExplainText();
+
+    expect(text).toContain("PatchDrill is not an AI PR reviewer.");
+    expect(text).toContain("What deterministic proof should exist before merge?");
+    expect(text).toContain("No model call is required");
+    expect(text).toContain("scan does not mutate the repository or run commands unless --run is set");
+    expect(text).toContain("patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo");
+    expect(text).toContain("patchdrill scan --base origin/main --run");
   });
 
   it("writes an evidence manifest from saved report artifacts", () => {

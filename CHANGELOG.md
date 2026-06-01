@@ -96,3 +96,4 @@
 - Updated generated PR workflows to run required verification commands with a per-command timeout.
 - Added package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - Added structured package script change summaries to JSON, Markdown, and HTML reports.
+- Expanded `patchdrill explain` with a clearer AI-reviewer boundary, deterministic guarantees, and first-run commands.

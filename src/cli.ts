@@ -219,18 +219,35 @@ function initCommand(parsed: ParsedArgs): void {
   }
 }
 
-function explainCommand(): void {
-  console.log(`PatchDrill turns a git diff into a verification drill:
+export function explainCommand(): void {
+  console.log(renderExplainText());
+}
 
-1. Detect changed files from git.
-2. Discover repo ecosystems from manifests.
-3. Infer the commands that should prove the patch.
-4. Score risk from changed areas, dependency files, infra, secrets, size, and command results.
-5. Emit Markdown, JSON, SARIF, static HTML, and verifiable evidence artifacts for PR review or CI storage.
+export function renderExplainText(): string {
+  return `PatchDrill is not an AI PR reviewer.
 
-Typical use:
-  patchdrill scan --base origin/main --run --evidence patchdrill-evidence.json --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
-`);
+AI reviewers answer: "Does this diff look right?"
+PatchDrill answers: "What deterministic proof should exist before merge?"
+
+What PatchDrill does:
+1. Reads changed files and added lines from git.
+2. Detects repository ecosystems, workspaces, owners, dependencies, package scripts, and workflow trust boundaries.
+3. Infers required and optional verification commands from the patch.
+4. Scores risk with human-readable findings where every score increase maps to a report row.
+5. Emits Markdown, JSON, SARIF, static HTML, PR-comment summaries, and verifiable evidence manifests.
+
+What makes it different:
+- No model call is required; the same diff produces the same plan and findings.
+- scan does not mutate the repository or run commands unless --run is set.
+- --run executes inferred required checks; --run-optional explicitly opts into optional checks.
+- JSON/SARIF/HTML/evidence artifacts are meant for CI gates, bots, auditors, and reviewers.
+- You can run PatchDrill before handing the report to a human or a frontier model.
+
+Try it without a repository:
+  patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+
+Typical CI/local use:
+  patchdrill scan --base origin/main --run --evidence patchdrill-evidence.json --summary-markdown patchdrill-summary.md --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69`;
 }
 
 function schemaCommand(parsed: ParsedArgs): void {

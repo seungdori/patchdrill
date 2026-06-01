@@ -49,6 +49,12 @@ PatchDrill is not another AI code reviewer. It does not ask a model whether a di
 
 The boundary is intentional: models are good at judgment, while PatchDrill is good at producing the same reviewable safety evidence for the same patch every time.
 
+Print the boundary and suggested first commands from the CLI:
+
+```bash
+patchdrill explain
+```
+
 Example summary:
 
 ```text
