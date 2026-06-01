@@ -69,6 +69,7 @@
 - Android Gradle detection with debug unit test, assemble, and lint planning.
 - ASP.NET Core detection with .NET build and publish planning.
 - FastAPI app entrypoint detection with import-smoke planning.
+- FastAPI changed router/dependency module import-smoke planning.
 - GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 - Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 - .NET project-aware test, build, and ASP.NET Core publish planning through `ProjectReference` relationships.
@@ -86,7 +87,7 @@
 PatchDrill needs real-world fixtures from:
 
 - Deeper workflow trust-boundary modeling across nested reusable workflows, environments, and OIDC claims.
-- FastAPI dependency-override and router import graph targeting.
+- FastAPI dependency-override test selection from dependency call sites.
 - .NET solution filter selection from multiple overlapping filters.
 - Android variantFilter and generated source set awareness.
 - Bazel/Buck downstream affected-target query planning beyond changed-package defaults.

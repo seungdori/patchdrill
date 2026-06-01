@@ -61,6 +61,7 @@
 - Added Android Gradle detection with debug unit test, assemble, and lint verification plans.
 - Added ASP.NET Core detection with .NET build and publish verification plans.
 - Added FastAPI app entrypoint detection with import-smoke verification plans.
+- Added FastAPI changed router/dependency module import-smoke planning.
 - Added GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 - Added Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 - Added .NET project-aware test, build, and ASP.NET Core publish plans using `ProjectReference` relationships.

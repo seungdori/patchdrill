@@ -179,9 +179,26 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.command)).toEqual([
       "python -m pytest tests/routers/test_users.py",
       "python -m compileall .",
-      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\""
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\"",
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; targets = ['app.routers.users']; [importlib.import_module(target) for target in targets]\""
     ]);
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-targeted-tests", "python-compile"]);
+  });
+
+  it("adds FastAPI dependency module import smoke for changed dependency helpers", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/dependencies.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }]
+    );
+
+    expect(commands.map((command) => command.command)).toContain(
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; targets = ['app.dependencies']; [importlib.import_module(target) for target in targets]\""
+    );
+    expect(commands.find((command) => command.id === "fastapi-module-import-smoke")).toMatchObject({
+      required: false,
+      ecosystem: "python"
+    });
   });
 
   it("does not plan FastAPI import smoke for invalid entrypoint syntax", () => {

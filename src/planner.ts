@@ -20,7 +20,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         addDjangoPlans(plans);
       } else {
         addPythonPlans(plans, root, paths);
-        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, signal.entrypoint);
+        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, paths, signal.entrypoint);
       }
     }
     if (signal.ecosystem === "rust" && touches(paths, [".rs", "Cargo.toml", "Cargo.lock"])) {
@@ -448,7 +448,7 @@ function addDjangoPlans(plans: CommandPlan[]): void {
   });
 }
 
-function addFastApiPlans(plans: CommandPlan[], entrypoint: string): void {
+function addFastApiPlans(plans: CommandPlan[], paths: string[], entrypoint: string): void {
   if (!isPythonEntrypoint(entrypoint)) return;
   pushUnique(plans, {
     id: "fastapi-import-smoke",
@@ -458,10 +458,44 @@ function addFastApiPlans(plans: CommandPlan[], entrypoint: string): void {
     ecosystem: "python",
     required: false
   });
+
+  const modules = fastApiChangedImportModules(paths);
+  if (modules.length === 0) return;
+  pushUnique(plans, {
+    id: "fastapi-module-import-smoke",
+    label: "FastAPI changed module import smoke",
+    command: `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; targets = [${modules.map((module) => `'${module}'`).join(", ")}]; [importlib.import_module(target) for target in targets]"`,
+    reason: "Changed FastAPI router or dependency modules should import cleanly before the full app startup path is trusted.",
+    ecosystem: "python",
+    required: false
+  });
 }
 
 function isPythonEntrypoint(value: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+}
+
+function fastApiChangedImportModules(paths: string[]): string[] {
+  const modules = new Set<string>();
+  for (const path of paths) {
+    if (!isFastApiImportSmokePath(path)) continue;
+    const module = pythonImportModuleName(path);
+    if (module) modules.add(module);
+  }
+  return [...modules].sort();
+}
+
+function isFastApiImportSmokePath(path: string): boolean {
+  if (!path.endsWith(".py")) return false;
+  return /(^|\/)routers?\//.test(path) || /(^|\/)(dependencies|deps)\.py$/.test(path) || /(^|\/)(dependencies|deps)\//.test(path);
+}
+
+function pythonImportModuleName(path: string): string | undefined {
+  const withoutSourceRoot = path.startsWith("src/") ? path.slice("src/".length) : path;
+  const withoutExtension = withoutSourceRoot.replace(/\.py$/, "");
+  if (withoutExtension.endsWith(".__init__")) return withoutExtension.slice(0, -"__init__".length - 1);
+  const moduleName = withoutExtension.replaceAll("/", ".");
+  return moduleName.split(".").every((part) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(part)) ? moduleName : undefined;
 }
 
 function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {
