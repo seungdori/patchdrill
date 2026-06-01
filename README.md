@@ -16,7 +16,7 @@ npx patchdrill scan --base origin/main --run \
 
 ## Why Star It
 
-- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, Go, Maven, Gradle, dotnet, Swift, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
+- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, cargo, Go, Maven, Gradle, dotnet, Swift, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
@@ -24,7 +24,7 @@ npx patchdrill scan --base origin/main --run \
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, .NET, SwiftPM, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
+- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Django, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, .NET, SwiftPM, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
@@ -188,7 +188,7 @@ PatchDrill detects project shape from repo manifests:
 | Ecosystem | Signals | Typical commands |
 | --- | --- | --- |
 | Node | `package.json`, lockfiles, scripts | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` |
-| Python | `pyproject.toml`, `requirements.txt`, `setup.py` | `python -m pytest`, `python -m compileall .` |
+| Python | `pyproject.toml`, `requirements.txt`, `setup.py`, `manage.py` | `python -m pytest`, `python manage.py test`, `python -m compileall .` |
 | Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `./mvnw test`, `./gradlew test` |

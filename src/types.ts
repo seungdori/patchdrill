@@ -47,6 +47,7 @@ export interface ProjectSignal {
     | "github-actions"
     | "unknown";
   manifestPath: string;
+  framework?: "django" | "fastapi";
   packageManager?: string;
   taskRunner?: "turbo" | "nx";
   scripts?: Record<string, string>;

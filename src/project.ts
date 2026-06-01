@@ -20,12 +20,13 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
 
-  if (exists(root, "pyproject.toml")) {
-    add({ ecosystem: "python", manifestPath: "pyproject.toml" });
-  } else if (exists(root, "requirements.txt") || exists(root, "setup.py") || exists(root, "setup.cfg")) {
+  const pythonManifestPath = firstExisting(root, ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]);
+  if (pythonManifestPath) {
+    const framework = detectPythonFramework(root);
     add({
       ecosystem: "python",
-      manifestPath: firstExisting(root, ["requirements.txt", "setup.py", "setup.cfg"]) ?? "python"
+      manifestPath: pythonManifestPath,
+      ...(framework ? { framework } : {})
     });
   }
 
@@ -114,6 +115,34 @@ function readPackageJson(root: string): {
     return parsed;
   } catch {
     return {};
+  }
+}
+
+function detectPythonFramework(root: string): ProjectSignal["framework"] | undefined {
+  if (exists(root, "manage.py")) return "django";
+  if (pythonDependencyDeclared(root, "django")) return "django";
+  if (pythonDependencyDeclared(root, "fastapi")) return "fastapi";
+  return undefined;
+}
+
+function pythonDependencyDeclared(root: string, packageName: string): boolean {
+  return ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg"].some((path) => pythonManifestMentionsPackage(root, path, packageName));
+}
+
+function pythonManifestMentionsPackage(root: string, path: string, packageName: string): boolean {
+  try {
+    const content = readFileSync(join(root, path), "utf8");
+    const normalizedName = packageName.toLowerCase().replaceAll("_", "-");
+    const searchable = content
+      .split(/\r?\n/)
+      .map((line) => line.replace(/#.*/, "").trim().toLowerCase())
+      .join("\n")
+      .replaceAll("_", "-");
+    const escapedName = escapeRegExp(normalizedName);
+    const dependencyPattern = new RegExp(`(^|[^a-z0-9.-])${escapedName}(?:\\[[^\\]]+\\])?\\s*($|[<>=!~;,\\]"'])`, "i");
+    return dependencyPattern.test(searchable);
+  } catch {
+    return false;
   }
 }
 

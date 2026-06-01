@@ -210,6 +210,10 @@
         "manifestPath": {
           "type": "string"
         },
+        "framework": {
+          "type": "string",
+          "enum": ["django", "fastapi"]
+        },
         "packageManager": {
           "type": "string"
         },

@@ -90,6 +90,17 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["swift-tests"]);
   });
 
+  it("adds Django framework verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "templates/home.html", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", framework: "django", manifestPath: "manage.py" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["python manage.py test", "python manage.py check", "python -m compileall ."]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["django-tests", "python-compile"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

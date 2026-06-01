@@ -74,6 +74,30 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Django projects from manage.py", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "manage.py"), "#!/usr/bin/env python\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      framework: "django",
+      manifestPath: "manage.py"
+    });
+  });
+
+  it("detects FastAPI dependencies in pyproject metadata", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "pyproject.toml"), "[project]\ndependencies = [\"fastapi>=0.110\", \"uvicorn\"]\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      framework: "fastapi",
+      manifestPath: "pyproject.toml"
+    });
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

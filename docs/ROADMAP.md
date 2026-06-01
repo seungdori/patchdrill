@@ -64,12 +64,13 @@
 - First-party stack fixtures for Kustomize, Java/Gradle, and .NET services.
 - Bazel and Buck2 workspace detection with graph-wide verification planning.
 - Swift Package Manager verification planning.
+- Django framework detection with `manage.py test` and `manage.py check` planning.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Django/FastAPI.
+- FastAPI route-aware verification planning.
 - Spring Boot and Gradle.
 - .NET services.
 - Bazel/Buck changed-target narrowing beyond graph-wide defaults.

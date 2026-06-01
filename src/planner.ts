@@ -15,23 +15,12 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       const workspacePlanCount = addNodeWorkspacePlans(plans, paths, signal);
       if (workspacePlanCount === 0) addNodePlans(plans, signal);
     }
-    if (signal.ecosystem === "python" && touchesPython(paths, root)) {
-      pushUnique(plans, {
-        id: "python-tests",
-        label: "Python tests",
-        command: "python -m pytest",
-        reason: "Python files or Python project metadata changed.",
-        ecosystem: "python",
-        required: true
-      });
-      pushUnique(plans, {
-        id: "python-compile",
-        label: "Python syntax compile",
-        command: "python -m compileall .",
-        reason: "Compile Python files to catch syntax errors without needing project-specific tooling.",
-        ecosystem: "python",
-        required: true
-      });
+    if (signal.ecosystem === "python" && touchesPython(paths, root, signal)) {
+      if (isDjangoProject(root, signal)) {
+        addDjangoPlans(plans);
+      } else {
+        addPythonPlans(plans);
+      }
     }
     if (signal.ecosystem === "rust" && touches(paths, [".rs", "Cargo.toml", "Cargo.lock"])) {
       const workspacePlanCount = addCargoWorkspacePlans(plans, paths, signal);
@@ -162,6 +151,52 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   }
 
   return plans;
+}
+
+function addPythonPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "python-tests",
+    label: "Python tests",
+    command: "python -m pytest",
+    reason: "Python files or Python project metadata changed.",
+    ecosystem: "python",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "python-compile",
+    label: "Python syntax compile",
+    command: "python -m compileall .",
+    reason: "Compile Python files to catch syntax errors without needing project-specific tooling.",
+    ecosystem: "python",
+    required: true
+  });
+}
+
+function addDjangoPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "django-tests",
+    label: "Django tests",
+    command: "python manage.py test",
+    reason: "Django app code or framework metadata changed, so the Django test runner should load settings, apps, migrations, and tests.",
+    ecosystem: "python",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "django-check",
+    label: "Django system check",
+    command: "python manage.py check",
+    reason: "Django system checks catch model, settings, URL, and app registry issues before deployment.",
+    ecosystem: "python",
+    required: false
+  });
+  pushUnique(plans, {
+    id: "python-compile",
+    label: "Python syntax compile",
+    command: "python -m compileall .",
+    reason: "Compile Python files to catch syntax errors in modules not imported by Django tests.",
+    ecosystem: "python",
+    required: true
+  });
 }
 
 function addPantsPlans(plans: CommandPlan[], root: string, changedSince: string): void {
@@ -671,8 +706,26 @@ function touchesNode(paths: string[]): boolean {
   );
 }
 
-function touchesPython(paths: string[], root: string): boolean {
-  return touches(paths, [".py", "pyproject.toml", "requirements.txt", "setup.py", "setup.cfg"]) || existsSync(join(root, "pytest.ini"));
+function touchesPython(paths: string[], root: string, signal?: ProjectSignal): boolean {
+  if (isDjangoProject(root, signal) && paths.some(isDjangoRelevantPath)) return true;
+  return touches(paths, [".py", "pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]) || existsSync(join(root, "pytest.ini"));
+}
+
+function isDjangoProject(root: string, signal?: ProjectSignal): boolean {
+  return signal?.framework === "django" || existsSync(join(root, "manage.py"));
+}
+
+function isDjangoRelevantPath(path: string): boolean {
+  return (
+    path === "manage.py" ||
+    path.endsWith(".py") ||
+    path.endsWith("requirements.txt") ||
+    path.endsWith("pyproject.toml") ||
+    path.endsWith("setup.py") ||
+    path.endsWith("setup.cfg") ||
+    /(^|\/)(templates|static)\//.test(path) ||
+    /(^|\/)(settings|urls|asgi|wsgi)\.py$/.test(path)
+  );
 }
 
 function touchesJava(paths: string[], root: string): boolean {

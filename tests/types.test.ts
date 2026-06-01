@@ -41,6 +41,16 @@ describe("types", () => {
 
     expect(signal.ecosystem).toBe("swift");
   });
+
+  it("includes Python framework metadata", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "python",
+      framework: "django",
+      manifestPath: "manage.py"
+    };
+
+    expect(signal.framework).toBe("django");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

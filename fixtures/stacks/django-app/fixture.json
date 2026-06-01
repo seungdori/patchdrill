@@ -1,0 +1,25 @@
+{
+  "name": "django-app",
+  "expectedEcosystems": ["python"],
+  "expectedCommands": ["python manage.py test", "python manage.py check", "python -m compileall ."],
+  "baseFiles": [
+    {
+      "path": "manage.py",
+      "lines": ["#!/usr/bin/env python", "import sys", "if __name__ == \"__main__\":", "    from django.core.management import execute_from_command_line", "    execute_from_command_line(sys.argv)"]
+    },
+    {
+      "path": "requirements.txt",
+      "lines": ["Django==5.0.0"]
+    },
+    {
+      "path": "app/views.py",
+      "lines": ["def home(request):", "    return \"ok\""]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/views.py",
+      "lines": ["def home(request):", "    return \"changed\""]
+    }
+  ]
+}

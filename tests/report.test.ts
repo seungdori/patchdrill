@@ -20,7 +20,7 @@ describe("report", () => {
       },
       changedFiles: [{ path: "src/auth.ts", status: "modified", additions: 5, deletions: 1, binary: false }],
       addedLines: 5,
-      projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
+      projectSignals: [{ ecosystem: "python", framework: "django", manifestPath: "manage.py" }],
       affectedPackages: [],
       dependencyChanges: [],
       findings: [
@@ -47,6 +47,8 @@ describe("report", () => {
 
     expect(renderMarkdown(report)).toContain("PatchDrill Report");
     expect(renderMarkdown(report)).toContain("Schema version: 1");
+    expect(renderMarkdown(report)).toContain("| Ecosystem | Framework | Manifest | Package manager | Task runner |");
+    expect(renderMarkdown(report)).toContain("| python | django | manage.py |  |  |");
     expect(renderMarkdown(report)).toContain("file.high-impact-area");
     expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
@@ -106,7 +108,7 @@ describe("report", () => {
       },
       changedFiles: [{ path: "src/<auth>.ts", status: "modified", additions: 7, deletions: 2, binary: false, owners: ["@security"] }],
       addedLines: 7,
-      projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
+      projectSignals: [{ ecosystem: "python", framework: "django", manifestPath: "manage.py" }],
       affectedPackages: [],
       dependencyChanges: [],
       findings: [
@@ -146,6 +148,8 @@ describe("report", () => {
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("<title>PatchDrill Dashboard</title>");
     expect(html).toContain("80/100");
+    expect(html).toContain("Framework");
+    expect(html).toContain("django");
     expect(html).toContain("Unsafe &lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).toContain("npm test -- --grep=&quot;&lt;auth&gt;&quot;");
     expect(html).toContain("&lt;ok&gt;");

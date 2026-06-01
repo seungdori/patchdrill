@@ -26,6 +26,7 @@ describe("schemas", () => {
       $defs: {
         ecosystem?: { enum?: string[] };
         commandEcosystem?: { enum?: string[] };
+        projectSignal?: { properties?: { framework?: { enum?: string[] } } };
       };
     };
 
@@ -40,6 +41,7 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("buck");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
+    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 
@@ -104,6 +106,11 @@ describe("schemas", () => {
               dependencies: ["@acme/shared"]
             }
           ]
+        },
+        {
+          ecosystem: "python",
+          framework: "fastapi",
+          manifestPath: "pyproject.toml"
         }
       ],
       affectedPackages: [
