@@ -25,14 +25,19 @@ steps:
   - uses: actions/checkout@v6
     with:
       fetch-depth: 0
-  - uses: actions/setup-node@v6
+  - uses: seungdori/patchdrill@v0
+    id: patchdrill
     with:
-      node-version: 22
-  - run: npx patchdrill scan --base origin/${{ github.base_ref }} --sarif patchdrill.sarif --markdown patchdrill-report.md --json patchdrill-report.json --fail-on high --max-risk 69
+      base: origin/${{ github.base_ref }}
+      sarif: patchdrill.sarif
+      markdown: patchdrill-report.md
+      json: patchdrill-report.json
+      fail-on: high
+      max-risk: "69"
   - uses: github/codeql-action/upload-sarif@v4
     if: always()
     with:
-      sarif_file: patchdrill.sarif
+      sarif_file: ${{ steps.patchdrill.outputs.report-sarif }}
 ```
 
 ## Severity Mapping

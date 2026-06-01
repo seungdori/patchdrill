@@ -85,6 +85,16 @@ runs:
     - uses: actions/setup-node@v6
       with:
         node-version: 22
+        cache: npm
+        cache-dependency-path: ${{ github.action_path }}/package-lock.json
+    - name: Install PatchDrill action dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --ignore-scripts
+    - name: Build PatchDrill action
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm run build
     - name: Run PatchDrill
       id: run
       shell: bash
@@ -130,7 +140,7 @@ runs:
           args+=(--command-timeout-ms "$PATCHDRILL_COMMAND_TIMEOUT_MS")
         fi
         set +e
-        npx patchdrill "${args[@]}"
+        node "$GITHUB_ACTION_PATH/dist/cli.js" "${args[@]}"
         STATUS=$?
         echo "status=$STATUS" >> "$GITHUB_OUTPUT"
         exit 0

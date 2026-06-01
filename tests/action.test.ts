@@ -12,4 +12,14 @@ describe("composite action", () => {
     expect(action).toContain('--html "$PATCHDRILL_HTML"');
     expect(action).toContain("write_output html");
   });
+
+  it("runs from the checked-out action source instead of the npm registry", () => {
+    const action = readFileSync("action.yml", "utf8");
+
+    expect(action).toContain("working-directory: ${{ github.action_path }}");
+    expect(action).toContain("run: npm ci --ignore-scripts");
+    expect(action).toContain("run: npm run build");
+    expect(action).toContain('node "$GITHUB_ACTION_PATH/dist/cli.js"');
+    expect(action).not.toContain("npx patchdrill");
+  });
 });

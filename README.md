@@ -5,7 +5,7 @@ PatchDrill is a local-first CI drill for proving that AI-generated and human pat
 AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, and SARIF evidence that reviewers and CI systems can inspect.
 
 ```bash
-npx patchdrill scan --base origin/main --run \
+npx --yes github:seungdori/patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
@@ -62,18 +62,26 @@ Run with --run to execute required verification commands.
 
 ## Install
 
-Use it without installing:
+Use the current GitHub build before the npm package is published:
+
+```bash
+npx --yes github:seungdori/patchdrill scan --base origin/main
+```
+
+After the npm package is published, use it without installing:
 
 ```bash
 npx patchdrill scan --base origin/main
 ```
 
-Or install globally:
+Or install the published package globally:
 
 ```bash
 npm install -g patchdrill
 patchdrill scan --base origin/main
 ```
+
+The examples below use `patchdrill` for readability. Replace it with `npx --yes github:seungdori/patchdrill` when running directly from this repository.
 
 ## Quickstart
 
@@ -297,23 +305,29 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: seungdori/patchdrill@v0
+        id: patchdrill
         with:
-          node-version: 22
-      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
+          base: origin/${{ github.base_ref }}
+          markdown: patchdrill-report.md
+          json: patchdrill-report.json
+          sarif: patchdrill.sarif
+          html: patchdrill-dashboard.html
+          fail-on: high
+          max-risk: "69"
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: patchdrill.sarif
+          sarif_file: ${{ steps.patchdrill.outputs.report-sarif }}
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: patchdrill-report
           path: |
-            patchdrill-report.md
-            patchdrill-report.json
-            patchdrill-dashboard.html
-            patchdrill.sarif
+            ${{ steps.patchdrill.outputs.report-markdown }}
+            ${{ steps.patchdrill.outputs.report-json }}
+            ${{ steps.patchdrill.outputs.report-html }}
+            ${{ steps.patchdrill.outputs.report-sarif }}
 ```
 
 ## Example Report
