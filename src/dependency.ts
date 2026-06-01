@@ -297,6 +297,14 @@ function parsePyprojectDependencies(value: string | undefined): Map<string, Mani
       for (const spec of result.items) {
         addPyprojectDependency(packages, `project.optional-dependencies.${match[1]}`, "optionalDependencies", spec);
       }
+      continue;
+    }
+
+    const poetryDependencyType = poetryDependencySectionType(section);
+    if (poetryDependencyType) {
+      const item = readTomlKeyValue(trimmed);
+      if (!item) continue;
+      addPoetryDependency(packages, section, poetryDependencyType, item.key, item.value);
     }
   }
 
@@ -723,6 +731,45 @@ function addPyprojectDependency(
   });
 }
 
+function addPoetryDependency(
+  packages: Map<string, ManifestDependency>,
+  packagePath: string,
+  dependencyType: DependencyChange["dependencyType"],
+  rawName: string,
+  rawValue: string
+): void {
+  const displayName = unquoteTomlScalar(rawName);
+  const name = normalizePythonPackageName(displayName);
+  if (!name || name === "python") return;
+  const spec = readPoetryDependencySpec(rawValue);
+  if (!spec) return;
+  const effectiveDependencyType = dependencyType === "dependencies" && /\boptional\s*=\s*true\b/i.test(rawValue) ? "optionalDependencies" : dependencyType;
+  packages.set(`${effectiveDependencyType}:${packagePath}:${name}`, {
+    name,
+    key: `${effectiveDependencyType}:${packagePath}:${name}`,
+    spec,
+    packagePath,
+    dependencyType: effectiveDependencyType
+  });
+}
+
+function poetryDependencySectionType(section: string): DependencyChange["dependencyType"] | undefined {
+  if (section === "tool.poetry.dependencies") return "dependencies";
+  if (section === "tool.poetry.dev-dependencies") return "devDependencies";
+  if (/^tool\.poetry\.group\.[A-Za-z0-9_.-]+\.dependencies$/.test(section)) return "devDependencies";
+  return undefined;
+}
+
+function readPoetryDependencySpec(value: string): string | undefined {
+  const trimmed = stripTomlComment(value).trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("{")) {
+    const version = /\bversion\s*=\s*("[^"]*"|'[^']*'|[^,}]+)/.exec(trimmed)?.[1];
+    return version ? unquoteTomlScalar(version.trim()) : normalizeInlineToml(trimmed);
+  }
+  return unquoteTomlScalar(trimmed);
+}
+
 function readTomlStringArray(lines: string[], startIndex: number): { items: string[]; endIndex: number } {
   let buffer = stripTomlComment(lines[startIndex] ?? "");
   let endIndex = startIndex;
@@ -742,6 +789,12 @@ function readQuotedStrings(value: string): string[] {
     items.push(raw.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
   }
   return items;
+}
+
+function readTomlKeyValue(line: string): { key: string; value: string } | undefined {
+  const match = /^("[^"]+"|'[^']+'|[A-Za-z0-9_.-]+)\s*=\s*(.+)$/.exec(line);
+  if (!match?.[1] || !match[2]) return undefined;
+  return { key: match[1], value: match[2] };
 }
 
 function stripTomlComment(value: string): string {

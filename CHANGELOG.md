@@ -25,7 +25,7 @@
 - Refreshed the example report to cover current Markdown sections.
 - Added GitHub issue forms and a pull request template for contributor intake.
 - Added `schemaVersion` to JSON and Markdown reports.
-- Added `pyproject.toml` PEP 621 dependency diff summaries.
+- Added `pyproject.toml` PEP 621 and Poetry dependency diff summaries.
 - Added `pnpm-lock.yaml` dependency diff summaries.
 - Added `yarn.lock` dependency diff summaries.
 - Added `go.sum` dependency diff summaries.

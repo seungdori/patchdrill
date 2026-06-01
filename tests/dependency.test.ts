@@ -205,6 +205,102 @@ dev = [
     ]);
   });
 
+  it("reports Poetry pyproject dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-poetry-pyproject-deps-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePyproject(
+      root,
+      `
+[tool.poetry]
+name = "api"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.110.0"
+old-package = "0.1.0"
+uvicorn = { version = "^0.29.0", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePyproject(
+      root,
+      `
+[tool.poetry]
+name = "api"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.111.0"
+rich = "^13.7.0"
+uvicorn = { version = "^0.30.0", optional = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.0"
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "pyproject.toml", status: "modified", additions: 7, deletions: 7, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "pyproject.toml",
+        packageName: "fastapi",
+        packagePath: "tool.poetry.dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^0.110.0",
+        after: "^0.111.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "old-package",
+        packagePath: "tool.poetry.dependencies",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "0.1.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "rich",
+        packagePath: "tool.poetry.dependencies",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "^13.7.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "pytest",
+        packagePath: "tool.poetry.group.dev.dependencies",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "^8.0.0",
+        after: "^8.1.0"
+      },
+      {
+        file: "pyproject.toml",
+        packageName: "uvicorn",
+        packagePath: "tool.poetry.dependencies",
+        dependencyType: "optionalDependencies",
+        changeType: "updated",
+        before: "^0.29.0",
+        after: "^0.30.0"
+      }
+    ]);
+  });
+
   it("reports .NET PackageReference additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-dotnet-deps-"));
     tempDirs.push(root);
