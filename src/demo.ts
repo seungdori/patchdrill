@@ -1,0 +1,222 @@
+import type { PatchReport } from "./types.js";
+
+export function createDemoReport(): PatchReport {
+  return {
+    schemaVersion: "1",
+    generatedAt: "2026-06-01T00:00:00.000Z",
+    root: "/demo/checkout",
+    base: "origin/main",
+    head: "feature/auth-session-hardening",
+    summary: {
+      status: "warn",
+      riskScore: 58,
+      confidenceScore: 82,
+      changedFileCount: 5,
+      additions: 186,
+      deletions: 42,
+      requiredCommandCount: 3,
+      failedCommandCount: 0
+    },
+    changedFiles: [
+      { path: "apps/api/src/auth/session.ts", status: "modified", additions: 54, deletions: 16, binary: false, owners: ["@acme/security"] },
+      { path: "apps/api/src/auth/session.test.ts", status: "modified", additions: 48, deletions: 4, binary: false, owners: ["@acme/security"] },
+      { path: "packages/db/migrations/20260601090000_add_session_rotation.sql", status: "added", additions: 38, deletions: 0, binary: false, owners: ["@acme/data"] },
+      { path: ".github/workflows/deploy.yml", status: "modified", additions: 22, deletions: 12, binary: false, owners: ["@acme/platform"] },
+      { path: "package-lock.json", status: "modified", additions: 24, deletions: 10, binary: false }
+    ],
+    addedLines: 186,
+    projectSignals: [
+      {
+        ecosystem: "node",
+        manifestPath: "package.json",
+        packageManager: "pnpm",
+        taskRunner: "turbo",
+        scripts: {
+          typecheck: "turbo run typecheck",
+          test: "turbo run test",
+          build: "turbo run build",
+          "test:e2e": "playwright test"
+        },
+        workspacePackages: [
+          {
+            name: "@acme/api",
+            projectName: "api",
+            path: "apps/api",
+            scripts: {
+              typecheck: "tsc --noEmit",
+              test: "vitest run",
+              build: "tsup"
+            },
+            targets: ["typecheck", "test", "build"],
+            dependencies: ["@acme/db"]
+          },
+          {
+            name: "@acme/db",
+            projectName: "db",
+            path: "packages/db",
+            scripts: {
+              test: "vitest run"
+            },
+            targets: ["test"]
+          }
+        ]
+      },
+      {
+        ecosystem: "github-actions",
+        manifestPath: ".github/workflows/deploy.yml"
+      }
+    ],
+    affectedPackages: [
+      {
+        name: "@acme/api",
+        projectName: "api",
+        path: "apps/api",
+        scripts: {
+          typecheck: "tsc --noEmit",
+          test: "vitest run",
+          build: "tsup"
+        },
+        targets: ["typecheck", "test", "build"],
+        dependencies: ["@acme/db"]
+      }
+    ],
+    dependencyChanges: [
+      {
+        file: "package-lock.json",
+        packageName: "@acme/session-store",
+        packagePath: "node_modules/@acme/session-store",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "1.8.2",
+        after: "1.9.0"
+      }
+    ],
+    policy: {
+      path: ".patchdrill.yml",
+      ignoredPaths: ["dist/**", "coverage/**"],
+      failOn: "high",
+      maxRisk: 69,
+      ruleCount: 2,
+      requiredCommandCount: 1,
+      optionalCommandCount: 1
+    },
+    codeOwners: {
+      path: ".github/CODEOWNERS",
+      ruleCount: 3
+    },
+    baseline: {
+      path: "previous-patchdrill-report.json",
+      previousStatus: "warn",
+      currentStatus: "warn",
+      previousRiskScore: 44,
+      currentRiskScore: 58,
+      riskDelta: 14,
+      newFindingCount: 2,
+      resolvedFindingCount: 1,
+      unchangedFindingCount: 3
+    },
+    findings: [
+      {
+        ruleId: "file.high-impact-area",
+        severity: "high",
+        title: "High-impact product area changed",
+        detail: "Authentication/session code changed and needs strong proof before merge.",
+        file: "apps/api/src/auth/session.ts",
+        remediation: "Require owner review and targeted session regression evidence.",
+        tags: ["security", "auth"]
+      },
+      {
+        ruleId: "file.migration-review",
+        severity: "high",
+        title: "Data migration review required",
+        detail: "A database migration can alter production session state.",
+        file: "packages/db/migrations/20260601090000_add_session_rotation.sql",
+        remediation: "Attach dry-run, rollback, and data-owner approval notes.",
+        tags: ["data", "migration"]
+      },
+      {
+        ruleId: "workflow.oidc-environment",
+        severity: "medium",
+        title: "OIDC deployment job should use a protected environment",
+        detail: "A deployment workflow can mint cloud credentials without an explicit GitHub environment gate.",
+        file: ".github/workflows/deploy.yml",
+        line: 34,
+        remediation: "Attach a protected environment or document why this job cannot deploy.",
+        tags: ["ci", "oidc", "supply-chain"]
+      },
+      {
+        ruleId: "dependency.lockfile-update",
+        severity: "low",
+        title: "Dependency lockfile changed",
+        detail: "@acme/session-store changed from 1.8.2 to 1.9.0.",
+        file: "package-lock.json",
+        remediation: "Review release notes and verify transitive dependency impact.",
+        tags: ["dependencies"]
+      }
+    ],
+    commandPlan: [
+      {
+        id: "node-turbo-api-typecheck",
+        label: "Typecheck affected API package",
+        command: "pnpm exec turbo run typecheck --filter=@acme/api",
+        reason: "Auth source changed in @acme/api.",
+        ecosystem: "node",
+        required: true,
+        packageName: "@acme/api",
+        packagePath: "apps/api"
+      },
+      {
+        id: "node-turbo-api-test",
+        label: "Test affected API package",
+        command: "pnpm exec turbo run test --filter=@acme/api",
+        reason: "Session behavior changed and matching tests exist.",
+        ecosystem: "node",
+        required: true,
+        packageName: "@acme/api",
+        packagePath: "apps/api"
+      },
+      {
+        id: "policy-contract-tests",
+        label: "Contract tests",
+        command: "pnpm run test:contracts",
+        reason: "Repository policy requires contract tests for auth/session changes.",
+        ecosystem: "general",
+        required: true
+      },
+      {
+        id: "node-e2e",
+        label: "Browser e2e",
+        command: "pnpm run test:e2e",
+        reason: "Optional browser coverage is available for session rotation flows.",
+        ecosystem: "node",
+        required: false
+      }
+    ],
+    commandResults: [
+      {
+        id: "node-turbo-api-typecheck",
+        command: "pnpm exec turbo run typecheck --filter=@acme/api",
+        exitCode: 0,
+        durationMs: 8421,
+        stdout: "@acme/api:typecheck: cache miss, executing\n@acme/api:typecheck: ok\n",
+        stderr: ""
+      },
+      {
+        id: "node-turbo-api-test",
+        command: "pnpm exec turbo run test --filter=@acme/api",
+        exitCode: 0,
+        durationMs: 12544,
+        stdout: "@acme/api:test: 42 tests passed\n",
+        stderr: ""
+      },
+      {
+        id: "policy-contract-tests",
+        command: "pnpm run test:contracts",
+        exitCode: 0,
+        durationMs: 15038,
+        stdout: "contract auth-session passed\ncontract deployment-claims passed\n",
+        stderr: ""
+      }
+    ]
+  };
+}

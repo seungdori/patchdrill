@@ -24,6 +24,11 @@ describe("cli", () => {
       command: "scan",
       flags: { run: true, "run-optional": true }
     });
+    expect(parseArgs(["demo", "--output", "patchdrill-demo"])).toEqual({
+      command: "demo",
+      flags: { output: "patchdrill-demo" },
+      positionals: []
+    });
     expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
       command: "dashboard",
       flags: {

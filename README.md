@@ -87,6 +87,12 @@ The examples below use `patchdrill` for readability. Replace it with `npx --yes 
 
 ## Quickstart
 
+Try the output without a git repository:
+
+```bash
+patchdrill demo --output patchdrill-demo
+```
+
 Analyze uncommitted work:
 
 ```bash
@@ -184,6 +190,7 @@ patchdrill init --policy-pack regulated
 ```text
 patchdrill scan [options]
 patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
+patchdrill demo [--output <directory>]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report] [--output <path>]
@@ -212,7 +219,7 @@ Options:
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
-| `--output <path>` | Write a schema or dashboard to a file. |
+| `--output <path>` | Write a schema/dashboard file or demo artifact directory. |
 
 ## Supported Signals
 

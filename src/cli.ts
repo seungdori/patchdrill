@@ -2,9 +2,10 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createDemoReport } from "./demo.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
-import { renderHtml, renderMarkdown, shouldFail, type GateOptions } from "./report.js";
+import { renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
@@ -36,6 +37,10 @@ async function main(): Promise<void> {
   }
   if (command === "dashboard") {
     dashboardCommand(parsed);
+    return;
+  }
+  if (command === "demo") {
+    demoCommand(parsed);
     return;
   }
   if (command === "init") {
@@ -127,6 +132,34 @@ export function dashboardCommand(parsed: ParsedArgs): void {
   mkdirSync(dirname(resolved), { recursive: true });
   writeFileSync(resolved, renderHtml(report, reports.length > 1 ? { history: reports } : undefined), "utf8");
   console.log(`Wrote ${output}`);
+}
+
+export function demoCommand(parsed: ParsedArgs): void {
+  const report = createDemoReport();
+  const output = flagString(parsed, "output");
+  if (!output) {
+    console.log(renderMarkdown(report).trimEnd());
+    return;
+  }
+
+  const outputDir = resolve(process.cwd(), output);
+  mkdirSync(outputDir, { recursive: true });
+  const files = {
+    markdown: join(outputDir, "patchdrill-demo.md"),
+    json: join(outputDir, "patchdrill-demo.json"),
+    sarif: join(outputDir, "patchdrill-demo.sarif"),
+    html: join(outputDir, "patchdrill-demo.html")
+  };
+  writeFileSync(files.markdown, renderMarkdown(report), "utf8");
+  writeFileSync(files.json, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  writeFileSync(files.sarif, renderSarif(report), "utf8");
+  writeFileSync(files.html, renderHtml(report), "utf8");
+
+  console.log(`Wrote demo artifacts to ${output}`);
+  console.log(`- ${files.markdown}`);
+  console.log(`- ${files.json}`);
+  console.log(`- ${files.sarif}`);
+  console.log(`- ${files.html}`);
 }
 
 function initCommand(parsed: ParsedArgs): void {
@@ -223,7 +256,7 @@ export function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "init", "explain", "schema", "help"].includes(arg)) {
+    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "init", "explain", "schema", "help"].includes(arg)) {
       command = arg;
       continue;
     }
@@ -350,6 +383,7 @@ function printHelp(): void {
 Usage:
   patchdrill scan [options]
   patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
+  patchdrill demo [--output <directory>]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill schema [policy|report] [--output <path>]
@@ -378,7 +412,7 @@ Options:
   --policy-pack <name>
                       Starter policy pack for init --policy: ${policyPackNames.join(", ")}
   --list              List schemas when used with schema
-  --output <path>     Write a schema or dashboard to a file
+  --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version
   --help              Print help
 `);
