@@ -1,0 +1,25 @@
+{
+  "name": "dotnet-service",
+  "expectedEcosystems": ["dotnet"],
+  "expectedCommands": ["dotnet test"],
+  "baseFiles": [
+    {
+      "path": "global.json",
+      "lines": ["{", "  \"sdk\": {", "    \"version\": \"8.0.100\"", "  }", "}"]
+    },
+    {
+      "path": "src/Api/Api.csproj",
+      "lines": ["<Project Sdk=\"Microsoft.NET.Sdk\">", "  <PropertyGroup>", "    <TargetFramework>net8.0</TargetFramework>", "  </PropertyGroup>", "</Project>"]
+    },
+    {
+      "path": "src/Api/Service.cs",
+      "lines": ["namespace Api;", "public class Service { public bool Ok() => true; }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/Api/Service.cs",
+      "lines": ["namespace Api;", "public class Service { public bool Ok() => false; }"]
+    }
+  ]
+}

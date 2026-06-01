@@ -61,6 +61,7 @@
 - Static HTML dashboard generation from scan output and saved JSON reports.
 - Composite GitHub Action support for HTML dashboard artifacts.
 - Kubernetes and Helm manifest verification planning.
+- First-party stack fixtures for Kustomize, Java/Gradle, and .NET services.
 
 ## Contribution Targets
 

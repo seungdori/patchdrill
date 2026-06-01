@@ -1,0 +1,21 @@
+{
+  "name": "kubernetes-kustomize",
+  "expectedEcosystems": ["kubernetes"],
+  "expectedCommands": ["kubectl kustomize k8s/overlays/prod"],
+  "baseFiles": [
+    {
+      "path": "k8s/overlays/prod/kustomization.yaml",
+      "lines": ["resources:", "  - deployment.yaml"]
+    },
+    {
+      "path": "k8s/overlays/prod/deployment.yaml",
+      "lines": ["apiVersion: apps/v1", "kind: Deployment", "metadata:", "  name: api"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "k8s/overlays/prod/deployment.yaml",
+      "lines": ["apiVersion: apps/v1", "kind: Deployment", "metadata:", "  name: api", "spec:", "  replicas: 3"]
+    }
+  ]
+}

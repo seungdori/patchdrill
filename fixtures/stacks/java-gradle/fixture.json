@@ -1,0 +1,29 @@
+{
+  "name": "java-gradle",
+  "expectedEcosystems": ["java"],
+  "expectedCommands": ["./gradlew test"],
+  "baseFiles": [
+    {
+      "path": "settings.gradle",
+      "lines": ["pluginManagement { repositories { gradlePluginPortal() } }", "rootProject.name = 'api'"]
+    },
+    {
+      "path": "build.gradle",
+      "lines": ["plugins {", "    id 'java'", "}"]
+    },
+    {
+      "path": "gradlew",
+      "lines": ["#!/bin/sh", "echo gradle wrapper"]
+    },
+    {
+      "path": "src/main/java/com/acme/Api.java",
+      "lines": ["package com.acme;", "public class Api { public boolean ok() { return true; } }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/main/java/com/acme/Api.java",
+      "lines": ["package com.acme;", "public class Api { public boolean ok() { return false; } }"]
+    }
+  ]
+}
