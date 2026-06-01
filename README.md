@@ -9,6 +9,7 @@ npx patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
+  --html patchdrill-dashboard.html \
   --fail-on high \
   --max-risk 69
 ```
@@ -19,7 +20,7 @@ npx patchdrill scan --base origin/main --run \
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
-- Emits portable evidence: Markdown for humans, JSON for bots and dashboards, SARIF for GitHub code scanning.
+- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, and a self-contained HTML dashboard.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
@@ -90,7 +91,14 @@ Write reports:
 patchdrill scan --base origin/main \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
-  --sarif patchdrill.sarif
+  --sarif patchdrill.sarif \
+  --html patchdrill-dashboard.html
+```
+
+Create a static dashboard from a saved JSON report:
+
+```bash
+patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
 Use the GitHub Action with PR comments:
@@ -143,6 +151,7 @@ patchdrill init --policy-pack regulated
 
 ```text
 patchdrill scan [options]
+patchdrill dashboard --json <report.json> [--output <dashboard.html>]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report] [--output <path>]
@@ -160,6 +169,7 @@ Options:
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
+| `--html <path>` | Write a self-contained static HTML dashboard. |
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
 | `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. |
@@ -169,7 +179,7 @@ Options:
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
-| `--output <path>` | Write a schema to a file when used with `patchdrill schema`. |
+| `--output <path>` | Write a schema or dashboard to a file. |
 
 ## Supported Signals
 
@@ -273,7 +283,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
+      - run: npx patchdrill scan --base origin/${{ github.base_ref }} --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -285,6 +295,7 @@ jobs:
           path: |
             patchdrill-report.md
             patchdrill-report.json
+            patchdrill-dashboard.html
             patchdrill.sarif
 ```
 
@@ -294,6 +305,7 @@ See [examples/report.md](examples/report.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
+For static HTML dashboards, see [docs/DASHBOARD.md](docs/DASHBOARD.md).
 For machine-readable schemas, see [docs/SCHEMAS.md](docs/SCHEMAS.md).
 For owner hints, see [docs/CODEOWNERS.md](docs/CODEOWNERS.md).
 For risk deltas, see [docs/BASELINES.md](docs/BASELINES.md).
@@ -317,9 +329,10 @@ PatchDrill summarizes dependency changes from changed `package.json`, `requireme
 
 ## Roadmap
 
-- Workspace dependency graph expansion.
-- Language-aware test selection.
-- Binary `bun.lockb` diff guidance for legacy Bun projects.
+- Broader first-party fixture coverage for common open-source stacks.
+- More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, and Go workspaces.
+- Multi-run static dashboard trends for CI artifact history.
+- Local TUI for interactively accepting or rejecting inferred verification commands.
 - Optional LLM summary mode that never replaces deterministic findings.
 
 ## Contributing

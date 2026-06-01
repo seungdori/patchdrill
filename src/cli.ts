@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
-import { renderMarkdown, shouldFail, type GateOptions } from "./report.js";
+import { renderHtml, renderMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
-import type { Severity } from "./types.js";
+import type { PatchReport, Severity } from "./types.js";
 
 const severities: Severity[] = ["info", "low", "medium", "high", "critical"];
 
-interface ParsedArgs {
+export interface ParsedArgs {
   command: string;
   flags: Record<string, string | boolean>;
   positionals: string[];
@@ -31,6 +32,10 @@ async function main(): Promise<void> {
 
   if (command === "scan") {
     await scanCommand(parsed);
+    return;
+  }
+  if (command === "dashboard") {
+    dashboardCommand(parsed);
     return;
   }
   if (command === "init") {
@@ -66,6 +71,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(typeof parsed.flags.markdown === "string" ? { markdownPath: parsed.flags.markdown } : {}),
     ...(typeof parsed.flags.json === "string" ? { jsonPath: parsed.flags.json } : {}),
     ...(typeof parsed.flags.sarif === "string" ? { sarifPath: parsed.flags.sarif } : {}),
+    ...(typeof parsed.flags.html === "string" ? { htmlPath: parsed.flags.html } : {}),
     ...(cliMaxOutputChars !== undefined ? { maxOutputChars: cliMaxOutputChars } : {}),
     ...(cliCommandTimeoutMs !== undefined ? { commandTimeoutMs: cliCommandTimeoutMs } : {})
   });
@@ -88,6 +94,19 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   }
 }
 
+export function dashboardCommand(parsed: ParsedArgs): void {
+  if (typeof parsed.flags.json !== "string") {
+    throw new Error("dashboard requires --json <report.json>.");
+  }
+
+  const output = typeof parsed.flags.output === "string" ? parsed.flags.output : "patchdrill-dashboard.html";
+  const report = JSON.parse(readFileSync(parsed.flags.json, "utf8")) as PatchReport;
+  const resolved = resolve(process.cwd(), output);
+  mkdirSync(dirname(resolved), { recursive: true });
+  writeFileSync(resolved, renderHtml(report), "utf8");
+  console.log(`Wrote ${output}`);
+}
+
 function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
   const policyPack = readPolicyPack(parsed.flags["policy-pack"]);
@@ -106,10 +125,10 @@ function explainCommand(): void {
 2. Discover repo ecosystems from manifests.
 3. Infer the commands that should prove the patch.
 4. Score risk from changed areas, dependency files, infra, secrets, size, and command results.
-5. Emit Markdown, JSON, and SARIF evidence for PR review or CI artifacts.
+5. Emit Markdown, JSON, SARIF, and static HTML evidence for PR review or CI artifacts.
 
 Typical use:
-  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --fail-on high --max-risk 69
+  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
 `);
 }
 
@@ -155,7 +174,7 @@ function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOpti
   return lines.join("\n");
 }
 
-function parseArgs(args: string[]): ParsedArgs {
+export function parseArgs(args: string[]): ParsedArgs {
   const flags: Record<string, string | boolean> = {};
   const positionals: string[] = [];
   let command = "scan";
@@ -180,7 +199,7 @@ function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "init", "explain", "schema", "help"].includes(arg)) {
+    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "init", "explain", "schema", "help"].includes(arg)) {
       command = arg;
       continue;
     }
@@ -199,6 +218,7 @@ function takesValue(flag: string): boolean {
     "markdown",
     "json",
     "sarif",
+    "html",
     "fail-on",
     "max-risk",
     "max-risk-delta",
@@ -277,6 +297,7 @@ function printHelp(): void {
 
 Usage:
   patchdrill scan [options]
+  patchdrill dashboard --json <report.json> [--output <dashboard.html>]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill schema [policy|report] [--output <path>]
@@ -290,6 +311,7 @@ Options:
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
   --sarif <path>      Write a SARIF report for GitHub code scanning
+  --html <path>       Write a self-contained static HTML dashboard
   --fail-on <level>   Fail when findings meet severity: info, low, medium, high, critical
   --max-risk <score>  Fail when risk score is above 0-100 threshold, default 69
   --max-risk-delta <score>
@@ -303,14 +325,27 @@ Options:
   --policy-pack <name>
                       Starter policy pack for init --policy: ${policyPackNames.join(", ")}
   --list              List schemas when used with schema
-  --output <path>     Write a schema to a file when used with schema
+  --output <path>     Write a schema or dashboard to a file
   --version           Print version
   --help              Print help
 `);
 }
 
-main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`patchdrill: ${message}`);
-  process.exitCode = 1;
-});
+if (isCliEntrypoint()) {
+  main().catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`patchdrill: ${message}`);
+    process.exitCode = 1;
+  });
+}
+
+function isCliEntrypoint(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const modulePath = fileURLToPath(import.meta.url);
+  try {
+    return realpathSync(entry) === realpathSync(modulePath);
+  } catch {
+    return resolve(entry) === modulePath;
+  }
+}

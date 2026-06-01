@@ -8,9 +8,9 @@
 ## Later
 
 - Expand language-aware changed-test matching with framework-specific conventions.
+- Expand the static dashboard into a multi-run trend view for CI artifact history.
 - Optional MCP server for coding agents.
 - Optional LLM summarization that can only summarize deterministic findings.
-- Web dashboard that reads JSON artifacts from CI.
 - Rule confidence calibration from anonymized fixture corpora.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
 
@@ -58,15 +58,15 @@
 - First-party stack fixture harness covering Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Pants, Cargo, and Go services.
 - Native Pants changed-target task plans.
 - Language-aware source-to-test matching for risk scoring.
+- Static HTML dashboard generation from scan output and saved JSON reports.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Rails.
 - Django/FastAPI.
-- Next.js.
-- Rust workspaces.
-- Go services.
-- Terraform-heavy infra repos.
+- Spring Boot and Gradle.
+- .NET services.
+- Kubernetes and Helm-heavy repos.
+- Bazel or Buck monorepos.
 - Mobile apps.

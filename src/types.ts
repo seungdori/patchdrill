@@ -185,6 +185,7 @@ export interface ScanOptions {
   markdownPath?: string;
   jsonPath?: string;
   sarifPath?: string;
+  htmlPath?: string;
   maxOutputChars?: number;
   commandTimeoutMs?: number;
 }

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -337,6 +337,30 @@ backend_packages = ["pants.backend.python"]
       "pants --changed-since=HEAD --changed-dependents=transitive lint",
       "pants --changed-since=HEAD --changed-dependents=transitive check"
     ]);
+  });
+
+  it("writes a static HTML dashboard during scan", async () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }, null, 2));
+    mkdirSync(join(root, "src"), { recursive: true });
+    writeFileSync(join(root, "src", "scan.ts"), "export const before = true;\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(join(root, "src", "scan.ts"), "export const after = true;\n");
+
+    const report = await scan({ cwd: root, htmlPath: "reports/patchdrill-dashboard.html" });
+    const html = readFileSync(join(root, "reports", "patchdrill-dashboard.html"), "utf8");
+
+    expect(html).toContain("<title>PatchDrill Dashboard</title>");
+    expect(html).toContain("Verification Dashboard");
+    expect(html).toContain(`${report.summary.riskScore}/100`);
+    expect(html).toContain("src/scan.ts");
   });
 
   it("includes dependency changes in reports", async () => {

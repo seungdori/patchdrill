@@ -50,3 +50,4 @@
 - Added native Pants changed-target task planning.
 - Expanded stack fixtures with Next.js, Rails, PHP/Composer, and Terraform examples.
 - Added language-aware source-to-test matching for missing-test risk findings.
+- Added self-contained static HTML dashboards through `scan --html` and `patchdrill dashboard --json`.
