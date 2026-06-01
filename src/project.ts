@@ -210,7 +210,7 @@ function detectDotnetFramework(root: string): ProjectSignal["framework"] | undef
 }
 
 function findDotnetManifestPath(root: string): string | undefined {
-  return firstExisting(root, ["global.json"]) ?? findFileWithExtension(root, ".sln", 2) ?? findFileWithExtension(root, ".csproj", 3);
+  return firstExisting(root, ["global.json"]) ?? findFileWithExtension(root, ".slnf", 2) ?? findFileWithExtension(root, ".sln", 2) ?? findFileWithExtension(root, ".csproj", 3);
 }
 
 function findAndroidManifestPath(root: string): string | undefined {

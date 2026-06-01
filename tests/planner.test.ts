@@ -323,6 +323,24 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.command)).toEqual(["dotnet test", "dotnet build --no-restore"]);
   });
 
+  it("targets .NET solution filters when filter metadata changes", () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "App.sln"), "Microsoft Visual Studio Solution File\n");
+    writeFileSync(join(root, "App.slnf"), JSON.stringify({ solution: { path: "App.sln", projects: ["src/Api/Api.csproj"] } }, null, 2));
+
+    const commands = planCommands(
+      root,
+      [{ path: "App.slnf", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", manifestPath: "App.slnf" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["dotnet test App.slnf", "dotnet build App.slnf --no-restore"]);
+    expect(commands.map((command) => command.reason)).toEqual([
+      ".NET solution filter App.slnf changed, so tests should run against the filtered solution.",
+      ".NET solution filter App.slnf changed, so the filtered solution should still compile."
+    ]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

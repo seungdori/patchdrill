@@ -167,6 +167,18 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects .NET solution filter files before full solutions", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "App.sln"), "Microsoft Visual Studio Solution File\n");
+    writeFileSync(join(root, "App.slnf"), JSON.stringify({ solution: { path: "App.sln", projects: [] } }, null, 2));
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "dotnet",
+      manifestPath: "App.slnf"
+    });
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

@@ -159,23 +159,28 @@ function addDotnetPlans(plans: CommandPlan[], root: string, paths: string[], sig
 }
 
 function addRootDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
+  const solutionFilter = dotnetSolutionFilterTarget(signal);
   pushUnique(plans, {
-    id: "dotnet-tests",
-    label: ".NET tests",
-    command: "dotnet test",
-    reason: ".NET source or project metadata changed.",
+    id: solutionFilter ? "dotnet-solution-filter-tests" : "dotnet-tests",
+    label: solutionFilter ? ".NET solution filter tests" : ".NET tests",
+    command: `dotnet test${solutionFilter ? ` ${quoteShell(solutionFilter)}` : ""}`,
+    reason: solutionFilter
+      ? `.NET solution filter ${solutionFilter} changed, so tests should run against the filtered solution.`
+      : ".NET source or project metadata changed.",
     ecosystem: "dotnet",
     required: true
   });
   pushUnique(plans, {
-    id: "dotnet-build",
-    label: ".NET build",
-    command: "dotnet build --no-restore",
-    reason: ".NET projects should still compile after source or project metadata changes.",
+    id: solutionFilter ? "dotnet-solution-filter-build" : "dotnet-build",
+    label: solutionFilter ? ".NET solution filter build" : ".NET build",
+    command: `dotnet build${solutionFilter ? ` ${quoteShell(solutionFilter)}` : ""} --no-restore`,
+    reason: solutionFilter
+      ? `.NET solution filter ${solutionFilter} changed, so the filtered solution should still compile.`
+      : ".NET projects should still compile after source or project metadata changes.",
     ecosystem: "dotnet",
     required: false
   });
-  if (signal.framework === "aspnet-core") {
+  if (signal.framework === "aspnet-core" && !solutionFilter) {
     pushUnique(plans, {
       id: "aspnet-core-publish",
       label: "ASP.NET Core publish",
@@ -185,6 +190,10 @@ function addRootDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
       required: false
     });
   }
+}
+
+function dotnetSolutionFilterTarget(signal: ProjectSignal): string | undefined {
+  return signal.manifestPath.endsWith(".slnf") ? signal.manifestPath : undefined;
 }
 
 function addDotnetProjectPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): number {
@@ -1159,11 +1168,11 @@ function touchesJava(paths: string[], root: string): boolean {
 }
 
 function touchesDotnet(paths: string[]): boolean {
-  return touches(paths, [".cs", ".fs", ".vb", ".csproj", ".fsproj", ".vbproj", ".sln", ".props", ".targets", "global.json", "Directory.Build.props", "Directory.Build.targets"]);
+  return touches(paths, [".cs", ".fs", ".vb", ".csproj", ".fsproj", ".vbproj", ".sln", ".slnf", ".props", ".targets", "global.json", "Directory.Build.props", "Directory.Build.targets"]);
 }
 
 function touchesDotnetRootMetadata(paths: string[]): boolean {
-  return paths.some((path) => path === "global.json" || path.endsWith(".sln") || path === "Directory.Build.props" || path === "Directory.Build.targets");
+  return paths.some((path) => path === "global.json" || path.endsWith(".sln") || path.endsWith(".slnf") || path === "Directory.Build.props" || path === "Directory.Build.targets");
 }
 
 function touchesAndroid(paths: string[]): boolean {

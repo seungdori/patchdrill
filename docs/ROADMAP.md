@@ -78,6 +78,7 @@
 - Whole-file GitHub Actions context analysis for changed workflows with pre-existing privileged triggers or checkout steps.
 - NuGet PackageReference and central PackageVersion dependency change summaries.
 - Workflow trust-boundary findings for reusable workflows that use `secrets: inherit`, including mutable remote reusable workflow refs.
+- .NET solution filter targeting for very large solutions.
 
 ## Contribution Targets
 
@@ -85,7 +86,7 @@ PatchDrill needs real-world fixtures from:
 
 - Deeper workflow trust-boundary modeling across nested reusable workflows, environments, and OIDC claims.
 - FastAPI dependency-override and router import graph targeting.
-- .NET solution filter targeting for very large solutions.
+- .NET solution filter selection from multiple overlapping filters.
 - Android flavor-dimension parsing beyond explicit variant source sets.
 - Bazel/Buck downstream affected-target query planning beyond changed-package defaults.
 - Mobile apps.
