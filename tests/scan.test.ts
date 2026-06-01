@@ -93,6 +93,27 @@ describe("scan", () => {
 
     const report = await scan({ cwd: root });
 
+    expect(report.packageScriptChanges).toEqual([
+      {
+        file: "package.json",
+        scriptName: "lint",
+        changeType: "removed",
+        before: "eslint ."
+      },
+      {
+        file: "package.json",
+        scriptName: "postinstall",
+        changeType: "added",
+        after: "node scripts/install.js"
+      },
+      {
+        file: "package.json",
+        scriptName: "test",
+        changeType: "updated",
+        before: "vitest run",
+        after: "true"
+      }
+    ]);
     expect(report.findings).toContainEqual(
       expect.objectContaining({
         ruleId: "package-script.lifecycle",

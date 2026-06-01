@@ -119,6 +119,21 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
+  if (report.packageScriptChanges.length > 0) {
+    lines.push("## Package Script Changes");
+    lines.push("");
+    lines.push("| File | Script | Change | Before | After |");
+    lines.push("| --- | --- | --- | --- | --- |");
+    for (const change of report.packageScriptChanges) {
+      lines.push(
+        `| ${escapePipe(change.file)} | ${markdownTableCode(change.scriptName)} | ${change.changeType} | ${markdownTableCode(change.before ?? "")} | ${markdownTableCode(
+          change.after ?? ""
+        )} |`
+      );
+    }
+    lines.push("");
+  }
+
   lines.push("## Changed Files");
   lines.push("");
   if (report.changedFiles.length === 0) {
@@ -743,6 +758,11 @@ ${commandResultsHtml}
     </section>
 
     <section>
+      <h2>Package Script Changes</h2>
+      ${htmlPackageScriptChanges(report)}
+    </section>
+
+    <section>
       <h2>Reviewer Notes</h2>
       <p class="muted">Treat this dashboard as triage evidence, not a replacement for review. High-impact areas still need human sign-off even when automated commands pass.</p>
     </section>
@@ -1074,6 +1094,20 @@ function htmlDependencyChanges(report: PatchReport): string {
       escapeHtml(change.after ?? "")
     ]),
     "No dependency changes detected."
+  );
+}
+
+function htmlPackageScriptChanges(report: PatchReport): string {
+  return htmlTable(
+    ["File", "Script", "Change", "Before", "After"],
+    report.packageScriptChanges.map((change) => [
+      escapeHtml(change.file),
+      `<code>${escapeHtml(change.scriptName)}</code>`,
+      escapeHtml(change.changeType),
+      `<code>${escapeHtml(change.before ?? "")}</code>`,
+      `<code>${escapeHtml(change.after ?? "")}</code>`
+    ]),
+    "No package script changes detected."
   );
 }
 

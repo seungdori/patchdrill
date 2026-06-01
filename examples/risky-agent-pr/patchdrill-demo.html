@@ -401,8 +401,8 @@
       </div>
       <div class="metric">
         <div class="metric-label">Changed files</div>
-        <div class="metric-value">7</div>
-        <div class="metric-detail">+312 / -74</div>
+        <div class="metric-value">8</div>
+        <div class="metric-detail">+326 / -78</div>
       </div>
       <div class="metric">
         <div class="metric-label">Required checks</div>
@@ -411,7 +411,7 @@
       </div>
       <div class="metric">
         <div class="metric-label">Added lines</div>
-        <div class="metric-value">312</div>
+        <div class="metric-value">326</div>
         <div class="metric-detail">Diff lines scanned for risky content.</div>
       </div>
     </div>
@@ -421,7 +421,7 @@
     <section>
       <div class="section-heading">
         <h2>Findings</h2>
-        <span class="pill fail">6 total</span>
+        <span class="pill fail">8 total</span>
       </div>
       <div class="finding-list">
         <article class="finding">
@@ -472,6 +472,30 @@
           <p class="muted">Remediation: Attach targeted billing regression tests and owner approval.</p>
           <p class="muted">Rule: <code>file.high-impact-area</code></p>
           <p class="muted">Tags: billing, payments</p>
+        </article><article class="finding">
+          <div class="finding-head">
+            <div>
+              <div class="finding-title">Verification script disabled: test</div>
+              <div class="metric-detail">package.json</div>
+            </div>
+            <span class="pill high">high</span>
+          </div>
+          <p>package.json verification script &quot;test&quot; now appears to exit successfully without running meaningful checks.</p>
+          <p class="muted">Remediation: Restore the real verification command or explain why this repository no longer has that check.</p>
+          <p class="muted">Rule: <code>package-script.disabled-verification</code></p>
+          <p class="muted">Tags: testing, ci, package-script</p>
+        </article><article class="finding">
+          <div class="finding-head">
+            <div>
+              <div class="finding-title">Package lifecycle script changed: postinstall</div>
+              <div class="metric-detail">package.json</div>
+            </div>
+            <span class="pill high">high</span>
+          </div>
+          <p>package.json lifecycle script &quot;postinstall&quot; was added, creating code that can run during install, prepare, pack, or publish flows.</p>
+          <p class="muted">Remediation: Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior.</p>
+          <p class="muted">Rule: <code>package-script.lifecycle</code></p>
+          <p class="muted">Tags: dependencies, supply-chain, package-script</p>
         </article><article class="finding">
           <div class="finding-head">
             <div>
@@ -565,7 +589,7 @@ built in 4.2s</pre>
             <tr><th>File</th><th>Status</th><th>+/-</th><th>Owners</th></tr>
           </thead>
           <tbody>
-            <tr><td>AGENTS.md</td><td>modified</td><td>+28 / -4</td><td>@acme/platform</td></tr><tr><td>.github/workflows/release.yml</td><td>modified</td><td>+44 / -18</td><td>@acme/platform</td></tr><tr><td>apps/web/src/billing/checkout.ts</td><td>modified</td><td>+83 / -21</td><td>@acme/billing</td></tr><tr><td>apps/web/src/billing/webhook.ts</td><td>modified</td><td>+39 / -15</td><td>@acme/billing</td></tr><tr><td>scripts/deploy.sh</td><td>modified</td><td>+27 / -8</td><td>@acme/platform</td></tr><tr><td>.env.example</td><td>modified</td><td>+3 / -0</td><td>@acme/platform</td></tr><tr><td>package-lock.json</td><td>modified</td><td>+88 / -8</td><td></td></tr>
+            <tr><td>AGENTS.md</td><td>modified</td><td>+28 / -4</td><td>@acme/platform</td></tr><tr><td>.github/workflows/release.yml</td><td>modified</td><td>+44 / -18</td><td>@acme/platform</td></tr><tr><td>apps/web/src/billing/checkout.ts</td><td>modified</td><td>+83 / -21</td><td>@acme/billing</td></tr><tr><td>apps/web/src/billing/webhook.ts</td><td>modified</td><td>+39 / -15</td><td>@acme/billing</td></tr><tr><td>scripts/deploy.sh</td><td>modified</td><td>+27 / -8</td><td>@acme/platform</td></tr><tr><td>.env.example</td><td>modified</td><td>+3 / -0</td><td>@acme/platform</td></tr><tr><td>package.json</td><td>modified</td><td>+14 / -4</td><td>@acme/platform</td></tr><tr><td>package-lock.json</td><td>modified</td><td>+88 / -8</td><td></td></tr>
           </tbody>
         </table>
       </div>
@@ -629,6 +653,20 @@ built in 4.2s</pre>
           </thead>
           <tbody>
             <tr><td>package-lock.json</td><td>lockfile</td><td>yaml</td><td>node_modules/yaml</td><td>updated</td><td>2.8.1</td><td>2.9.0</td></tr><tr><td>package-lock.json</td><td>lockfile</td><td>@acme/payments</td><td>node_modules/@acme/payments</td><td>updated</td><td>4.2.0</td><td>4.3.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Package Script Changes</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>File</th><th>Script</th><th>Change</th><th>Before</th><th>After</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>package.json</td><td><code>postinstall</code></td><td>added</td><td><code></code></td><td><code>node scripts/bootstrap-agent.js</code></td></tr><tr><td>package.json</td><td><code>test</code></td><td>updated</td><td><code>vitest run</code></td><td><code>true</code></td></tr>
           </tbody>
         </table>
       </div>

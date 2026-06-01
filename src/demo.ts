@@ -103,6 +103,7 @@ function createReviewReadyReport(): PatchReport {
         after: "1.9.0"
       }
     ],
+    packageScriptChanges: [],
     policy: {
       path: ".patchdrill.yml",
       ignoredPaths: ["dist/**", "coverage/**"],
@@ -244,9 +245,9 @@ function createRiskyAgentPrReport(): PatchReport {
       status: "fail",
       riskScore: 94,
       confidenceScore: 21,
-      changedFileCount: 7,
-      additions: 312,
-      deletions: 74,
+      changedFileCount: 8,
+      additions: 326,
+      deletions: 78,
       requiredCommandCount: 4,
       failedCommandCount: 1
     },
@@ -257,9 +258,10 @@ function createRiskyAgentPrReport(): PatchReport {
       { path: "apps/web/src/billing/webhook.ts", status: "modified", additions: 39, deletions: 15, binary: false, owners: ["@acme/billing"] },
       { path: "scripts/deploy.sh", status: "modified", additions: 27, deletions: 8, binary: false, owners: ["@acme/platform"] },
       { path: ".env.example", status: "modified", additions: 3, deletions: 0, binary: false, owners: ["@acme/platform"] },
+      { path: "package.json", status: "modified", additions: 14, deletions: 4, binary: false, owners: ["@acme/platform"] },
       { path: "package-lock.json", status: "modified", additions: 88, deletions: 8, binary: false }
     ],
-    addedLines: 312,
+    addedLines: 326,
     projectSignals: [
       {
         ecosystem: "node",
@@ -334,6 +336,21 @@ function createRiskyAgentPrReport(): PatchReport {
         after: "4.3.0"
       }
     ],
+    packageScriptChanges: [
+      {
+        file: "package.json",
+        scriptName: "postinstall",
+        changeType: "added",
+        after: "node scripts/bootstrap-agent.js"
+      },
+      {
+        file: "package.json",
+        scriptName: "test",
+        changeType: "updated",
+        before: "vitest run",
+        after: "true"
+      }
+    ],
     policy: {
       path: ".patchdrill.yml",
       ignoredPaths: ["dist/**", "coverage/**"],
@@ -396,6 +413,24 @@ function createRiskyAgentPrReport(): PatchReport {
         file: "apps/web/src/billing/checkout.ts",
         remediation: "Attach targeted billing regression tests and owner approval.",
         tags: ["billing", "payments"]
+      },
+      {
+        ruleId: "package-script.disabled-verification",
+        severity: "high",
+        title: "Verification script disabled: test",
+        detail: "package.json verification script \"test\" now appears to exit successfully without running meaningful checks.",
+        file: "package.json",
+        remediation: "Restore the real verification command or explain why this repository no longer has that check.",
+        tags: ["testing", "ci", "package-script"]
+      },
+      {
+        ruleId: "package-script.lifecycle",
+        severity: "high",
+        title: "Package lifecycle script changed: postinstall",
+        detail: "package.json lifecycle script \"postinstall\" was added, creating code that can run during install, prepare, pack, or publish flows.",
+        file: "package.json",
+        remediation: "Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior.",
+        tags: ["dependencies", "supply-chain", "package-script"]
       },
       {
         ruleId: "test.missing-source-match",

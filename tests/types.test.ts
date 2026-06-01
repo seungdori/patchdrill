@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PackageScriptChange, ProjectSignal, ScanOptions } from "../src/types.js";
+import type { PackageScriptChange, PatchReport, ProjectSignal, ScanOptions } from "../src/types.js";
 
 describe("types", () => {
   it("includes static HTML dashboard output in scan options", () => {
@@ -129,8 +129,49 @@ describe("types", () => {
       after: "node scripts/install.js"
     });
   });
+
+  it("includes package script changes in patch reports", () => {
+    const report = acceptPatchReport({
+      schemaVersion: "1",
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      root: "/repo",
+      summary: {
+        status: "warn",
+        riskScore: 25,
+        confidenceScore: 75,
+        changedFileCount: 1,
+        additions: 2,
+        deletions: 1,
+        requiredCommandCount: 0,
+        failedCommandCount: 0
+      },
+      changedFiles: [{ path: "package.json", status: "modified", additions: 2, deletions: 1, binary: false }],
+      addedLines: 2,
+      projectSignals: [{ ecosystem: "node", manifestPath: "package.json" }],
+      affectedPackages: [],
+      dependencyChanges: [],
+      packageScriptChanges: [
+        {
+          file: "package.json",
+          scriptName: "test",
+          changeType: "updated",
+          before: "vitest run",
+          after: "true"
+        }
+      ],
+      findings: [],
+      commandPlan: [],
+      commandResults: []
+    });
+
+    expect(report.packageScriptChanges[0]?.scriptName).toBe("test");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {
   return options;
+}
+
+function acceptPatchReport(report: PatchReport): PatchReport {
+  return report;
 }

@@ -421,6 +421,10 @@ PatchDrill includes a release workflow for npm trusted publishing and provenance
 
 PatchDrill summarizes dependency changes from changed `package.json`, `requirements.txt`, NuGet `PackageReference` / `PackageVersion` manifests, npm `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `go.sum`, `Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `Gemfile.lock`, and `composer.lock` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
 
+## Package Script Review
+
+PatchDrill also summarizes `package.json` script additions, removals, and updates in Markdown, JSON, and HTML reports. Risk findings call out install/prepare/pack/publish lifecycle hooks, no-op verification scripts, removed test/lint/build scripts, and package scripts that pipe remote downloads into interpreters.
+
 ## Design Principles
 
 - Deterministic first. No model call is required to get a useful answer.

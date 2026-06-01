@@ -111,6 +111,7 @@
 - Compact PR comment preview artifacts in demo output.
 - Generated PR workflows execute required verification commands with bounded per-command timeout.
 - Package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
+- Structured package script change summaries in JSON, Markdown, and HTML reports.
 
 ## Contribution Targets
 

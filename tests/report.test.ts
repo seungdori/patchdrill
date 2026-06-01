@@ -23,6 +23,15 @@ describe("report", () => {
       projectSignals: [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }],
       affectedPackages: [],
       dependencyChanges: [],
+      packageScriptChanges: [
+        {
+          file: "package.json",
+          scriptName: "test",
+          changeType: "updated",
+          before: "vitest run",
+          after: "true"
+        }
+      ],
       findings: [
         {
           ruleId: "file.high-impact-area",
@@ -49,6 +58,8 @@ describe("report", () => {
     expect(renderMarkdown(report)).toContain("Schema version: 1");
     expect(renderMarkdown(report)).toContain("| Ecosystem | Framework | Entrypoint | Manifest | Package manager | Task runner |");
     expect(renderMarkdown(report)).toContain("| python | fastapi | app.main:app | requirements.txt |  |  |");
+    expect(renderMarkdown(report)).toContain("## Package Script Changes");
+    expect(renderMarkdown(report)).toContain("| package.json | `test` | updated | `vitest run` | `true` |");
     expect(renderMarkdown(report)).toContain("file.high-impact-area");
     expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
@@ -111,6 +122,14 @@ describe("report", () => {
       projectSignals: [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }],
       affectedPackages: [],
       dependencyChanges: [],
+      packageScriptChanges: [
+        {
+          file: "package.json",
+          scriptName: "postinstall",
+          changeType: "added",
+          after: "node scripts/install.js"
+        }
+      ],
       findings: [
         {
           ruleId: "example.escape",
@@ -152,6 +171,9 @@ describe("report", () => {
     expect(html).toContain("Entrypoint");
     expect(html).toContain("fastapi");
     expect(html).toContain("app.main:app");
+    expect(html).toContain("Package Script Changes");
+    expect(html).toContain("postinstall");
+    expect(html).toContain("node scripts/install.js");
     expect(html).toContain("Unsafe &lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).toContain("npm test -- --grep=&quot;&lt;auth&gt;&quot;");
     expect(html).toContain("&lt;ok&gt;");
@@ -272,6 +294,7 @@ function htmlReport(overrides: { generatedAt: string; riskScore: number; failedC
     projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
     affectedPackages: [],
     dependencyChanges: [],
+    packageScriptChanges: [],
     findings: [{ ruleId: "example", severity: "medium", title: "Example finding", detail: "Example detail." }],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "Source changed.", ecosystem: "node", required: true }],
     commandResults:

@@ -78,6 +78,42 @@
               }
             },
             {
+              "id": "package-script.disabled-verification",
+              "name": "Verification script disabled: test",
+              "shortDescription": {
+                "text": "Verification script disabled: test"
+              },
+              "help": {
+                "text": "Restore the real verification command or explain why this repository no longer has that check."
+              },
+              "properties": {
+                "severity": "high",
+                "tags": [
+                  "testing",
+                  "ci",
+                  "package-script"
+                ]
+              }
+            },
+            {
+              "id": "package-script.lifecycle",
+              "name": "Package lifecycle script changed: postinstall",
+              "shortDescription": {
+                "text": "Package lifecycle script changed: postinstall"
+              },
+              "help": {
+                "text": "Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior."
+              },
+              "properties": {
+                "severity": "high",
+                "tags": [
+                  "dependencies",
+                  "supply-chain",
+                  "package-script"
+                ]
+              }
+            },
+            {
               "id": "test.missing-source-match",
               "name": "Source changed without matching test changes",
               "shortDescription": {
@@ -238,6 +274,66 @@
           },
           "partialFingerprints": {
             "patchdrillFinding": "2fd95cd4c8bf6a886b6a8c77850232bda70c8c5559f4e603d58bb93a8b104859"
+          }
+        },
+        {
+          "ruleId": "package-script.disabled-verification",
+          "level": "error",
+          "message": {
+            "text": "Verification script disabled: test: package.json verification script \"test\" now appears to exit successfully without running meaningful checks. Remediation: Restore the real verification command or explain why this repository no longer has that check."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "tags": [
+              "testing",
+              "ci",
+              "package-script"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "f659ab1a5d6066ca9afb587095764ba745ca4ea1dcf74a4544c45d73a656e6c8"
+          }
+        },
+        {
+          "ruleId": "package-script.lifecycle",
+          "level": "error",
+          "message": {
+            "text": "Package lifecycle script changed: postinstall: package.json lifecycle script \"postinstall\" was added, creating code that can run during install, prepare, pack, or publish flows. Remediation: Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "tags": [
+              "dependencies",
+              "supply-chain",
+              "package-script"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "99a9a7495c0512a3b640ab4d14d78fb359968ef544025231d6154da6b5a0cafc"
           }
         },
         {

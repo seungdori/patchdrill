@@ -2,7 +2,7 @@
 
 **FAIL** - risk 94/100, confidence 21/100
 
-- Changed files: 7 (+312 / -74)
+- Changed files: 8 (+326 / -78)
 - Verification plan: 4 required, 1 optional
 - Command results: 3 run, 1 failed
 - Baseline risk delta: +63 (6 new findings)
@@ -15,7 +15,7 @@
 - `apps/web/src/billing/webhook.ts` (modified, +39 / -15)
 - `scripts/deploy.sh` (modified, +27 / -8)
 
-_2 more changed files in the full report._
+_3 more changed files in the full report._
 
 ## Top Findings
 
@@ -25,9 +25,9 @@ _2 more changed files in the full report._
 | critical | Secret-looking value added | .env.example:8 |
 | high | Agent instructions changed | AGENTS.md |
 | high | High-impact product area changed | apps/web/src/billing/checkout.ts |
-| medium | Source changed without matching test changes | apps/web/src/billing/checkout.ts |
+| high | Verification script disabled: test | package.json |
 
-_1 more findings in the full report._
+_3 more findings in the full report._
 
 ## Required Checks
 

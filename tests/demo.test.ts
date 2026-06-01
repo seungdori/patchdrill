@@ -70,5 +70,16 @@ describe("demo", () => {
     expect(summary).toContain("Privileged workflow checks out pull request code");
     expect(report.summary.status).toBe("fail");
     expect(report.summary.failedCommandCount).toBe(1);
+    expect(report.changedFiles.map((file) => file.path)).toContain("package.json");
+    expect(report.packageScriptChanges).toContainEqual(
+      expect.objectContaining({
+        scriptName: "test",
+        changeType: "updated",
+        before: "vitest run",
+        after: "true"
+      })
+    );
+    expect(markdown).toContain("## Package Script Changes");
+    expect(markdown).toContain("Verification script disabled: test");
   });
 });

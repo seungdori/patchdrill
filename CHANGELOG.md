@@ -95,3 +95,4 @@
 - Added compact PR comment preview files to demo artifacts.
 - Updated generated PR workflows to run required verification commands with a per-command timeout.
 - Added package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
+- Added structured package script change summaries to JSON, Markdown, and HTML reports.

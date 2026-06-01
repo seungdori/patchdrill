@@ -81,6 +81,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     projectSignals,
     affectedPackages,
     dependencyChanges,
+    packageScriptChanges,
     ...(loadedPolicy.path
       ? {
           policy: {

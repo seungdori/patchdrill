@@ -126,6 +126,7 @@ function exampleReport(): PatchReport {
     projectSignals: [{ ecosystem: "node", manifestPath: "package.json" }],
     affectedPackages: [],
     dependencyChanges: [],
+    packageScriptChanges: [],
     findings: [],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "Source changed.", ecosystem: "node", required: true }],
     commandResults: [{ id: "test", command: "npm test", exitCode: 0, durationMs: 1200, stdout: "ok\n", stderr: "" }]

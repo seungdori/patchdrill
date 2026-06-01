@@ -174,6 +174,7 @@ function exampleReport(overrides: { generatedAt?: string; riskScore?: number; fa
     projectSignals: [{ ecosystem: "node", manifestPath: "package.json", packageManager: "npm" }],
     affectedPackages: [],
     dependencyChanges: [],
+    packageScriptChanges: [],
     findings: [{ ruleId: "cli.finding", severity: "medium", title: overrides.title ?? "CLI finding", detail: "Dashboard command changed." }],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "CLI changed.", ecosystem: "node", required: true }],
     commandResults:

@@ -34,6 +34,7 @@ describe("schemas", () => {
     expect(reportSchema.required).toContain("schemaVersion");
     expect(reportSchema.required).toContain("summary");
     expect(reportSchema.required).toContain("dependencyChanges");
+    expect(reportSchema.required).toContain("packageScriptChanges");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("kubernetes");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("buck");
@@ -192,6 +193,15 @@ describe("schemas", () => {
           changeType: "updated",
           before: "18.2.0",
           after: "19.0.0"
+        }
+      ],
+      packageScriptChanges: [
+        {
+          file: "package.json",
+          scriptName: "test",
+          changeType: "updated",
+          before: "vitest run",
+          after: "true"
         }
       ],
       policy: {

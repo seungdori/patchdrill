@@ -23,6 +23,7 @@ describe("renderSarif", () => {
       projectSignals: [],
       affectedPackages: [],
       dependencyChanges: [],
+      packageScriptChanges: [],
       findings: [
         {
           ruleId: "agent.prompt-injection",

@@ -163,6 +163,7 @@ export interface PatchReport {
   projectSignals: ProjectSignal[];
   affectedPackages: WorkspacePackage[];
   dependencyChanges: DependencyChange[];
+  packageScriptChanges: PackageScriptChange[];
   policy?: {
     path: string;
     ignoredPaths: string[];

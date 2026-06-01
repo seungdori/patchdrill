@@ -8,11 +8,11 @@ Schema version: 1
 
 ## Summary
 
-- Changed files: 7
-- Additions / deletions: +312 / -74
+- Changed files: 8
+- Additions / deletions: +326 / -78
 - Required verification commands: 4
 - Failed verification commands: 1
-- Added lines inspected: 312
+- Added lines inspected: 326
 
 ## Policy
 
@@ -55,6 +55,13 @@ Schema version: 1
 | package-lock.json | lockfile | yaml | node_modules/yaml | updated | 2.8.1 | 2.9.0 |
 | package-lock.json | lockfile | @acme/payments | node_modules/@acme/payments | updated | 4.2.0 | 4.3.0 |
 
+## Package Script Changes
+
+| File | Script | Change | Before | After |
+| --- | --- | --- | --- | --- |
+| package.json | `postinstall` | added | `` | `node scripts/bootstrap-agent.js` |
+| package.json | `test` | updated | `vitest run` | `true` |
+
 ## Changed Files
 
 | File | Status | +/- | Owners |
@@ -65,6 +72,7 @@ Schema version: 1
 | apps/web/src/billing/webhook.ts | modified | +39 / -15 | @acme/billing |
 | scripts/deploy.sh | modified | +27 / -8 | @acme/platform |
 | .env.example | modified | +3 / -0 | @acme/platform |
+| package.json | modified | +14 / -4 | @acme/platform |
 | package-lock.json | modified | +88 / -8 |  |
 
 ## Findings
@@ -75,6 +83,8 @@ Schema version: 1
 | critical | secret.added | Secret-looking value added: A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body. | .env.example:8 | Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as <redacted>. |
 | high | agent.instructions-changed | Agent instructions changed: Repository-level coding-agent instructions changed in the same patch as release and billing code. | AGENTS.md | Review instruction changes separately and require maintainer approval before agent-visible rules change. |
 | high | file.high-impact-area | High-impact product area changed: Billing checkout and webhook code changed, which can affect payment capture, refunds, and entitlement state. | apps/web/src/billing/checkout.ts | Attach targeted billing regression tests and owner approval. |
+| high | package-script.disabled-verification | Verification script disabled: test: package.json verification script "test" now appears to exit successfully without running meaningful checks. | package.json | Restore the real verification command or explain why this repository no longer has that check. |
+| high | package-script.lifecycle | Package lifecycle script changed: postinstall: package.json lifecycle script "postinstall" was added, creating code that can run during install, prepare, pack, or publish flows. | package.json | Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior. |
 | medium | test.missing-source-match | Source changed without matching test changes: Billing source files changed, but no matching checkout or webhook test files changed. | apps/web/src/billing/checkout.ts | Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates. |
 | low | dependency.lockfile-update | Dependency lockfile changed: @acme/payments changed from 4.2.0 to 4.3.0. | package-lock.json | Review release notes and verify transitive dependency impact. |
 

@@ -8,9 +8,9 @@
     "status": "fail",
     "riskScore": 94,
     "confidenceScore": 21,
-    "changedFileCount": 7,
-    "additions": 312,
-    "deletions": 74,
+    "changedFileCount": 8,
+    "additions": 326,
+    "deletions": 78,
     "requiredCommandCount": 4,
     "failedCommandCount": 1
   },
@@ -76,6 +76,16 @@
       ]
     },
     {
+      "path": "package.json",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 4,
+      "binary": false,
+      "owners": [
+        "@acme/platform"
+      ]
+    },
+    {
       "path": "package-lock.json",
       "status": "modified",
       "additions": 88,
@@ -83,7 +93,7 @@
       "binary": false
     }
   ],
-  "addedLines": 312,
+  "addedLines": 326,
   "projectSignals": [
     {
       "ecosystem": "node",
@@ -172,6 +182,21 @@
       "after": "4.3.0"
     }
   ],
+  "packageScriptChanges": [
+    {
+      "file": "package.json",
+      "scriptName": "postinstall",
+      "changeType": "added",
+      "after": "node scripts/bootstrap-agent.js"
+    },
+    {
+      "file": "package.json",
+      "scriptName": "test",
+      "changeType": "updated",
+      "before": "vitest run",
+      "after": "true"
+    }
+  ],
   "policy": {
     "path": ".patchdrill.yml",
     "ignoredPaths": [
@@ -249,6 +274,32 @@
       "tags": [
         "billing",
         "payments"
+      ]
+    },
+    {
+      "ruleId": "package-script.disabled-verification",
+      "severity": "high",
+      "title": "Verification script disabled: test",
+      "detail": "package.json verification script \"test\" now appears to exit successfully without running meaningful checks.",
+      "file": "package.json",
+      "remediation": "Restore the real verification command or explain why this repository no longer has that check.",
+      "tags": [
+        "testing",
+        "ci",
+        "package-script"
+      ]
+    },
+    {
+      "ruleId": "package-script.lifecycle",
+      "severity": "high",
+      "title": "Package lifecycle script changed: postinstall",
+      "detail": "package.json lifecycle script \"postinstall\" was added, creating code that can run during install, prepare, pack, or publish flows.",
+      "file": "package.json",
+      "remediation": "Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior.",
+      "tags": [
+        "dependencies",
+        "supply-chain",
+        "package-script"
       ]
     },
     {

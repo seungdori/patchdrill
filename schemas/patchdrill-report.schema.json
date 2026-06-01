@@ -15,6 +15,7 @@
     "projectSignals",
     "affectedPackages",
     "dependencyChanges",
+    "packageScriptChanges",
     "findings",
     "commandPlan",
     "commandResults"
@@ -66,6 +67,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/dependencyChange"
+      }
+    },
+    "packageScriptChanges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/packageScriptChange"
       }
     },
     "policy": {
@@ -294,6 +301,29 @@
         },
         "packagePath": {
           "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "after": {
+          "type": "string"
+        }
+      }
+    },
+    "packageScriptChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "scriptName", "changeType"],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "scriptName": {
+          "type": "string"
+        },
+        "changeType": {
+          "type": "string",
+          "enum": ["added", "removed", "updated"]
         },
         "before": {
           "type": "string"
