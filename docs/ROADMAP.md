@@ -92,6 +92,7 @@
 - Nested local reusable workflow loading for downstream reusable workflow secret and OIDC trust-boundary findings.
 - Cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
 - Xcode scheme target-platform detection with macOS test destinations, mobile generic build destinations, and destination discovery planning.
+- Rails, RSpec, Composer script, Laravel, PHPUnit, and PHP syntax fallback command planning.
 
 ## Contribution Targets
 

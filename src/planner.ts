@@ -55,24 +55,10 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       addAndroidPlans(plans, root, paths);
     }
     if (signal.ecosystem === "ruby" && touches(paths, [".rb", "Gemfile", "Gemfile.lock"])) {
-      pushUnique(plans, {
-        id: "ruby-tests",
-        label: "Ruby tests",
-        command: "bundle exec rake test",
-        reason: "Ruby source or dependency metadata changed.",
-        ecosystem: "ruby",
-        required: true
-      });
+      addRubyPlans(plans, root, signal);
     }
     if (signal.ecosystem === "php" && touches(paths, [".php", "composer.json", "composer.lock"])) {
-      pushUnique(plans, {
-        id: "php-tests",
-        label: "PHP tests",
-        command: "composer test",
-        reason: "PHP source or Composer metadata changed.",
-        ecosystem: "php",
-        required: true
-      });
+      addPhpPlans(plans, root, paths, signal);
     }
     if (signal.ecosystem === "dotnet" && touchesDotnet(paths)) {
       addDotnetPlans(plans, root, paths, signal);
@@ -471,6 +457,127 @@ function addPythonPlans(plans: CommandPlan[], root: string, paths: string[], sig
     ecosystem: "python",
     required: true
   });
+}
+
+function addRubyPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {
+  if (rubyUsesRSpec(root)) {
+    pushUnique(plans, {
+      id: "ruby-rspec",
+      label: "Ruby RSpec tests",
+      command: "bundle exec rspec",
+      reason: "Ruby source, specs, or dependency metadata changed and the project declares RSpec.",
+      ecosystem: "ruby",
+      required: true
+    });
+    return;
+  }
+
+  if (signal.framework === "rails") {
+    pushUnique(plans, {
+      id: "rails-tests",
+      label: "Rails tests",
+      command: `${railsCommand(root)} test`,
+      reason: "Rails source, tests, or dependency metadata changed, so the Rails test runner should execute.",
+      ecosystem: "ruby",
+      required: true
+    });
+    return;
+  }
+
+  pushUnique(plans, {
+    id: "ruby-tests",
+    label: "Ruby tests",
+    command: "bundle exec rake test",
+    reason: "Ruby source or dependency metadata changed.",
+    ecosystem: "ruby",
+    required: true
+  });
+}
+
+function rubyUsesRSpec(root: string): boolean {
+  if (existsSync(join(root, "spec"))) return true;
+  const manifest = `${readText(root, "Gemfile")}\n${readText(root, "Gemfile.lock")}`.toLowerCase();
+  return /\brspec(?:-rails)?\b/.test(manifest);
+}
+
+function railsCommand(root: string): string {
+  return existsSync(join(root, "bin", "rails")) ? "bin/rails" : "bundle exec rails";
+}
+
+function addPhpPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
+  if (touchesComposerMetadata(paths)) {
+    pushUnique(plans, {
+      id: "php-composer-validate",
+      label: "Composer validate",
+      command: "composer validate --strict",
+      reason: "Composer dependency metadata changed, so composer.json and composer.lock should validate before tests run.",
+      ecosystem: "php",
+      required: true
+    });
+  }
+
+  const composerScript = phpComposerTestScript(signal);
+  if (composerScript) {
+    pushUnique(plans, {
+      id: `php-composer-${slug(composerScript)}`,
+      label: `Composer ${composerScript}`,
+      command: `composer ${quoteShell(composerScript)}`,
+      reason: `composer.json defines the "${composerScript}" script for PHP verification.`,
+      ecosystem: "php",
+      required: true
+    });
+    return;
+  }
+
+  if (signal.framework === "laravel") {
+    pushUnique(plans, {
+      id: "laravel-tests",
+      label: "Laravel tests",
+      command: "php artisan test",
+      reason: "Laravel source or Composer metadata changed, so Laravel's test runner should execute.",
+      ecosystem: "php",
+      required: true
+    });
+    return;
+  }
+
+  if (phpUsesPhpUnit(root)) {
+    pushUnique(plans, {
+      id: "phpunit-tests",
+      label: "PHPUnit tests",
+      command: "vendor/bin/phpunit",
+      reason: "PHP source or Composer metadata changed and the project declares PHPUnit.",
+      ecosystem: "php",
+      required: true
+    });
+    return;
+  }
+
+  pushUnique(plans, {
+    id: "php-syntax-check",
+    label: "PHP syntax check",
+    command: "find . -name '*.php' -not -path './vendor/*' -exec php -l {} \\;",
+    reason: "PHP source changed but no test script, Laravel runner, or PHPUnit configuration was detected.",
+    ecosystem: "php",
+    required: true
+  });
+}
+
+function touchesComposerMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === "composer.json" || path === "composer.lock");
+}
+
+function phpComposerTestScript(signal: ProjectSignal): string | undefined {
+  const scripts = signal.scripts ?? {};
+  for (const name of ["test", "tests", "phpunit"]) {
+    if (scripts[name]) return name;
+  }
+  return undefined;
+}
+
+function phpUsesPhpUnit(root: string): boolean {
+  if (existsSync(join(root, "phpunit.xml")) || existsSync(join(root, "phpunit.xml.dist"))) return true;
+  return readText(root, "composer.json").toLowerCase().includes("phpunit/phpunit");
 }
 
 function pythonChangedTestTargets(root: string, paths: string[], signal?: ProjectSignal): string[] {

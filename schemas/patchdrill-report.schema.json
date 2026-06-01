@@ -212,7 +212,7 @@
         },
         "framework": {
           "type": "string",
-          "enum": ["django", "fastapi", "spring-boot", "aspnet-core"]
+          "enum": ["django", "fastapi", "spring-boot", "rails", "laravel", "aspnet-core"]
         },
         "entrypoint": {
           "type": "string",

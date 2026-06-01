@@ -72,6 +72,22 @@ describe("types", () => {
     expect(signal.framework).toBe("spring-boot");
   });
 
+  it("includes Rails and Laravel framework metadata", () => {
+    const rails: ProjectSignal = {
+      ecosystem: "ruby",
+      framework: "rails",
+      manifestPath: "Gemfile"
+    };
+    const laravel: ProjectSignal = {
+      ecosystem: "php",
+      framework: "laravel",
+      manifestPath: "composer.json",
+      scripts: { test: "phpunit" }
+    };
+
+    expect([rails.framework, laravel.framework, laravel.scripts?.test]).toEqual(["rails", "laravel", "phpunit"]);
+  });
+
   it("includes Android as a supported project ecosystem", () => {
     const signal: ProjectSignal = {
       ecosystem: "android",

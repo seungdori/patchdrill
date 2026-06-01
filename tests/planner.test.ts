@@ -373,6 +373,82 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
   });
 
+  it("uses the Rails test runner when a Rails binstub exists", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "bin"), { recursive: true });
+    writeFileSync(join(root, "bin", "rails"), "#!/usr/bin/env ruby\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/models/user.rb", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "ruby", framework: "rails", manifestPath: "Gemfile" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["bin/rails test"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["rails-tests"]);
+  });
+
+  it("uses RSpec when a Ruby project declares RSpec", () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "Gemfile"), "source \"https://rubygems.org\"\ngem \"rspec-rails\"\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/models/user.rb", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "ruby", framework: "rails", manifestPath: "Gemfile" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["bundle exec rspec"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["ruby-rspec"]);
+  });
+
+  it("validates Composer metadata and runs Composer test scripts", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "composer.json", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "php", manifestPath: "composer.json", scripts: { test: "phpunit" } }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["composer validate --strict", "composer test"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["php-composer-validate", "php-composer-test"]);
+  });
+
+  it("uses Laravel's test runner when Composer has no test script", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/Services/UserService.php", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "php", framework: "laravel", manifestPath: "composer.json" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["php artisan test"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["laravel-tests"]);
+  });
+
+  it("uses PHPUnit when PHPUnit configuration is present", () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "phpunit.xml.dist"), "<phpunit />\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "src/Service.php", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "php", manifestPath: "composer.json" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["vendor/bin/phpunit"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["phpunit-tests"]);
+  });
+
+  it("falls back to PHP syntax checks when no PHP test runner is detected", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/Service.php", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "php", manifestPath: "composer.json" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["find . -name '*.php' -not -path './vendor/*' -exec php -l {} \\;"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["php-syntax-check"]);
+  });
+
   it("uses Gradle for Gradle projects without wrappers", () => {
     const commands = planCommands(
       process.cwd(),

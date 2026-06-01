@@ -180,6 +180,41 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Rails projects from Gemfile metadata", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "Gemfile"), "source \"https://rubygems.org\"\ngem \"rails\", \"~> 7.2\"\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "ruby",
+      framework: "rails",
+      manifestPath: "Gemfile"
+    });
+  });
+
+  it("detects Laravel projects and Composer scripts", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, "composer.json"),
+      JSON.stringify(
+        {
+          require: { "laravel/framework": "^11.0" },
+          scripts: { test: "phpunit" }
+        },
+        null,
+        2
+      )
+    );
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "php",
+      framework: "laravel",
+      manifestPath: "composer.json",
+      scripts: { test: "phpunit" }
+    });
+  });
+
   it("detects .NET solution filter files before full solutions", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

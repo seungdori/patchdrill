@@ -63,8 +63,24 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       ...(framework ? { framework } : {})
     });
   }
-  if (exists(root, "Gemfile")) add({ ecosystem: "ruby", manifestPath: "Gemfile" });
-  if (exists(root, "composer.json")) add({ ecosystem: "php", manifestPath: "composer.json" });
+  if (exists(root, "Gemfile")) {
+    const framework = detectRubyFramework(root);
+    add({
+      ecosystem: "ruby",
+      manifestPath: "Gemfile",
+      ...(framework ? { framework } : {})
+    });
+  }
+  if (exists(root, "composer.json")) {
+    const framework = detectPhpFramework(root);
+    const scripts = readComposerScripts(root);
+    add({
+      ecosystem: "php",
+      manifestPath: "composer.json",
+      ...(framework ? { framework } : {}),
+      ...(Object.keys(scripts).length > 0 ? { scripts } : {})
+    });
+  }
   const dotnetManifestPath = findDotnetManifestPath(root);
   if (dotnetManifestPath) {
     const framework = detectDotnetFramework(root);
@@ -206,9 +222,56 @@ function detectJavaFramework(root: string): ProjectSignal["framework"] | undefin
   return undefined;
 }
 
+function detectRubyFramework(root: string): ProjectSignal["framework"] | undefined {
+  if (exists(root, "config/application.rb")) return "rails";
+  if (rubyManifestMentions(root, ["gem \"rails\"", "gem 'rails'", " rails ("])) return "rails";
+  return undefined;
+}
+
+function detectPhpFramework(root: string): ProjectSignal["framework"] | undefined {
+  if (exists(root, "artisan")) return "laravel";
+  if (composerManifestMentions(root, ["laravel/framework"])) return "laravel";
+  return undefined;
+}
+
 function detectDotnetFramework(root: string): ProjectSignal["framework"] | undefined {
   if (findFileWithExtensionMentioning(root, ".csproj", ["Microsoft.NET.Sdk.Web", "Microsoft.AspNetCore"], 4)) return "aspnet-core";
   return undefined;
+}
+
+function rubyManifestMentions(root: string, needles: string[]): boolean {
+  return ["Gemfile", "Gemfile.lock"].some((path) => {
+    try {
+      const content = readFileSync(join(root, path), "utf8").toLowerCase();
+      return needles.some((needle) => content.includes(needle.toLowerCase()));
+    } catch {
+      return false;
+    }
+  });
+}
+
+function composerManifestMentions(root: string, needles: string[]): boolean {
+  try {
+    const content = readFileSync(join(root, "composer.json"), "utf8").toLowerCase();
+    return needles.some((needle) => content.includes(needle.toLowerCase()));
+  } catch {
+    return false;
+  }
+}
+
+function readComposerScripts(root: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(readFileSync(join(root, "composer.json"), "utf8")) as { scripts?: unknown };
+    if (!isRecord(parsed.scripts)) return {};
+    const scripts: Record<string, string> = {};
+    for (const [name, value] of Object.entries(parsed.scripts)) {
+      if (typeof value === "string") scripts[name] = value;
+      if (Array.isArray(value) && value.every((item) => typeof item === "string")) scripts[name] = value.join(" && ");
+    }
+    return scripts;
+  } catch {
+    return {};
+  }
 }
 
 function findDotnetManifestPath(root: string): string | undefined {

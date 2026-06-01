@@ -16,7 +16,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 
 ## Why Star It
 
-- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, dotnet, ASP.NET Core, Swift, Xcode, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
+- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, Ruby, Rails, RSpec, PHP, Composer, Laravel, dotnet, ASP.NET Core, Swift, Xcode, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
@@ -211,6 +211,8 @@ PatchDrill detects project shape from repo manifests:
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |
 | Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml`, build types, product flavors, `variantFilter`, variant source sets, generated source paths | `./gradlew testDebugUnitTest`, `./gradlew testReleaseUnitTest`, `./gradlew testFreeDebugUnitTest`, `./gradlew testMinApi24DemoDebugUnitTest`, `./gradlew assemble<Variant>`, `./gradlew lint<Variant>` |
+| Ruby/Rails | `Gemfile`, `Gemfile.lock`, `config/application.rb`, RSpec metadata | `bin/rails test`, `bundle exec rails test`, `bundle exec rspec`, `bundle exec rake test` |
+| PHP/Laravel | `composer.json`, `composer.lock`, `artisan`, `phpunit.xml` | `composer validate --strict`, `composer test`, `php artisan test`, `vendor/bin/phpunit`, PHP syntax lint fallback |
 | .NET | `global.json`, `.slnf`, `.sln`, `.csproj`, `ProjectReference` | `dotnet test App.slnf`, `dotnet test tests/Api.Tests/Api.Tests.csproj`, `dotnet build src/Api/Api.csproj --no-restore`, `dotnet publish src/Api/Api.csproj --no-restore` |
 | Swift | `Package.swift`, `Package.resolved`, `*.swift` | `swift test`, `swift build` |
 | Xcode | `.xcworkspace`, `.xcodeproj`, shared `.xcscheme`, `.xctestplan`, Apple app source/resources, scheme target platforms | `xcodebuild -workspace App.xcworkspace -scheme App -testPlan AppTests test`, `xcodebuild -project App.xcodeproj -scheme App -destination generic/platform=iOS build`, `xcodebuild -project App.xcodeproj -scheme App -showdestinations` |

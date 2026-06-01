@@ -45,7 +45,7 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("xcode");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("android");
-    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "aspnet-core"]);
+    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "rails", "laravel", "aspnet-core"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 
@@ -121,6 +121,17 @@ describe("schemas", () => {
           ecosystem: "java",
           framework: "spring-boot",
           manifestPath: "build.gradle"
+        },
+        {
+          ecosystem: "ruby",
+          framework: "rails",
+          manifestPath: "Gemfile"
+        },
+        {
+          ecosystem: "php",
+          framework: "laravel",
+          manifestPath: "composer.json",
+          scripts: { test: "phpunit" }
         },
         {
           ecosystem: "android",

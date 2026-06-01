@@ -1,11 +1,15 @@
 {
   "name": "rails-app",
   "expectedEcosystems": ["ruby"],
-  "expectedCommands": ["bundle exec rake test"],
+  "expectedCommands": ["bin/rails test"],
   "baseFiles": [
     {
       "path": "Gemfile",
       "lines": ["source \"https://rubygems.org\"", "gem \"rails\", \"~> 7.2\""]
+    },
+    {
+      "path": "bin/rails",
+      "lines": ["#!/usr/bin/env ruby", "APP_PATH = File.expand_path(\"../config/application\", __dir__)"]
     },
     {
       "path": "app/models/user.rb",
@@ -19,4 +23,3 @@
     }
   ]
 }
-
