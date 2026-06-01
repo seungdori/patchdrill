@@ -23,10 +23,12 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
   const pythonManifestPath = firstExisting(root, ["pyproject.toml", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]);
   if (pythonManifestPath) {
     const framework = detectPythonFramework(root);
+    const entrypoint = detectPythonEntrypoint(root, framework);
     add({
       ecosystem: "python",
       manifestPath: pythonManifestPath,
-      ...(framework ? { framework } : {})
+      ...(framework ? { framework } : {}),
+      ...(entrypoint ? { entrypoint } : {})
     });
   }
 
@@ -137,6 +139,43 @@ function detectPythonFramework(root: string): ProjectSignal["framework"] | undef
   if (pythonDependencyDeclared(root, "django")) return "django";
   if (pythonDependencyDeclared(root, "fastapi")) return "fastapi";
   return undefined;
+}
+
+function detectPythonEntrypoint(root: string, framework: ProjectSignal["framework"] | undefined): string | undefined {
+  if (framework === "fastapi") return findFastApiEntrypoint(root);
+  return undefined;
+}
+
+function findFastApiEntrypoint(root: string): string | undefined {
+  for (const path of ["main.py", "app/main.py", "src/main.py", "src/app/main.py"]) {
+    const entrypoint = parseFastApiEntrypoint(root, path);
+    if (entrypoint) return entrypoint;
+  }
+  const nestedPath = findFileWithExtensionMentioning(root, ".py", ["FastAPI("], 4);
+  return nestedPath ? parseFastApiEntrypoint(root, nestedPath) : undefined;
+}
+
+function parseFastApiEntrypoint(root: string, path: string): string | undefined {
+  try {
+    const content = readFileSync(join(root, path), "utf8");
+    const match = content.match(/(?:^|\n)\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*FastAPI\s*\(/);
+    if (!match?.[1]) return undefined;
+    const moduleName = pythonModuleName(path);
+    if (!moduleName) return undefined;
+    return `${moduleName}:${match[1]}`;
+  } catch {
+    return undefined;
+  }
+}
+
+function pythonModuleName(path: string): string | undefined {
+  const withoutSourceRoot = path.startsWith("src/") ? path.slice("src/".length) : path;
+  const moduleName = withoutSourceRoot.replace(/\.py$/, "").replaceAll("/", ".");
+  return moduleName.split(".").every(isPythonIdentifier) ? moduleName : undefined;
+}
+
+function isPythonIdentifier(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 }
 
 function pythonDependencyDeclared(root: string, packageName: string): boolean {

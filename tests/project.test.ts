@@ -98,6 +98,35 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects FastAPI app entrypoints", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "requirements.txt"), "fastapi==0.110.0\n");
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(join(root, "app", "main.py"), "from fastapi import FastAPI\napp = FastAPI()\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      entrypoint: "app.main:app",
+      framework: "fastapi",
+      manifestPath: "requirements.txt"
+    });
+  });
+
+  it("ignores FastAPI entrypoints with non-importable module paths", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "requirements.txt"), "fastapi==0.110.0\n");
+    mkdirSync(join(root, "src", "service-api"), { recursive: true });
+    writeFileSync(join(root, "src", "service-api", "main.py"), "from fastapi import FastAPI\napp = FastAPI()\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      framework: "fastapi",
+      manifestPath: "requirements.txt"
+    });
+  });
+
   it("detects Spring Boot Gradle projects", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

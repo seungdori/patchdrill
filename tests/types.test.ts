@@ -42,14 +42,15 @@ describe("types", () => {
     expect(signal.ecosystem).toBe("swift");
   });
 
-  it("includes Python framework metadata", () => {
+  it("includes Python framework and entrypoint metadata", () => {
     const signal: ProjectSignal = {
       ecosystem: "python",
-      framework: "django",
-      manifestPath: "manage.py"
+      entrypoint: "app.main:app",
+      framework: "fastapi",
+      manifestPath: "requirements.txt"
     };
 
-    expect(signal.framework).toBe("django");
+    expect([signal.framework, signal.entrypoint]).toEqual(["fastapi", "app.main:app"]);
   });
 
   it("includes Spring Boot framework metadata", () => {

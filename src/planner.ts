@@ -20,6 +20,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         addDjangoPlans(plans);
       } else {
         addPythonPlans(plans);
+        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, signal.entrypoint);
       }
     }
     if (signal.ecosystem === "rust" && touches(paths, [".rs", "Cargo.toml", "Cargo.lock"])) {
@@ -215,6 +216,22 @@ function addDjangoPlans(plans: CommandPlan[]): void {
     ecosystem: "python",
     required: true
   });
+}
+
+function addFastApiPlans(plans: CommandPlan[], entrypoint: string): void {
+  if (!isPythonEntrypoint(entrypoint)) return;
+  pushUnique(plans, {
+    id: "fastapi-import-smoke",
+    label: "FastAPI import smoke",
+    command: `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; target = '${entrypoint}'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)"`,
+    reason: "FastAPI app entrypoints should import cleanly so route modules, startup wiring, and dependency setup are not obviously broken.",
+    ecosystem: "python",
+    required: false
+  });
+}
+
+function isPythonEntrypoint(value: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 }
 
 function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {

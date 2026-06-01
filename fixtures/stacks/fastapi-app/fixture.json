@@ -1,0 +1,25 @@
+{
+  "name": "fastapi-app",
+  "expectedEcosystems": ["python"],
+  "expectedCommands": [
+    "python -m pytest",
+    "python -m compileall .",
+    "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\""
+  ],
+  "baseFiles": [
+    {
+      "path": "requirements.txt",
+      "lines": ["fastapi==0.110.0", "pytest==8.0.0"]
+    },
+    {
+      "path": "app/main.py",
+      "lines": ["from fastapi import FastAPI", "app = FastAPI()", "@app.get(\"/health\")", "def health():", "    return {\"ok\": True}"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/main.py",
+      "lines": ["from fastapi import FastAPI", "app = FastAPI()", "@app.get(\"/health\")", "def health():", "    return {\"ok\": False}"]
+    }
+  ]
+}

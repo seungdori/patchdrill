@@ -214,6 +214,10 @@
           "type": "string",
           "enum": ["django", "fastapi", "spring-boot", "aspnet-core"]
         },
+        "entrypoint": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*:[A-Za-z_][A-Za-z0-9_]*$"
+        },
         "packageManager": {
           "type": "string"
         },

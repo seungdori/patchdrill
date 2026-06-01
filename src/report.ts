@@ -79,10 +79,10 @@ export function renderMarkdown(report: PatchReport): string {
   if (report.projectSignals.length > 0) {
     lines.push("## Project Signals");
     lines.push("");
-    lines.push("| Ecosystem | Framework | Manifest | Package manager | Task runner |");
-    lines.push("| --- | --- | --- | --- | --- |");
+    lines.push("| Ecosystem | Framework | Entrypoint | Manifest | Package manager | Task runner |");
+    lines.push("| --- | --- | --- | --- | --- | --- |");
     for (const signal of report.projectSignals) {
-      lines.push(`| ${signal.ecosystem} | ${signal.framework ?? ""} | ${signal.manifestPath} | ${signal.packageManager ?? ""} | ${signal.taskRunner ?? ""} |`);
+      lines.push(`| ${signal.ecosystem} | ${signal.framework ?? ""} | ${signal.entrypoint ?? ""} | ${signal.manifestPath} | ${signal.packageManager ?? ""} | ${signal.taskRunner ?? ""} |`);
     }
     lines.push("");
   }
@@ -847,10 +847,11 @@ function htmlChangedFiles(report: PatchReport): string {
 
 function htmlProjectSignals(report: PatchReport): string {
   return htmlTable(
-    ["Ecosystem", "Framework", "Manifest", "Package manager", "Task runner"],
+    ["Ecosystem", "Framework", "Entrypoint", "Manifest", "Package manager", "Task runner"],
     report.projectSignals.map((signal) => [
       escapeHtml(signal.ecosystem),
       escapeHtml(signal.framework ?? ""),
+      escapeHtml(signal.entrypoint ?? ""),
       escapeHtml(signal.manifestPath),
       escapeHtml(signal.packageManager ?? ""),
       escapeHtml(signal.taskRunner ?? "")

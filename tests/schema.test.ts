@@ -111,6 +111,7 @@ describe("schemas", () => {
         },
         {
           ecosystem: "python",
+          entrypoint: "app.main:app",
           framework: "fastapi",
           manifestPath: "pyproject.toml"
         },

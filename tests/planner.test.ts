@@ -101,6 +101,31 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["django-tests", "python-compile"]);
   });
 
+  it("adds FastAPI import smoke verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/main.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "python -m pytest",
+      "python -m compileall .",
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\""
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
+  });
+
+  it("does not plan FastAPI import smoke for invalid entrypoint syntax", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/main.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", entrypoint: "app.main:app'; print('bad')", framework: "fastapi", manifestPath: "requirements.txt" }]
+    );
+
+    expect(commands.map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
+  });
+
   it("uses Gradle for Gradle projects without wrappers", () => {
     const commands = planCommands(
       process.cwd(),

@@ -60,3 +60,4 @@
 - Added Spring Boot framework detection, Gradle fallback commands, and `bootJar` packaging plans.
 - Added Android Gradle detection with debug unit test, assemble, and lint verification plans.
 - Added ASP.NET Core detection with .NET build and publish verification plans.
+- Added FastAPI app entrypoint detection with import-smoke verification plans.
