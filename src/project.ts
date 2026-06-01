@@ -65,6 +65,8 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
   }
   if (exists(root, "pants.toml")) add({ ecosystem: "pants", manifestPath: "pants.toml" });
   if (hasTerraform(root)) add({ ecosystem: "terraform", manifestPath: "*.tf" });
+  const kubernetesManifestPath = findKubernetesManifestPath(root);
+  if (kubernetesManifestPath) add({ ecosystem: "kubernetes", manifestPath: kubernetesManifestPath });
   if (exists(root, ".github/workflows")) add({ ecosystem: "github-actions", manifestPath: ".github/workflows" });
 
   return signals;
@@ -497,4 +499,32 @@ function walkForExtension(directory: string, extension: string, maxDepth: number
 
 function hasTerraform(root: string): boolean {
   return ["main.tf", "variables.tf", "providers.tf", "terraform.tfvars"].some((file) => exists(root, file));
+}
+
+function findKubernetesManifestPath(root: string): string | undefined {
+  const direct = firstExisting(root, ["Chart.yaml", "kustomization.yaml", "kustomization.yml", "k8s", "kubernetes", "manifests", "charts"]);
+  if (direct) return direct;
+  if (hasFileNamed(root, "Chart.yaml", 3)) return "Chart.yaml";
+  if (hasFileNamed(root, "kustomization.yaml", 3) || hasFileNamed(root, "kustomization.yml", 3)) return "kustomization.yaml";
+  return undefined;
+}
+
+function hasFileNamed(root: string, fileName: string, maxDepth: number): boolean {
+  return walkForFileName(root, fileName, maxDepth, 0);
+}
+
+function walkForFileName(directory: string, fileName: string, maxDepth: number, depth: number): boolean {
+  if (depth > maxDepth) return false;
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    for (const entry of entries) {
+      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "dist") continue;
+      const path = join(directory, entry.name);
+      if (entry.isFile() && entry.name === fileName) return true;
+      if (entry.isDirectory() && walkForFileName(path, fileName, maxDepth, depth + 1)) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }

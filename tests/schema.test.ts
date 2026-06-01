@@ -23,11 +23,17 @@ describe("schemas", () => {
     const reportSchema = JSON.parse(readSchema("report")) as {
       required: string[];
       properties: Record<string, unknown>;
+      $defs: {
+        ecosystem?: { enum?: string[] };
+        commandEcosystem?: { enum?: string[] };
+      };
     };
 
     expect(reportSchema.required).toContain("schemaVersion");
     expect(reportSchema.required).toContain("summary");
     expect(reportSchema.required).toContain("dependencyChanges");
+    expect(reportSchema.$defs.ecosystem?.enum).toContain("kubernetes");
+    expect(reportSchema.$defs.commandEcosystem?.enum).toContain("kubernetes");
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 

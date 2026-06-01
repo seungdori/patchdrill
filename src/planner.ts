@@ -118,6 +118,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         required: false
       });
     }
+    if (signal.ecosystem === "kubernetes" && touchesKubernetes(paths)) {
+      addKubernetesPlans(plans, root, paths);
+    }
     if (signal.ecosystem === "pants" && touchesPants(paths)) {
       addPantsPlans(plans, root, options.changedSince ?? "HEAD");
     }
@@ -164,6 +167,58 @@ function addPantsPlans(plans: CommandPlan[], root: string, changedSince: string)
     ecosystem: "pants",
     required: false
   });
+}
+
+function addKubernetesPlans(plans: CommandPlan[], root: string, paths: string[]): void {
+  const helmRoots = new Set<string>();
+  const kustomizeRoots = new Set<string>();
+  const manifestRoots = new Set<string>();
+
+  for (const path of paths) {
+    if (!isKubernetesPath(path)) continue;
+    const helmRoot = nearestManifestRoot(root, path, ["Chart.yaml"]);
+    if (helmRoot) {
+      helmRoots.add(helmRoot);
+      continue;
+    }
+    const kustomizeRoot = nearestManifestRoot(root, path, ["kustomization.yaml", "kustomization.yml"]);
+    if (kustomizeRoot) {
+      kustomizeRoots.add(kustomizeRoot);
+      continue;
+    }
+    manifestRoots.add(kubernetesManifestRoot(path));
+  }
+
+  for (const chartRoot of [...helmRoots].sort()) {
+    pushUnique(plans, {
+      id: `kubernetes-helm-lint-${slug(chartRoot)}`,
+      label: "Helm lint",
+      command: `helm lint ${quoteShell(chartRoot)}`,
+      reason: "Helm chart files changed, so chart templates and values should lint before merge.",
+      ecosystem: "kubernetes",
+      required: true
+    });
+  }
+  for (const kustomizeRoot of [...kustomizeRoots].sort()) {
+    pushUnique(plans, {
+      id: `kubernetes-kustomize-${slug(kustomizeRoot)}`,
+      label: "Kustomize render",
+      command: `kubectl kustomize ${quoteShell(kustomizeRoot)}`,
+      reason: "Kustomize files changed, so rendered manifests should be generated before merge.",
+      ecosystem: "kubernetes",
+      required: true
+    });
+  }
+  for (const manifestRoot of [...manifestRoots].sort()) {
+    pushUnique(plans, {
+      id: `kubernetes-dry-run-${slug(manifestRoot)}`,
+      label: "Kubernetes manifest dry-run",
+      command: `kubectl apply --dry-run=client -f ${quoteShell(manifestRoot)}`,
+      reason: "Kubernetes manifests changed, so client-side apply should parse them before merge.",
+      ecosystem: "kubernetes",
+      required: true
+    });
+  }
 }
 
 export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signals: ProjectSignal[]): WorkspacePackage[] {
@@ -562,6 +617,41 @@ function touchesJava(paths: string[], root: string): boolean {
 
 function touchesPants(paths: string[]): boolean {
   return paths.some((path) => path === "pants.toml" || path === "pants" || path === "BUILD" || path.endsWith("/BUILD") || path.endsWith("/BUILD.pants") || isSourceLikePath(path));
+}
+
+function touchesKubernetes(paths: string[]): boolean {
+  return paths.some(isKubernetesPath);
+}
+
+function isKubernetesPath(path: string): boolean {
+  const lower = path.toLowerCase();
+  return (
+    /(^|\/)(chart\.yaml|values\.ya?ml|kustomization\.ya?ml)$/.test(lower) ||
+    /(^|\/)templates\/.+\.(ya?ml|tpl)$/.test(lower) ||
+    (/(^|\/)(k8s|kubernetes|manifests|charts|helm)\//.test(lower) && /\.(ya?ml|tpl)$/.test(lower))
+  );
+}
+
+function nearestManifestRoot(root: string, path: string, manifestNames: string[]): string | undefined {
+  let current = parentPath(path);
+  while (true) {
+    if (manifestNames.some((manifestName) => existsSync(join(root, current, manifestName)))) return current || ".";
+    const next = parentPath(current);
+    if (next === current) return undefined;
+    current = next;
+  }
+}
+
+function kubernetesManifestRoot(path: string): string {
+  const segments = path.split("/");
+  const anchorIndex = segments.findIndex((segment) => ["k8s", "kubernetes", "manifests"].includes(segment.toLowerCase()));
+  if (anchorIndex >= 0) return segments.slice(0, anchorIndex + 1).join("/");
+  return parentPath(path) || ".";
+}
+
+function parentPath(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash >= 0 ? path.slice(0, slash) : "";
 }
 
 function isSourceLikePath(path: string): boolean {

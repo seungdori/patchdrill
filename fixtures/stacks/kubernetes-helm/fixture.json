@@ -1,0 +1,25 @@
+{
+  "name": "kubernetes-helm",
+  "expectedEcosystems": ["kubernetes"],
+  "expectedCommands": ["helm lint ."],
+  "baseFiles": [
+    {
+      "path": "Chart.yaml",
+      "lines": ["apiVersion: v2", "name: api", "version: 0.1.0"]
+    },
+    {
+      "path": "values.yaml",
+      "lines": ["replicaCount: 2", "image:", "  repository: ghcr.io/acme/api", "  tag: 1.0.0"]
+    },
+    {
+      "path": "templates/deployment.yaml",
+      "lines": ["apiVersion: apps/v1", "kind: Deployment", "metadata:", "  name: api"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "templates/deployment.yaml",
+      "lines": ["apiVersion: apps/v1", "kind: Deployment", "metadata:", "  name: api", "spec:", "  replicas: {{ .Values.replicaCount }}"]
+    }
+  ]
+}

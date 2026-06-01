@@ -16,7 +16,7 @@ npx patchdrill scan --base origin/main --run \
 
 ## Why Star It
 
-- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, Go, Maven, Gradle, dotnet, Terraform, Docker.
+- Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, cargo, Go, Maven, Gradle, dotnet, Terraform, Docker, Kubernetes, and Helm.
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
@@ -195,6 +195,7 @@ PatchDrill detects project shape from repo manifests:
 | .NET | `global.json`, project files | `dotnet test` |
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`, Compose files | `docker build .` |
+| Kubernetes | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `kubernetes/`, `manifests/` | `helm lint .`, `kubectl kustomize .`, `kubectl apply --dry-run=client -f k8s` |
 | Pants | `pants.toml` | `pants --changed-since=HEAD --changed-dependents=transitive test` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 

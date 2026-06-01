@@ -41,6 +41,22 @@ describe("planCommands", () => {
     );
   });
 
+  it("adds Kubernetes manifest dry-run checks", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "k8s/deployment.yaml", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "kubernetes", manifestPath: "k8s" }]
+    );
+
+    expect(commands).toContainEqual(
+      expect.objectContaining({
+        id: "kubernetes-dry-run-k8s",
+        command: "kubectl apply --dry-run=client -f k8s",
+        required: true
+      })
+    );
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

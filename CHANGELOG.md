@@ -52,3 +52,4 @@
 - Added language-aware source-to-test matching for missing-test risk findings.
 - Added self-contained static HTML dashboards through `scan --html` and `patchdrill dashboard --json`.
 - Added `report-html` output support to the composite GitHub Action and generated workflow.
+- Added Kubernetes and Helm project detection with manifest dry-run, Kustomize render, and Helm lint plans.

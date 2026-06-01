@@ -60,6 +60,7 @@
 - Language-aware source-to-test matching for risk scoring.
 - Static HTML dashboard generation from scan output and saved JSON reports.
 - Composite GitHub Action support for HTML dashboard artifacts.
+- Kubernetes and Helm manifest verification planning.
 
 ## Contribution Targets
 
@@ -68,6 +69,5 @@ PatchDrill needs real-world fixtures from:
 - Django/FastAPI.
 - Spring Boot and Gradle.
 - .NET services.
-- Kubernetes and Helm-heavy repos.
 - Bazel or Buck monorepos.
 - Mobile apps.
