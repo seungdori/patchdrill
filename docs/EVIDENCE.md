@@ -28,4 +28,17 @@ patchdrill verify --evidence patchdrill-evidence.json
 
 Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest.
 
+Regenerate a manifest after post-processing final artifacts, such as re-rendering a dashboard with trend history:
+
+```bash
+patchdrill evidence \
+  --json patchdrill-report.json \
+  --evidence patchdrill-evidence.json \
+  --summary-markdown patchdrill-summary.md \
+  --markdown patchdrill-report.md \
+  --sarif patchdrill.sarif \
+  --html patchdrill-dashboard.html
+patchdrill verify --evidence patchdrill-evidence.json
+```
+
 This keeps the default scanner local-only and deterministic while giving CI systems one small file that can prove which evidence artifacts belonged to a run.

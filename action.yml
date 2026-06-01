@@ -198,6 +198,40 @@ runs:
         done <<< "$PATCHDRILL_DASHBOARD_HISTORY"
         args+=(--json "$PATCHDRILL_JSON" --output "$PATCHDRILL_HTML")
         node "$GITHUB_ACTION_PATH/dist/cli.js" "${args[@]}"
+    - name: Refresh evidence manifest
+      shell: bash
+      env:
+        PATCHDRILL_EVIDENCE: ${{ inputs.evidence }}
+        PATCHDRILL_SUMMARY: ${{ inputs.summary }}
+        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
+        PATCHDRILL_JSON: ${{ inputs.json }}
+        PATCHDRILL_SARIF: ${{ inputs.sarif }}
+        PATCHDRILL_HTML: ${{ inputs.html }}
+      run: |
+        if [ -n "$PATCHDRILL_EVIDENCE" ] && [ -n "$PATCHDRILL_JSON" ]; then
+          args=(evidence --json "$PATCHDRILL_JSON" --evidence "$PATCHDRILL_EVIDENCE")
+          if [ -n "$PATCHDRILL_SUMMARY" ]; then
+            args+=(--summary-markdown "$PATCHDRILL_SUMMARY")
+          fi
+          if [ -n "$PATCHDRILL_MARKDOWN" ]; then
+            args+=(--markdown "$PATCHDRILL_MARKDOWN")
+          fi
+          if [ -n "$PATCHDRILL_SARIF" ]; then
+            args+=(--sarif "$PATCHDRILL_SARIF")
+          fi
+          if [ -n "$PATCHDRILL_HTML" ]; then
+            args+=(--html "$PATCHDRILL_HTML")
+          fi
+          node "$GITHUB_ACTION_PATH/dist/cli.js" "${args[@]}"
+        fi
+    - name: Verify evidence manifest
+      shell: bash
+      env:
+        PATCHDRILL_EVIDENCE: ${{ inputs.evidence }}
+      run: |
+        if [ -n "$PATCHDRILL_EVIDENCE" ]; then
+          node "$GITHUB_ACTION_PATH/dist/cli.js" verify --evidence "$PATCHDRILL_EVIDENCE"
+        fi
     - name: Write step summary
       if: inputs.step-summary == 'true'
       shell: bash

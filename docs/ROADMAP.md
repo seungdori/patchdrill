@@ -105,6 +105,7 @@
 - First-party Maven and Spring Boot Maven stack fixtures.
 - Audit evidence manifests with report, artifact, and command-output digests.
 - Evidence manifest verification against generated artifact hashes.
+- Evidence manifest regeneration for finalized artifacts and CI verification before upload.
 
 ## Contribution Targets
 

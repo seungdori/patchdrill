@@ -16,6 +16,10 @@ describe("composite action", () => {
     expect(action).toContain("evidence:");
     expect(action).toContain("PATCHDRILL_EVIDENCE");
     expect(action).toContain('--evidence "$PATCHDRILL_EVIDENCE"');
+    expect(action).toContain("Refresh evidence manifest");
+    expect(action).toContain('args=(evidence --json "$PATCHDRILL_JSON" --evidence "$PATCHDRILL_EVIDENCE")');
+    expect(action).toContain("Verify evidence manifest");
+    expect(action).toContain('verify --evidence "$PATCHDRILL_EVIDENCE"');
     expect(action).toContain("report-evidence:");
     expect(action).toContain("write_output evidence");
     expect(action).toContain("summary:");
@@ -64,5 +68,10 @@ describe("composite action", () => {
     const historyStep = action.runs?.steps?.find((step) => step.name === "Render dashboard history");
     expect(historyStep?.if).toBe("inputs.dashboard-history != ''");
     expect(historyStep?.run).toContain('args+=(--json "$PATCHDRILL_JSON" --output "$PATCHDRILL_HTML")');
+    const refreshStep = action.runs?.steps?.find((step) => step.name === "Refresh evidence manifest");
+    expect(refreshStep?.run).toContain('args=(evidence --json "$PATCHDRILL_JSON" --evidence "$PATCHDRILL_EVIDENCE")');
+    expect(refreshStep?.run).toContain('args+=(--html "$PATCHDRILL_HTML")');
+    const verifyStep = action.runs?.steps?.find((step) => step.name === "Verify evidence manifest");
+    expect(verifyStep?.run).toContain('verify --evidence "$PATCHDRILL_EVIDENCE"');
   });
 });

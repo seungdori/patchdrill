@@ -2,7 +2,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, parseArgs } from "../src/cli.js";
+import { dashboardCommand, evidenceCommand, parseArgs } from "../src/cli.js";
+import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
 const tempDirs: string[] = [];
@@ -31,6 +32,10 @@ describe("cli", () => {
     expect(parseArgs(["verify", "--evidence", "patchdrill-evidence.json"])).toMatchObject({
       command: "verify",
       flags: { evidence: "patchdrill-evidence.json" }
+    });
+    expect(parseArgs(["evidence", "--json", "patchdrill-report.json", "--evidence", "patchdrill-evidence.json"])).toMatchObject({
+      command: "evidence",
+      flags: { json: "patchdrill-report.json", evidence: "patchdrill-evidence.json" }
     });
     expect(parseArgs(["scan", "--run", "--run-optional"])).toMatchObject({
       command: "scan",
@@ -94,6 +99,37 @@ describe("cli", () => {
     expect(html).toContain("2 latest");
     expect(html).toContain("2026-06-01T00:00:00.000Z");
     expect(html).toContain("Latest CLI finding");
+  });
+
+  it("writes an evidence manifest from saved report artifacts", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const reportPath = join(root, "patchdrill-report.json");
+    const summaryPath = join(root, "patchdrill-summary.md");
+    const htmlPath = join(root, "patchdrill-dashboard.html");
+    const evidencePath = join(root, "patchdrill-evidence.json");
+    writeFileSync(reportPath, `${JSON.stringify(exampleReport())}\n`, "utf8");
+    writeFileSync(summaryPath, "# PatchDrill Summary\n", "utf8");
+    writeFileSync(htmlPath, "<!doctype html><title>PatchDrill</title>\n", "utf8");
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    evidenceCommand(
+      parseArgs([
+        "evidence",
+        "--json",
+        reportPath,
+        "--evidence",
+        evidencePath,
+        "--summary-markdown",
+        summaryPath,
+        "--html",
+        htmlPath
+      ])
+    );
+
+    const manifest = JSON.parse(readFileSync(evidencePath, "utf8")) as EvidenceManifest;
+    expect(manifest.artifacts.map((artifact) => artifact.kind)).toEqual(["summary-markdown", "json", "html"]);
+    expect(verifyEvidenceManifest(evidencePath).ok).toBe(true);
   });
 });
 

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDemoReport } from "./demo.js";
-import { formatEvidenceVerification, verifyEvidenceManifest } from "./evidence.js";
+import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest, type EvidenceArtifactKind, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
@@ -42,6 +42,10 @@ async function main(): Promise<void> {
   }
   if (command === "demo") {
     demoCommand(parsed);
+    return;
+  }
+  if (command === "evidence") {
+    evidenceCommand(parsed);
     return;
   }
   if (command === "init") {
@@ -175,6 +179,31 @@ export function demoCommand(parsed: ParsedArgs): void {
   console.log(`- ${files.html}`);
 }
 
+export function evidenceCommand(parsed: ParsedArgs): void {
+  const reportPath = flagString(parsed, "json");
+  const evidencePath = flagString(parsed, "evidence") ?? flagString(parsed, "output");
+  if (!reportPath) {
+    throw new Error("evidence requires --json <patchdrill-report.json>.");
+  }
+  if (!evidencePath) {
+    throw new Error("evidence requires --evidence <patchdrill-evidence.json>.");
+  }
+
+  const reportJson = readFileSync(reportPath, "utf8");
+  const report = JSON.parse(reportJson) as PatchReport;
+  const artifacts: RenderedEvidenceArtifact[] = [
+    ...optionalEvidenceArtifact("summary-markdown", flagString(parsed, "summary-markdown")),
+    ...optionalEvidenceArtifact("markdown", flagString(parsed, "markdown")),
+    { kind: "json", path: reportPath, contents: reportJson },
+    ...optionalEvidenceArtifact("sarif", flagString(parsed, "sarif")),
+    ...optionalEvidenceArtifact("html", flagString(parsed, "html"))
+  ];
+  const resolved = resolve(process.cwd(), evidencePath);
+  mkdirSync(dirname(resolved), { recursive: true });
+  writeFileSync(resolved, renderEvidenceManifest(report, artifacts, report.root || process.cwd(), reportJson), "utf8");
+  console.log(`Wrote ${evidencePath}`);
+}
+
 function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
   const policyPack = readPolicyPack(flagString(parsed, "policy-pack"));
@@ -283,7 +312,7 @@ export function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "init", "explain", "schema", "verify", "help"].includes(arg)) {
+    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "evidence", "init", "explain", "schema", "verify", "help"].includes(arg)) {
       command = arg;
       continue;
     }
@@ -395,6 +424,10 @@ function readPolicyPack(value: string | boolean | undefined): PolicyPackName {
   return value;
 }
 
+function optionalEvidenceArtifact(kind: EvidenceArtifactKind, path: string | undefined): RenderedEvidenceArtifact[] {
+  return path ? [{ kind, path, contents: readFileSync(path, "utf8") }] : [];
+}
+
 function readVersion(): string {
   const packagePath = join(new URL("..", import.meta.url).pathname, "package.json");
   if (!existsSync(packagePath)) return "0.1.0";
@@ -413,6 +446,7 @@ Usage:
   patchdrill scan [options]
   patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
   patchdrill demo [--output <directory>]
+  patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill schema [policy|report|evidence] [--output <path>]
@@ -423,7 +457,7 @@ Options:
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
-  --evidence <path>   Write an audit evidence manifest during scan, or select one for verify
+  --evidence <path>   Write an audit evidence manifest during scan/evidence, or select one for verify
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
   --github-annotations

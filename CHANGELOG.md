@@ -89,3 +89,4 @@
 - Added first-party Maven and Spring Boot Maven stack fixtures.
 - Added audit evidence manifests with report, artifact, and command-output digests.
 - Added evidence manifest verification against generated artifact hashes.
+- Added evidence manifest regeneration for finalized artifacts and CI verification before upload.

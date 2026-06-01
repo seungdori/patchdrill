@@ -141,6 +141,16 @@ Verify an evidence manifest against its generated artifacts:
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
+Regenerate an evidence manifest after final artifact post-processing:
+
+```bash
+patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence.json \
+  --summary-markdown patchdrill-summary.md \
+  --markdown patchdrill-report.md \
+  --sarif patchdrill.sarif \
+  --html patchdrill-dashboard.html
+```
+
 See committed demo outputs in [examples/demo](examples/demo).
 
 Add repeated JSON reports in oldest-to-newest order to show run trends:
@@ -203,6 +213,7 @@ patchdrill init --policy-pack regulated
 patchdrill scan [options]
 patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
 patchdrill demo [--output <directory>]
+patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report|evidence] [--output <path>]
@@ -217,7 +228,7 @@ Options:
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
-| `--evidence <path>` | Write an audit evidence manifest during `scan`, or select one for `verify`. |
+| `--evidence <path>` | Write an audit evidence manifest during `scan`/`evidence`, or select one for `verify`. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
