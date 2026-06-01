@@ -1,7 +1,12 @@
 {
   "name": "bazel-workspace",
   "expectedEcosystems": ["bazel"],
-  "expectedCommands": ["bazel test //src/app/...", "bazel build //src/app/...", "bazel query 'rdeps(//..., set(//src/app/...))'"],
+  "expectedCommands": [
+    "bazel test //src/app/...",
+    "bazel build //src/app/...",
+    "bazel query 'rdeps(//..., set(//src/app/...))'",
+    "targets=\"$(bazel query 'tests(rdeps(//..., set(//src/app/...)))')\" && if [ -n \"$targets\" ]; then bazel test $targets; else echo 'No downstream Bazel tests found'; fi"
+  ],
   "baseFiles": [
     {
       "path": "MODULE.bazel",

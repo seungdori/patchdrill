@@ -1382,11 +1382,20 @@ function addBazelPlans(plans: CommandPlan[], root: string, paths: string[]): voi
     required: false
   });
   if (narrowed) {
+    const downstreamQuery = `rdeps(//..., set(${targetArgs}))`;
     pushUnique(plans, {
       id: "bazel-downstream-query",
       label: "Bazel downstream reverse-dependency query",
-      command: `${bazel} query ${quoteShell(`rdeps(//..., set(${targetArgs}))`)}`,
+      command: `${bazel} query ${quoteShell(downstreamQuery)}`,
       reason: "Bazel changed-package patterns can miss downstream owners; rdeps shows graph-wide reverse dependencies for review before expanding tests.",
+      ecosystem: "bazel",
+      required: false
+    });
+    pushUnique(plans, {
+      id: "bazel-downstream-tests",
+      label: "Bazel downstream test targets",
+      command: downstreamTargetsCommand(bazel, "query", `tests(${downstreamQuery})`, "test", "No downstream Bazel tests found"),
+      reason: "Bazel rdeps can be promoted through tests(...) into executable downstream test targets after review.",
       ecosystem: "bazel",
       required: false
     });
@@ -1419,15 +1428,28 @@ function addBuckPlans(plans: CommandPlan[], root: string, paths: string[]): void
     required: false
   });
   if (narrowed) {
+    const downstreamQuery = `rdeps(//..., set(${targetArgs}))`;
     pushUnique(plans, {
       id: "buck-downstream-uquery",
       label: "Buck downstream reverse-dependency query",
-      command: `${buck} uquery ${quoteShell(`rdeps(//..., set(${targetArgs}))`)}`,
+      command: `${buck} uquery ${quoteShell(downstreamQuery)}`,
       reason: "Buck changed-package patterns can miss downstream owners; uquery rdeps shows graph-wide reverse dependencies for review before expanding tests.",
       ecosystem: "buck",
       required: false
     });
+    pushUnique(plans, {
+      id: "buck-downstream-tests",
+      label: "Buck downstream test targets",
+      command: downstreamTargetsCommand(buck, "uquery", `testsof(${downstreamQuery})`, "test", "No downstream Buck tests found"),
+      reason: "Buck uquery rdeps can be promoted through testsof(...) into executable downstream test targets after review.",
+      ecosystem: "buck",
+      required: false
+    });
   }
+}
+
+function downstreamTargetsCommand(tool: string, querySubcommand: string, query: string, runSubcommand: string, emptyMessage: string): string {
+  return `targets="$(${tool} ${querySubcommand} ${quoteShell(query)})" && if [ -n "$targets" ]; then ${tool} ${runSubcommand} $targets; else echo ${quoteShell(emptyMessage)}; fi`;
 }
 
 function bazelChangedTargetPatterns(root: string, paths: string[]): string[] {

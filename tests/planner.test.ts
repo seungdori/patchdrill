@@ -88,7 +88,8 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.command)).toEqual([
       "bazel test //src/app/...",
       "bazel build //src/app/...",
-      "bazel query 'rdeps(//..., set(//src/app/...))'"
+      "bazel query 'rdeps(//..., set(//src/app/...))'",
+      "targets=\"$(bazel query 'tests(rdeps(//..., set(//src/app/...)))')\" && if [ -n \"$targets\" ]; then bazel test $targets; else echo 'No downstream Bazel tests found'; fi"
     ]);
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["bazel-changed-tests"]);
   });
@@ -118,7 +119,8 @@ describe("planCommands", () => {
     expect(commands.map((command) => command.command)).toEqual([
       "buck2 test //src/app/...",
       "buck2 build //src/app/...",
-      "buck2 uquery 'rdeps(//..., set(//src/app/...))'"
+      "buck2 uquery 'rdeps(//..., set(//src/app/...))'",
+      "targets=\"$(buck2 uquery 'testsof(rdeps(//..., set(//src/app/...)))')\" && if [ -n \"$targets\" ]; then buck2 test $targets; else echo 'No downstream Buck tests found'; fi"
     ]);
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["buck-changed-tests"]);
   });

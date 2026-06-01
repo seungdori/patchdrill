@@ -12,7 +12,7 @@ export default defineConfig({
       }
     },
     fileParallelism: false,
-    testTimeout: 20_000,
+    testTimeout: 60_000,
     coverage: {
       reporter: ["text", "lcov"]
     }

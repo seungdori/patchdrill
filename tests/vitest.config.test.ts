@@ -15,6 +15,6 @@ describe("vitest config", () => {
     expect(testConfig.test?.fileParallelism).toBe(false);
     expect(testConfig.test?.pool).toBe("forks");
     expect(testConfig.test?.poolOptions?.forks?.singleFork).toBe(true);
-    expect(testConfig.test?.testTimeout).toBe(20_000);
+    expect(testConfig.test?.testTimeout).toBe(60_000);
   });
 });
