@@ -800,6 +800,95 @@ python-versions = ">=3.10"
     ]);
   });
 
+  it("reports uv.lock additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-uv-lock-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeUvLock(
+      root,
+      `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "fastapi"
+version = "0.110.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "oldlib"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "pydantic"
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeUvLock(
+      root,
+      `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "fastapi"
+version = "0.111.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "pydantic"
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
+
+[[package]]
+name = "ruff"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "uv.lock", status: "modified", additions: 12, deletions: 12, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "uv.lock",
+        packageName: "fastapi",
+        packagePath:
+          'fastapi@0.110.0 { registry = "https://pypi.org/simple" } -> fastapi@0.111.0 { registry = "https://pypi.org/simple" }',
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "0.110.0",
+        after: "0.111.0"
+      },
+      {
+        file: "uv.lock",
+        packageName: "oldlib",
+        packagePath: 'oldlib@0.1.0 { registry = "https://pypi.org/simple" }',
+        dependencyType: "lockfile",
+        changeType: "removed",
+        before: "0.1.0"
+      },
+      {
+        file: "uv.lock",
+        packageName: "ruff",
+        packagePath: 'ruff@0.6.0 { registry = "https://pypi.org/simple" }',
+        dependencyType: "lockfile",
+        changeType: "added",
+        after: "0.6.0"
+      }
+    ]);
+  });
+
   it("reports Pipfile.lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-pipfile-lock-"));
     tempDirs.push(root);
@@ -1051,6 +1140,10 @@ function writeCargoLock(root: string, contents: string): void {
 
 function writePoetryLock(root: string, contents: string): void {
   writeFileSync(join(root, "poetry.lock"), contents.trimStart());
+}
+
+function writeUvLock(root: string, contents: string): void {
+  writeFileSync(join(root, "uv.lock"), contents.trimStart());
 }
 
 function writePipfileLock(root: string, contents: unknown): void {

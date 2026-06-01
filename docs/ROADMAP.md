@@ -35,6 +35,7 @@
 - `Cargo.lock` dependency diff summaries.
 - `requirements.txt` dependency diff summaries.
 - `poetry.lock` dependency diff summaries.
+- `uv.lock` dependency diff summaries.
 - `Pipfile.lock` dependency diff summaries.
 - `bun.lock` dependency diff summaries.
 - `Gemfile.lock` dependency diff summaries.

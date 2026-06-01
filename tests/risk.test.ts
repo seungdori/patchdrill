@@ -669,6 +669,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags uv.lock as a dependency lockfile", () => {
+    const assessment = assessRisk(
+      [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.lockfile",
+        severity: "medium",
+        file: "uv.lock"
+      })
+    );
+  });
+
   it("adds migration guidance for binary Bun lockfiles", () => {
     const assessment = assessRisk(
       [{ path: "bun.lockb", status: "modified", additions: 0, deletions: 0, binary: true }],

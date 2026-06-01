@@ -96,6 +96,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("uv.lock"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseUvLock(pair.before);
+    const after = parseUvLock(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Pipfile.lock"))) {
     const pair = readFilePair(options, file.path);
     const before = parsePipfileLock(pair.before);
@@ -492,6 +499,38 @@ function parseTomlPackageLock(value: string | undefined): Map<string, LockPackag
   return packages.size > 0 ? packages : undefined;
 }
 
+function parseUvLock(value: string | undefined): Map<string, LockPackage> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, LockPackage>();
+  let current: Partial<Pick<LockPackage, "name" | "version">> & { source?: string } | undefined;
+
+  const flush = () => {
+    if (!current?.name || !current.version) return;
+    const source = current.source ? ` ${current.source}` : "";
+    const path = `${current.name}@${current.version}${source}`;
+    packages.set(path, { name: current.name, path, version: current.version });
+  };
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const trimmed = rawLine.trim();
+    if (/^\[\[.*\]\]$/.test(trimmed)) {
+      flush();
+      current = trimmed === "[[package]]" ? {} : undefined;
+      continue;
+    }
+    if (!current) continue;
+    const scalar = /^([A-Za-z0-9_-]+)\s*=\s*(.+)$/.exec(trimmed);
+    if (!scalar?.[1] || !scalar[2]) continue;
+    const value = unquoteTomlScalar(scalar[2]);
+    if (scalar[1] === "name") current.name = value;
+    if (scalar[1] === "version") current.version = value;
+    if (scalar[1] === "source") current.source = normalizeInlineToml(value);
+  }
+
+  flush();
+  return packages.size > 0 ? packages : undefined;
+}
+
 function parsePipfileLock(value: string | undefined): Map<string, LockPackage> | undefined {
   if (!value) return undefined;
   try {
@@ -710,6 +749,18 @@ function parseYarnDescriptor(descriptor: string): { name: string } | undefined {
   if (separator <= 0) return undefined;
   const name = key.slice(0, separator);
   return name ? { name } : undefined;
+}
+
+function unquoteTomlScalar(value: string): string {
+  const trimmed = value.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function normalizeInlineToml(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function readBunPackageVersion(value: unknown): string | undefined {

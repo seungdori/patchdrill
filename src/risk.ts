@@ -45,6 +45,7 @@ const LOCKFILES = [
   "Cargo.lock",
   "go.sum",
   "poetry.lock",
+  "uv.lock",
   "Pipfile.lock",
   "Gemfile.lock",
   "composer.lock"

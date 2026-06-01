@@ -31,6 +31,7 @@
 - Added `Cargo.lock` dependency diff summaries.
 - Added `requirements.txt` dependency diff summaries.
 - Added `poetry.lock` dependency diff summaries.
+- Added `uv.lock` dependency diff summaries.
 - Added `Pipfile.lock` dependency diff summaries.
 - Added `bun.lock` dependency diff summaries.
 - Hardened GitHub Action input handling with environment-backed bash argument arrays.
