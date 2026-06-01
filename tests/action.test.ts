@@ -65,6 +65,8 @@ describe("composite action", () => {
     expect(summaryStep?.run).toContain('cat -- "$PATCHDRILL_SUMMARY"');
     const commentStep = action.runs?.steps?.find((step) => step.name === "Upsert PR comment");
     expect(JSON.stringify(commentStep)).toContain("PATCHDRILL_SUMMARY");
+    expect(commentStep?.with?.script).toContain("PatchDrill PR comment skipped");
+    expect(commentStep?.with?.script).toContain("try {");
     const historyStep = action.runs?.steps?.find((step) => step.name === "Render dashboard history");
     expect(historyStep?.if).toBe("inputs.dashboard-history != ''");
     expect(historyStep?.run).toContain('args+=(--json "$PATCHDRILL_JSON" --output "$PATCHDRILL_HTML")');

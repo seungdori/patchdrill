@@ -28,3 +28,5 @@ PatchDrill finds an existing bot comment containing the marker and updates it. I
 ## Permissions
 
 The workflow needs `pull-requests: write` to create or update PR comments. Keep other permissions least-privileged.
+
+For fork pull requests where the workflow token is read-only, PatchDrill emits a warning and skips the comment instead of failing the verification run. The step summary, annotations, SARIF, HTML, JSON, Markdown, and evidence artifacts still remain available.

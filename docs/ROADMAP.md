@@ -107,6 +107,7 @@
 - Evidence manifest verification against generated artifact hashes.
 - Evidence manifest regeneration for finalized artifacts and CI verification before upload.
 - Fail-state `risky-agent-pr` demo scenario for quick product evaluation.
+- Fork-safe PR comment handling that does not fail verification when comment permissions are unavailable.
 
 ## Contribution Targets
 
