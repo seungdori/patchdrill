@@ -54,6 +54,7 @@ jobs:
           markdown: patchdrill-report.md
           json: patchdrill-report.json
           sarif: patchdrill.sarif
+          html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
           pr-comment: "true"
@@ -71,6 +72,7 @@ jobs:
             \${{ steps.patchdrill.outputs.report-markdown }}
             \${{ steps.patchdrill.outputs.report-json }}
             \${{ steps.patchdrill.outputs.report-sarif }}
+            \${{ steps.patchdrill.outputs.report-html }}
 `;
 }
 

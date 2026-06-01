@@ -59,6 +59,7 @@
 - Native Pants changed-target task plans.
 - Language-aware source-to-test matching for risk scoring.
 - Static HTML dashboard generation from scan output and saved JSON reports.
+- Composite GitHub Action support for HTML dashboard artifacts.
 
 ## Contribution Targets
 

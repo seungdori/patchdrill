@@ -50,6 +50,10 @@ inputs:
     description: SARIF report output path.
     required: false
     default: patchdrill.sarif
+  html:
+    description: Static HTML dashboard output path.
+    required: false
+    default: patchdrill-dashboard.html
   step-summary:
     description: Append the Markdown report to the GitHub Actions step summary.
     required: false
@@ -72,6 +76,9 @@ outputs:
   report-sarif:
     description: Path to the generated SARIF report.
     value: ${{ steps.paths.outputs.sarif }}
+  report-html:
+    description: Path to the generated HTML dashboard.
+    value: ${{ steps.paths.outputs.html }}
 runs:
   using: composite
   steps:
@@ -94,6 +101,7 @@ runs:
         PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
+        PATCHDRILL_HTML: ${{ inputs.html }}
       run: |
         args=(
           scan
@@ -101,6 +109,7 @@ runs:
           --markdown "$PATCHDRILL_MARKDOWN"
           --json "$PATCHDRILL_JSON"
           --sarif "$PATCHDRILL_SARIF"
+          --html "$PATCHDRILL_HTML"
           --fail-on "$PATCHDRILL_FAIL_ON"
           --max-risk "$PATCHDRILL_MAX_RISK"
           --max-output-chars "$PATCHDRILL_MAX_OUTPUT_CHARS"
@@ -181,6 +190,7 @@ runs:
         PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
+        PATCHDRILL_HTML: ${{ inputs.html }}
       run: |
         write_output() {
           local name="$1"
@@ -195,6 +205,7 @@ runs:
         write_output json "$PATCHDRILL_JSON"
         write_output markdown "$PATCHDRILL_MARKDOWN"
         write_output sarif "$PATCHDRILL_SARIF"
+        write_output html "$PATCHDRILL_HTML"
     - name: Fail on PatchDrill gate
       if: steps.run.outputs.status != '0'
       shell: bash

@@ -22,6 +22,8 @@ describe("init", () => {
     expect(workflow).toContain("patchdrill/patchdrill@v0");
     expect(workflow).toContain('pr-comment: "true"');
     expect(workflow).toContain("steps.patchdrill.outputs.report-sarif");
+    expect(workflow).toContain("steps.patchdrill.outputs.report-html");
+    expect(workflow).toContain("html: patchdrill-dashboard.html");
     expect(workflow).toContain("github/codeql-action/upload-sarif@v3");
     expect(workflow).toContain("actions/upload-artifact@v4");
   });

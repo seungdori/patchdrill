@@ -28,12 +28,17 @@ The dashboard includes:
 For CI, upload the HTML alongside the JSON and Markdown artifacts:
 
 ```yaml
-- run: npx patchdrill scan --base origin/${{ github.base_ref }} --json patchdrill-report.json --html patchdrill-dashboard.html
+- uses: patchdrill/patchdrill@v0
+  id: patchdrill
+  with:
+    base: origin/${{ github.base_ref }}
+    json: patchdrill-report.json
+    html: patchdrill-dashboard.html
 - uses: actions/upload-artifact@v4
   if: always()
   with:
     name: patchdrill-report
     path: |
-      patchdrill-report.json
-      patchdrill-dashboard.html
+      ${{ steps.patchdrill.outputs.report-json }}
+      ${{ steps.patchdrill.outputs.report-html }}
 ```
