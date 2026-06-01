@@ -1,0 +1,62 @@
+{
+  "name": "dotnet-solution-filter",
+  "expectedEcosystems": ["dotnet"],
+  "expectedCommands": ["dotnet test Api.slnf", "dotnet build Api.slnf --no-restore"],
+  "baseFiles": [
+    {
+      "path": "App.sln",
+      "lines": ["Microsoft Visual Studio Solution File"]
+    },
+    {
+      "path": "Api.slnf",
+      "lines": [
+        "{",
+        "  \"solution\": {",
+        "    \"path\": \"App.sln\",",
+        "    \"projects\": [\"src/Api/Api.csproj\", \"tests/Api.Tests/Api.Tests.csproj\"]",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "path": "All.slnf",
+      "lines": [
+        "{",
+        "  \"solution\": {",
+        "    \"path\": \"App.sln\",",
+        "    \"projects\": [\"src/Api/Api.csproj\", \"src/Admin/Admin.csproj\", \"tests/Api.Tests/Api.Tests.csproj\"]",
+        "  }",
+        "}"
+      ]
+    },
+    {
+      "path": "src/Api/Api.csproj",
+      "lines": ["<Project Sdk=\"Microsoft.NET.Sdk\">", "  <PropertyGroup>", "    <TargetFramework>net8.0</TargetFramework>", "  </PropertyGroup>", "</Project>"]
+    },
+    {
+      "path": "src/Admin/Admin.csproj",
+      "lines": ["<Project Sdk=\"Microsoft.NET.Sdk\">", "  <PropertyGroup>", "    <TargetFramework>net8.0</TargetFramework>", "  </PropertyGroup>", "</Project>"]
+    },
+    {
+      "path": "tests/Api.Tests/Api.Tests.csproj",
+      "lines": [
+        "<Project Sdk=\"Microsoft.NET.Sdk\">",
+        "  <ItemGroup>",
+        "    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"17.10.0\" />",
+        "    <ProjectReference Include=\"../../src/Api/Api.csproj\" />",
+        "  </ItemGroup>",
+        "</Project>"
+      ]
+    },
+    {
+      "path": "src/Api/Service.cs",
+      "lines": ["namespace Api;", "public class Service { public bool Ok() => true; }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/Api/Service.cs",
+      "lines": ["namespace Api;", "public class Service { public bool Ok() => false; }"]
+    }
+  ]
+}

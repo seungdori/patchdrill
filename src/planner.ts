@@ -155,7 +155,14 @@ interface DotnetProject {
   isAspNetCoreProject: boolean;
 }
 
+interface DotnetSolutionFilter {
+  path: string;
+  projects: string[];
+}
+
 function addDotnetPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
+  const solutionFilterPlanCount = addDotnetSolutionFilterPlans(plans, root, paths);
+  if (solutionFilterPlanCount > 0) return;
   const targetedPlanCount = addDotnetProjectPlans(plans, root, paths, signal);
   if (targetedPlanCount > 0) return;
   addRootDotnetPlans(plans, signal);
@@ -197,6 +204,104 @@ function addRootDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
 
 function dotnetSolutionFilterTarget(signal: ProjectSignal): string | undefined {
   return signal.manifestPath.endsWith(".slnf") ? signal.manifestPath : undefined;
+}
+
+function addDotnetSolutionFilterPlans(plans: CommandPlan[], root: string, paths: string[]): number {
+  if (touchesDotnetRootMetadata(paths)) return 0;
+  const projects = discoverDotnetProjects(root);
+  if (projects.length === 0) return 0;
+  const changedProjects = dotnetChangedProjects(projects, paths);
+  if (changedProjects.length === 0) return 0;
+  const affectedProjects = includeDownstreamDotnetProjects(changedProjects, projects);
+  const affectedProjectPaths = new Set(affectedProjects.map((project) => project.path));
+  const affectedTestProjectPaths = new Set(affectedProjects.filter((project) => project.isTestProject).map((project) => project.path));
+  if (affectedTestProjectPaths.size === 0) return 0;
+
+  const filters = selectDotnetSolutionFilters(root, affectedProjectPaths, affectedTestProjectPaths);
+  let added = 0;
+  for (const filter of filters) {
+    const before = plans.length;
+    pushUnique(plans, {
+      id: `dotnet-solution-filter-${slug(filter.path)}-tests`,
+      label: `${filter.path} .NET solution filter tests`,
+      command: `dotnet test ${quoteShell(filter.path)}`,
+      reason: dotnetSolutionFilterReason(filter, changedProjects, "test"),
+      ecosystem: "dotnet",
+      required: true,
+      packagePath: filter.path
+    });
+    pushUnique(plans, {
+      id: `dotnet-solution-filter-${slug(filter.path)}-build`,
+      label: `${filter.path} .NET solution filter build`,
+      command: `dotnet build ${quoteShell(filter.path)} --no-restore`,
+      reason: dotnetSolutionFilterReason(filter, changedProjects, "build"),
+      ecosystem: "dotnet",
+      required: false,
+      packagePath: filter.path
+    });
+    if (plans.length > before) added += plans.length - before;
+  }
+  return added;
+}
+
+function selectDotnetSolutionFilters(root: string, affectedProjectPaths: Set<string>, affectedTestProjectPaths: Set<string>): DotnetSolutionFilter[] {
+  const filters = discoverDotnetSolutionFilters(root)
+    .filter((filter) => filter.projects.some((project) => affectedTestProjectPaths.has(project)))
+    .sort((a, b) => a.projects.length - b.projects.length || a.path.localeCompare(b.path));
+  const selected: DotnetSolutionFilter[] = [];
+  const coveredTestProjects = new Set<string>();
+
+  for (const filter of filters) {
+    const uncoveredTests = filter.projects.filter((project) => affectedTestProjectPaths.has(project) && !coveredTestProjects.has(project));
+    if (uncoveredTests.length === 0) continue;
+    selected.push(filter);
+    for (const project of filter.projects) {
+      if (affectedProjectPaths.has(project) && affectedTestProjectPaths.has(project)) coveredTestProjects.add(project);
+    }
+  }
+
+  return selected;
+}
+
+function discoverDotnetSolutionFilters(root: string): DotnetSolutionFilter[] {
+  return findFilesWithExtension(root, ".slnf", 4)
+    .map((path) => ({ path, projects: dotnetSolutionFilterProjects(root, path) }))
+    .filter((filter) => filter.projects.length > 0)
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function dotnetSolutionFilterProjects(root: string, filterPath: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readText(root, filterPath));
+  } catch {
+    return [];
+  }
+  const projects = dotnetSolutionFilterProjectList(parsed);
+  if (!projects) return [];
+  const filterDirectory = dirname(filterPath);
+  return uniqueStrings(
+    projects
+      .map((project) => toRepoPath(relative(root, join(root, filterDirectory, normalize(project.replaceAll("\\", "/"))))))
+      .filter((project) => project.endsWith(".csproj") || project.endsWith(".fsproj") || project.endsWith(".vbproj"))
+  ).sort();
+}
+
+function dotnetSolutionFilterProjectList(value: unknown): string[] | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const solution = (value as { solution?: unknown }).solution;
+  if (!solution || typeof solution !== "object") return undefined;
+  const projects = (solution as { projects?: unknown }).projects;
+  return Array.isArray(projects) && projects.every((project) => typeof project === "string") ? projects : undefined;
+}
+
+function dotnetSolutionFilterReason(filter: DotnetSolutionFilter, changedProjects: DotnetProject[], command: "build" | "test"): string {
+  const examples = changedProjects.slice(0, 3).map((project) => project.path).join(", ");
+  const suffix = changedProjects.length > 3 ? ", ..." : "";
+  if (command === "test") {
+    return `${filter.path} covers affected .NET test projects for changed ${examples}${suffix}, so tests should run through that solution filter.`;
+  }
+  return `${filter.path} covers affected .NET projects for changed ${examples}${suffix}, so the filtered solution should still compile.`;
 }
 
 function addDotnetProjectPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): number {

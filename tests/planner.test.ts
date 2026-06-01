@@ -501,6 +501,51 @@ describe("planCommands", () => {
     ]);
   });
 
+  it("selects narrow .NET solution filters that cover affected test projects", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "src", "Api"), { recursive: true });
+    mkdirSync(join(root, "src", "Admin"), { recursive: true });
+    mkdirSync(join(root, "tests", "Api.Tests"), { recursive: true });
+    writeFileSync(join(root, "App.sln"), "Microsoft Visual Studio Solution File\n");
+    writeFileSync(
+      join(root, "Api.slnf"),
+      JSON.stringify({ solution: { path: "App.sln", projects: ["src/Api/Api.csproj", "tests/Api.Tests/Api.Tests.csproj"] } }, null, 2)
+    );
+    writeFileSync(
+      join(root, "All.slnf"),
+      JSON.stringify(
+        { solution: { path: "App.sln", projects: ["src/Api/Api.csproj", "src/Admin/Admin.csproj", "tests/Api.Tests/Api.Tests.csproj"] } },
+        null,
+        2
+      )
+    );
+    writeFileSync(join(root, "src", "Api", "Api.csproj"), '<Project Sdk="Microsoft.NET.Sdk" />\n');
+    writeFileSync(join(root, "src", "Admin", "Admin.csproj"), '<Project Sdk="Microsoft.NET.Sdk" />\n');
+    writeFileSync(
+      join(root, "tests", "Api.Tests", "Api.Tests.csproj"),
+      [
+        '<Project Sdk="Microsoft.NET.Sdk">',
+        "  <ItemGroup>",
+        '    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />',
+        '    <ProjectReference Include="../../src/Api/Api.csproj" />',
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "src/Api/Service.cs", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", manifestPath: "App.sln" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["dotnet test Api.slnf", "dotnet build Api.slnf --no-restore"]);
+    expect(commands.map((command) => command.reason)).toEqual([
+      "Api.slnf covers affected .NET test projects for changed src/Api/Api.csproj, so tests should run through that solution filter.",
+      "Api.slnf covers affected .NET projects for changed src/Api/Api.csproj, so the filtered solution should still compile."
+    ]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }
