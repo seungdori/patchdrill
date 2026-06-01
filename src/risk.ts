@@ -391,6 +391,11 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
   }
 
+  for (const finding of workflowContextFindings(options.addedLines ?? [])) {
+    risk += severityWeights[finding.severity];
+    findings.push(finding);
+  }
+
   for (const rule of options.policy?.rules ?? []) {
     for (const file of changedFiles) {
       if (!matchesPolicyRule(file.path, rule)) continue;
@@ -569,6 +574,44 @@ function workflowUsesUnpinnedAction(content: string): boolean {
   if (refSeparator < 0) return true;
   const ref = action.slice(refSeparator + 1);
   return !/^[a-f0-9]{40}$/i.test(ref);
+}
+
+function workflowContextFindings(addedLines: AddedLine[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  const workflowLinesByFile = new Map<string, AddedLine[]>();
+  for (const line of addedLines) {
+    if (!line.file.startsWith(".github/workflows/")) continue;
+    const lines = workflowLinesByFile.get(line.file) ?? [];
+    lines.push(line);
+    workflowLinesByFile.set(line.file, lines);
+  }
+
+  for (const [file, lines] of workflowLinesByFile) {
+    if (!lines.some((line) => /^\s*pull_request_target\s*:/i.test(line.content))) continue;
+    if (!lines.some((line) => workflowUsesCheckoutAction(line.content))) continue;
+    const headCheckoutLine = lines.find((line) => workflowUsesPullRequestHeadContext(line.content));
+    if (!headCheckoutLine) continue;
+    findings.push({
+      ruleId: "workflow.pull-request-target-head-checkout",
+      severity: "critical",
+      title: "pull_request_target checks out pull request head",
+      detail: "New workflow lines combine the privileged pull_request_target event with checkout of attacker-controlled pull request code.",
+      file,
+      line: headCheckoutLine.line,
+      remediation: "Use pull_request for untrusted code, or keep pull_request_target jobs on trusted base code with least-privilege permissions.",
+      tags: ["ci", "github-actions", "supply-chain", "trust-boundary"]
+    });
+  }
+
+  return findings;
+}
+
+function workflowUsesCheckoutAction(content: string): boolean {
+  return /^\s*(?:-\s*)?uses\s*:\s*['"]?actions\/checkout@[^'"\s#]+['"]?\s*(?:#.*)?$/i.test(content);
+}
+
+function workflowUsesPullRequestHeadContext(content: string): boolean {
+  return /\${{\s*(github\.event\.pull_request\.head\.(sha|ref|repo\.full_name)|github\.head_ref)\s*}}/i.test(content);
 }
 
 function clamp(value: number, min: number, max: number): number {

@@ -65,3 +65,4 @@
 - Added Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 - Added .NET project-aware test, build, and ASP.NET Core publish plans using `ProjectReference` relationships.
 - Added Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
+- Added context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.

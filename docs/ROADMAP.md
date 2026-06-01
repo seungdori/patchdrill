@@ -73,12 +73,13 @@
 - Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
 - .NET project-aware test, build, and ASP.NET Core publish planning through `ProjectReference` relationships.
 - Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
+- Context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
-- Workflow context-aware hardening for `pull_request_target` checkout patterns.
+- Workflow whole-file context analysis for pre-existing privileged triggers and checkout steps.
 - FastAPI route-level changed-test targeting.
 - .NET solution filter and central package management targeting.
 - Android flavor-dimension parsing beyond explicit variant source sets.
