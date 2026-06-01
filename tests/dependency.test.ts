@@ -803,6 +803,91 @@ golang.org/x/sync v0.7.0 h1:syncnew
     ]);
   });
 
+  it("reports go.mod require additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-go-mod-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGoMod(
+      root,
+      `
+module example.com/app
+
+go 1.22
+
+require github.com/gin-gonic/gin v1.9.0
+
+require (
+  github.com/acme/old v0.1.0
+  golang.org/x/crypto v0.20.0 // indirect
+  golang.org/x/text v0.14.0
+)
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGoMod(
+      root,
+      `
+module example.com/app
+
+go 1.22
+
+require github.com/gin-gonic/gin v1.10.0
+
+require (
+  golang.org/x/crypto v0.20.0 // indirect
+  golang.org/x/sync v0.7.0 // indirect
+  golang.org/x/text v0.15.0
+)
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "go.mod", status: "modified", additions: 7, deletions: 7, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "go.mod",
+        packageName: "github.com/acme/old",
+        packagePath: "require",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "v0.1.0"
+      },
+      {
+        file: "go.mod",
+        packageName: "github.com/gin-gonic/gin",
+        packagePath: "require",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "v1.9.0",
+        after: "v1.10.0"
+      },
+      {
+        file: "go.mod",
+        packageName: "golang.org/x/sync",
+        packagePath: "require.indirect",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "v0.7.0"
+      },
+      {
+        file: "go.mod",
+        packageName: "golang.org/x/text",
+        packagePath: "require",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "v0.14.0",
+        after: "v0.15.0"
+      }
+    ]);
+  });
+
   it("reports Cargo.lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-cargo-lock-"));
     tempDirs.push(root);
@@ -1469,6 +1554,10 @@ function writeBunLock(root: string, contents: string): void {
 
 function writeGoSum(root: string, contents: string): void {
   writeFileSync(join(root, "go.sum"), contents.trimStart());
+}
+
+function writeGoMod(root: string, contents: string): void {
+  writeFileSync(join(root, "go.mod"), contents.trimStart());
 }
 
 function writeCargoLock(root: string, contents: string): void {

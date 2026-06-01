@@ -714,6 +714,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags go.mod as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "go.mod", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "go.mod"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

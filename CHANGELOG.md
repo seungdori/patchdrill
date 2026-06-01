@@ -28,7 +28,7 @@
 - Added `pyproject.toml` PEP 621 and Poetry dependency diff summaries.
 - Added `pnpm-lock.yaml` dependency diff summaries.
 - Added `yarn.lock` dependency diff summaries.
-- Added `go.sum` dependency diff summaries.
+- Added `go.mod` and `go.sum` dependency diff summaries.
 - Added `Cargo.lock` dependency diff summaries.
 - Added `requirements.txt` dependency diff summaries.
 - Added `poetry.lock` dependency diff summaries.

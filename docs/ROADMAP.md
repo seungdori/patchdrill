@@ -31,6 +31,7 @@
 - npm `package-lock.json` dependency diff summaries.
 - `pnpm-lock.yaml` dependency diff summaries.
 - `yarn.lock` dependency diff summaries.
+- `go.mod` dependency diff summaries.
 - `go.sum` dependency diff summaries.
 - `Cargo.lock` dependency diff summaries.
 - `requirements.txt` dependency diff summaries.

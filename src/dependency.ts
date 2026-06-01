@@ -69,6 +69,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("go.mod"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGoMod(pair.before);
+    const after = parseGoMod(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parsePackageLock(pair.before);
@@ -317,6 +324,41 @@ function parseGemfile(value: string | undefined): Map<string, ManifestDependency
       spec: gem.spec,
       packagePath,
       dependencyType
+    });
+  }
+
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseGoMod(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  let inRequireBlock = false;
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("//")) continue;
+    if (/^require\s*\($/.test(line)) {
+      inRequireBlock = true;
+      continue;
+    }
+    if (inRequireBlock && line === ")") {
+      inRequireBlock = false;
+      continue;
+    }
+
+    const requireLine = inRequireBlock ? line : /^require\s+(.+)$/.exec(line)?.[1];
+    if (!requireLine) continue;
+    const parsed = parseGoModRequireLine(requireLine);
+    if (!parsed) continue;
+    const packagePath = parsed.indirect ? "require.indirect" : "require";
+    const key = `${packagePath}:${parsed.name.toLowerCase()}`;
+    packages.set(key, {
+      name: parsed.name,
+      key,
+      spec: parsed.version,
+      packagePath,
+      dependencyType: "dependencies"
     });
   }
 
@@ -766,6 +808,14 @@ function readGemfileStringArguments(value: string): string[] {
 
 function gemfileDependencyType(groups: string[]): DependencyChange["dependencyType"] {
   return groups.some((group) => group === "development" || group === "test") ? "devDependencies" : "dependencies";
+}
+
+function parseGoModRequireLine(line: string): { name: string; version: string; indirect: boolean } | undefined {
+  const indirect = /\s+\/\/\s*indirect\b/.test(line);
+  const cleaned = line.replace(/\s+\/\/.*$/, "").trim();
+  const [name, version] = cleaned.split(/\s+/);
+  if (!name || !version || name === ")") return undefined;
+  return { name, version, indirect };
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {
