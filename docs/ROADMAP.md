@@ -100,6 +100,7 @@
 - `--run-optional` CLI and GitHub Action opt-in for executing optional verification commands.
 - `patchdrill demo` plus committed synchronized first-run sample Markdown, JSON, SARIF, and HTML artifacts.
 - GitHub Actions annotation output and documentation for findings.
+- Generated workflow templates that explicitly enable annotations and step summaries.
 
 ## Contribution Targets
 

@@ -345,6 +345,9 @@ jobs:
           html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
+          annotations: "true"
+          step-summary: "true"
+          pr-comment: "true"
           # Optional: newline-separated previous JSON reports downloaded from earlier artifacts.
           # dashboard-history: |
           #   reports/patchdrill-previous.json

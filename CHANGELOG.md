@@ -84,3 +84,4 @@
 - Added cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
 - Added `patchdrill demo` and committed synchronized sample Markdown, JSON, SARIF, and HTML artifacts.
 - Added GitHub Actions annotation output for findings through `--github-annotations` and the composite Action, with dedicated documentation.
+- Updated generated workflows to make annotations and step summaries explicit.

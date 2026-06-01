@@ -57,6 +57,8 @@ jobs:
           html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
+          annotations: "true"
+          step-summary: "true"
           pr-comment: "true"
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v4

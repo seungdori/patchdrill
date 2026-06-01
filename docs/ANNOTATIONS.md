@@ -15,6 +15,8 @@ The composite Action enables annotations by default:
     annotations: "true"
 ```
 
+`patchdrill init` writes this setting explicitly in the generated workflow so reviewers can see that Checks annotations are part of the default PR evidence.
+
 These annotations appear in the Actions log and Checks UI. They are meant for immediate review attention, while Markdown, JSON, SARIF, and HTML remain the durable artifacts.
 
 ## Severity Mapping
