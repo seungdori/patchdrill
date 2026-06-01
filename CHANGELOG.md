@@ -82,4 +82,4 @@
 - Added Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
 - Added nested local reusable workflow loading so changed workflows expose downstream reusable workflow secret and OIDC trust-boundary findings.
 - Added cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
-- Added `patchdrill demo` for generating sample Markdown, JSON, SARIF, and HTML artifacts without a git repository.
+- Added `patchdrill demo` and committed synchronized sample Markdown, JSON, SARIF, and HTML artifacts.

@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { createDemoReport } from "../src/demo.js";
+import { renderHtml, renderMarkdown, renderSarif } from "../src/report.js";
 
 describe("documentation examples", () => {
   it("keeps the example report risk and confidence scores consistent", () => {
@@ -15,6 +17,15 @@ describe("documentation examples", () => {
 
     expect(readme).toContain("![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)");
     expect(existsSync("docs/assets/patchdrill-demo.svg")).toBe(true);
+  });
+
+  it("keeps committed demo artifacts synchronized with the demo renderer", () => {
+    const report = createDemoReport();
+
+    expect(readFileSync("examples/demo/patchdrill-demo.md", "utf8")).toBe(renderMarkdown(report));
+    expect(readFileSync("examples/demo/patchdrill-demo.json", "utf8")).toBe(`${JSON.stringify(report, null, 2)}\n`);
+    expect(readFileSync("examples/demo/patchdrill-demo.sarif", "utf8")).toBe(renderSarif(report));
+    expect(readFileSync("examples/demo/patchdrill-demo.html", "utf8")).toBe(renderHtml(report));
   });
 });
 

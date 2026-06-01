@@ -133,6 +133,8 @@ Create a static dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+See committed demo outputs in [examples/demo](examples/demo).
+
 Add repeated JSON reports in oldest-to-newest order to show run trends:
 
 ```bash

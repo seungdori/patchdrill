@@ -1,0 +1,212 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "PatchDrill",
+          "informationUri": "https://github.com/seungdori/patchdrill",
+          "rules": [
+            {
+              "id": "file.high-impact-area",
+              "name": "High-impact product area changed",
+              "shortDescription": {
+                "text": "High-impact product area changed"
+              },
+              "help": {
+                "text": "Require owner review and targeted session regression evidence."
+              },
+              "properties": {
+                "severity": "high",
+                "tags": [
+                  "security",
+                  "auth"
+                ]
+              }
+            },
+            {
+              "id": "file.migration-review",
+              "name": "Data migration review required",
+              "shortDescription": {
+                "text": "Data migration review required"
+              },
+              "help": {
+                "text": "Attach dry-run, rollback, and data-owner approval notes."
+              },
+              "properties": {
+                "severity": "high",
+                "tags": [
+                  "data",
+                  "migration"
+                ]
+              }
+            },
+            {
+              "id": "workflow.oidc-environment",
+              "name": "OIDC deployment job should use a protected environment",
+              "shortDescription": {
+                "text": "OIDC deployment job should use a protected environment"
+              },
+              "help": {
+                "text": "Attach a protected environment or document why this job cannot deploy."
+              },
+              "properties": {
+                "severity": "medium",
+                "tags": [
+                  "ci",
+                  "oidc",
+                  "supply-chain"
+                ]
+              }
+            },
+            {
+              "id": "dependency.lockfile-update",
+              "name": "Dependency lockfile changed",
+              "shortDescription": {
+                "text": "Dependency lockfile changed"
+              },
+              "help": {
+                "text": "Review release notes and verify transitive dependency impact."
+              },
+              "properties": {
+                "severity": "low",
+                "tags": [
+                  "dependencies"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "status": "warn",
+            "riskScore": 58,
+            "confidenceScore": 82
+          }
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "file.high-impact-area",
+          "level": "error",
+          "message": {
+            "text": "High-impact product area changed: Authentication/session code changed and needs strong proof before merge. Remediation: Require owner review and targeted session regression evidence."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api/src/auth/session.ts"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "tags": [
+              "security",
+              "auth"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "1c19812835c3b6a32febeb8bc84e02b7e9a6bd1f08faa2620792e86cfdb43c77"
+          }
+        },
+        {
+          "ruleId": "file.migration-review",
+          "level": "error",
+          "message": {
+            "text": "Data migration review required: A database migration can alter production session state. Remediation: Attach dry-run, rollback, and data-owner approval notes."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "packages/db/migrations/20260601090000_add_session_rotation.sql"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "tags": [
+              "data",
+              "migration"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "517cc738ebb6373a8d9a18433a9847d407081b6aadffca765e1a48c463bc3f72"
+          }
+        },
+        {
+          "ruleId": "workflow.oidc-environment",
+          "level": "warning",
+          "message": {
+            "text": "OIDC deployment job should use a protected environment: A deployment workflow can mint cloud credentials without an explicit GitHub environment gate. Remediation: Attach a protected environment or document why this job cannot deploy."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".github/workflows/deploy.yml"
+                },
+                "region": {
+                  "startLine": 34
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "tags": [
+              "ci",
+              "oidc",
+              "supply-chain"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "692be4ec45a108b67c0b7e1d216632b78d8cb583fbe9db406e1025897a0f5c49"
+          }
+        },
+        {
+          "ruleId": "dependency.lockfile-update",
+          "level": "note",
+          "message": {
+            "text": "Dependency lockfile changed: @acme/session-store changed from 1.8.2 to 1.9.0. Remediation: Review release notes and verify transitive dependency impact."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package-lock.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "low",
+            "tags": [
+              "dependencies"
+            ]
+          },
+          "partialFingerprints": {
+            "patchdrillFinding": "29cf41858f87c2c56206c74272589b0baef70cfd09811e798c2e64577d83ded9"
+          }
+        }
+      ]
+    }
+  ]
+}
