@@ -110,6 +110,21 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Android Gradle projects separately from Java", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "settings.gradle"), "pluginManagement { repositories { google(); gradlePluginPortal() } }\ninclude ':app'\n");
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(join(root, "app", "build.gradle"), "plugins { id 'com.android.application' }\n");
+
+    expect(discoverProjectSignals(root)).toEqual([
+      {
+        ecosystem: "android",
+        manifestPath: "app/build.gradle"
+      }
+    ]);
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

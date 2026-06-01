@@ -66,6 +66,7 @@
 - Swift Package Manager verification planning.
 - Django framework detection with `manage.py test` and `manage.py check` planning.
 - Spring Boot framework detection with Gradle `bootJar` packaging plans.
+- Android Gradle detection with debug unit test, assemble, and lint planning.
 
 ## Contribution Targets
 
@@ -73,7 +74,7 @@ PatchDrill needs real-world fixtures from:
 
 - FastAPI route-aware verification planning.
 - .NET services.
-- Android Gradle projects.
+- Android variant-aware task narrowing.
 - Bazel/Buck changed-target narrowing beyond graph-wide defaults.
 - Mobile apps.
 - Xcode scheme-aware iOS and macOS app test planning.

@@ -61,6 +61,15 @@ describe("types", () => {
 
     expect(signal.framework).toBe("spring-boot");
   });
+
+  it("includes Android as a supported project ecosystem", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "android",
+      manifestPath: "app/build.gradle"
+    };
+
+    expect(signal.ecosystem).toBe("android");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

@@ -50,6 +50,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
     if (signal.ecosystem === "java" && touchesJava(paths, root)) {
       addJavaPlans(plans, root, signal);
     }
+    if (signal.ecosystem === "android" && touchesAndroid(paths)) {
+      addAndroidPlans(plans, root);
+    }
     if (signal.ecosystem === "ruby" && touches(paths, [".rb", "Gemfile", "Gemfile.lock"])) {
       pushUnique(plans, {
         id: "ruby-tests",
@@ -212,6 +215,34 @@ function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal)
       required: false
     });
   }
+}
+
+function addAndroidPlans(plans: CommandPlan[], root: string): void {
+  const gradle = gradleCommand(root);
+  pushUnique(plans, {
+    id: "android-unit-tests",
+    label: "Android unit tests",
+    command: `${gradle} testDebugUnitTest`,
+    reason: "Android source, resources, manifest, or Gradle metadata changed, so debug JVM unit tests should run through the Android Gradle plugin.",
+    ecosystem: "android",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "android-assemble-debug",
+    label: "Android debug assemble",
+    command: `${gradle} assembleDebug`,
+    reason: "Android changes should still compile resources, manifests, generated code, and the debug artifact.",
+    ecosystem: "android",
+    required: false
+  });
+  pushUnique(plans, {
+    id: "android-lint-debug",
+    label: "Android lint",
+    command: `${gradle} lintDebug`,
+    reason: "Android lint catches manifest, resource, API, and lifecycle issues that normal JVM tests can miss.",
+    ecosystem: "android",
+    required: false
+  });
 }
 
 type JavaBuildTool = "maven" | "gradle";
@@ -776,6 +807,15 @@ function touchesJava(paths: string[], root: string): boolean {
     touches(paths, [".java", ".kt", ".kts", "pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle.properties"]) ||
     paths.some((path) => path === "gradlew" || path === "mvnw" || path.startsWith("gradle/")) ||
     existsSync(join(root, "mvnw"))
+  );
+}
+
+function touchesAndroid(paths: string[]): boolean {
+  return paths.some((path) =>
+    touches([path], [".java", ".kt", ".kts", ".xml", ".gradle", ".gradle.kts", "AndroidManifest.xml", "gradle.properties", "settings.gradle", "settings.gradle.kts"]) ||
+    path === "gradlew" ||
+    path.startsWith("gradle/") ||
+    /(^|\/)(res|assets|aidl|jni|cpp)\//.test(path)
   );
 }
 

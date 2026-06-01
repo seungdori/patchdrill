@@ -122,6 +122,17 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["java-tests"]);
   });
 
+  it("adds Android Gradle verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "app/src/main/res/values/strings.xml", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "android", manifestPath: "app/build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle testDebugUnitTest", "gradle assembleDebug", "gradle lintDebug"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-unit-tests"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

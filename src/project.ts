@@ -44,8 +44,16 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       workspacePackages: discoverGoWorkspacePackages(root)
     });
   }
+  const androidManifestPath = findAndroidManifestPath(root);
+  if (androidManifestPath) {
+    add({
+      ecosystem: "android",
+      manifestPath: androidManifestPath
+    });
+  }
+
   const javaManifestPath = firstExisting(root, ["pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]);
-  if (javaManifestPath) {
+  if (javaManifestPath && !androidManifestPath) {
     const framework = detectJavaFramework(root);
     add({
       ecosystem: "java",
@@ -152,6 +160,26 @@ function pythonManifestMentionsPackage(root: string, path: string, packageName: 
 function detectJavaFramework(root: string): ProjectSignal["framework"] | undefined {
   if (javaManifestMentions(root, ["org.springframework.boot", "spring-boot-starter"])) return "spring-boot";
   return undefined;
+}
+
+function findAndroidManifestPath(root: string): string | undefined {
+  const directBuildFile = ["settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts", "app/build.gradle", "app/build.gradle.kts"].find((path) =>
+    androidManifestMentions(root, path)
+  );
+  if (directBuildFile) return directBuildFile;
+  const nestedBuildFile = findFileMentioning(root, ["build.gradle", "build.gradle.kts"], ["com.android.application", "com.android.library"], 3);
+  if (nestedBuildFile) return nestedBuildFile;
+  if (hasFileNamed(root, "AndroidManifest.xml", 5)) return "AndroidManifest.xml";
+  return undefined;
+}
+
+function androidManifestMentions(root: string, path: string): boolean {
+  try {
+    const content = readFileSync(join(root, path), "utf8").toLowerCase();
+    return content.includes("com.android.application") || content.includes("com.android.library") || content.includes("com.android.tools.build:gradle");
+  } catch {
+    return false;
+  }
 }
 
 function javaManifestMentions(root: string, needles: string[]): boolean {
@@ -579,6 +607,32 @@ function findBuckManifestPath(root: string): string | undefined {
 
 function hasFileNamed(root: string, fileName: string, maxDepth: number): boolean {
   return walkForFileName(root, fileName, maxDepth, 0);
+}
+
+function findFileMentioning(root: string, fileNames: string[], needles: string[], maxDepth: number): string | undefined {
+  return walkForFileMentioning(root, root, new Set(fileNames), needles.map((needle) => needle.toLowerCase()), maxDepth, 0);
+}
+
+function walkForFileMentioning(directory: string, root: string, fileNames: Set<string>, needles: string[], maxDepth: number, depth: number): string | undefined {
+  if (depth > maxDepth) return undefined;
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    for (const entry of entries) {
+      if (shouldSkipDirectory(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.isFile() && fileNames.has(entry.name)) {
+        const content = readFileSync(path, "utf8").toLowerCase();
+        if (needles.some((needle) => content.includes(needle))) return relativePath(root, path);
+      }
+      if (entry.isDirectory()) {
+        const match = walkForFileMentioning(path, root, fileNames, needles, maxDepth, depth + 1);
+        if (match) return match;
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 function walkForFileName(directory: string, fileName: string, maxDepth: number, depth: number): boolean {

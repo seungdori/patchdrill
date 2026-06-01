@@ -58,3 +58,4 @@
 - Added Swift Package Manager detection with `swift test` and `swift build` plans.
 - Added Python framework metadata for Django/FastAPI and Django-specific `manage.py` verification plans.
 - Added Spring Boot framework detection, Gradle fallback commands, and `bootJar` packaging plans.
+- Added Android Gradle detection with debug unit test, assemble, and lint verification plans.

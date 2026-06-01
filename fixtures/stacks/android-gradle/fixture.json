@@ -1,0 +1,33 @@
+{
+  "name": "android-gradle",
+  "expectedEcosystems": ["android"],
+  "expectedCommands": ["./gradlew testDebugUnitTest", "./gradlew assembleDebug", "./gradlew lintDebug"],
+  "baseFiles": [
+    {
+      "path": "settings.gradle",
+      "lines": ["pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }", "dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }", "rootProject.name = 'MobileApp'", "include ':app'"]
+    },
+    {
+      "path": "app/build.gradle",
+      "lines": ["plugins {", "    id 'com.android.application'", "}", "android {", "    namespace 'com.acme.mobile'", "    compileSdk 35", "    defaultConfig { applicationId 'com.acme.mobile'; minSdk 24; targetSdk 35; versionCode 1; versionName '1.0' }", "}"]
+    },
+    {
+      "path": "gradlew",
+      "lines": ["#!/bin/sh", "echo gradle wrapper"]
+    },
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "lines": ["<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" />"]
+    },
+    {
+      "path": "app/src/main/java/com/acme/mobile/MainActivity.kt",
+      "lines": ["package com.acme.mobile", "class MainActivity { fun ready() = true }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "app/src/main/res/values/strings.xml",
+      "lines": ["<resources>", "    <string name=\"app_name\">PatchDrill Mobile</string>", "</resources>"]
+    }
+  ]
+}

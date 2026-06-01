@@ -34,6 +34,7 @@ export interface ProjectSignal {
     | "rust"
     | "go"
     | "java"
+    | "android"
     | "ruby"
     | "php"
     | "dotnet"
