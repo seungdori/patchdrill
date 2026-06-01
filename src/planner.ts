@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
+import { basename, dirname, join, normalize, relative } from "node:path";
 import type { ChangedFile, CommandPlan, ProjectSignal, WorkspacePackage } from "./types.js";
 
 export interface PlannerOptions {
@@ -75,7 +75,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       });
     }
     if (signal.ecosystem === "dotnet" && touchesDotnet(paths)) {
-      addDotnetPlans(plans, signal);
+      addDotnetPlans(plans, root, paths, signal);
     }
     if (signal.ecosystem === "swift" && touches(paths, [".swift", "Package.swift", "Package.resolved"])) {
       pushUnique(plans, {
@@ -143,7 +143,22 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   return plans;
 }
 
-function addDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
+interface DotnetProject {
+  name: string;
+  path: string;
+  directory: string;
+  references: string[];
+  isTestProject: boolean;
+  isAspNetCoreProject: boolean;
+}
+
+function addDotnetPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
+  const targetedPlanCount = addDotnetProjectPlans(plans, root, paths, signal);
+  if (targetedPlanCount > 0) return;
+  addRootDotnetPlans(plans, signal);
+}
+
+function addRootDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
   pushUnique(plans, {
     id: "dotnet-tests",
     label: ".NET tests",
@@ -169,6 +184,153 @@ function addDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
       ecosystem: "dotnet",
       required: false
     });
+  }
+}
+
+function addDotnetProjectPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): number {
+  if (touchesDotnetRootMetadata(paths)) return 0;
+  const projects = discoverDotnetProjects(root);
+  if (projects.length === 0) return 0;
+  const changedProjects = dotnetChangedProjects(projects, paths);
+  if (changedProjects.length === 0) return 0;
+  const affectedProjects = includeDownstreamDotnetProjects(changedProjects, projects);
+  const affectedProjectPaths = new Set(affectedProjects.map((project) => project.path));
+  const testProjects = affectedProjects.filter((project) => project.isTestProject);
+  if (testProjects.length === 0) return 0;
+
+  let added = 0;
+  for (const project of testProjects) {
+    const before = plans.length;
+    pushUnique(plans, {
+      id: `dotnet-project-${slug(project.name)}-tests`,
+      label: `${project.name} .NET tests`,
+      command: `dotnet test ${quoteShell(project.path)}`,
+      reason: dotnetProjectReason(project, changedProjects, affectedProjectPaths, "test"),
+      ecosystem: "dotnet",
+      required: true,
+      packageName: project.name,
+      packagePath: project.directory
+    });
+    if (plans.length > before) added += 1;
+  }
+
+  for (const project of affectedProjects.filter((candidate) => !candidate.isTestProject)) {
+    const before = plans.length;
+    pushUnique(plans, {
+      id: `dotnet-project-${slug(project.name)}-build`,
+      label: `${project.name} .NET build`,
+      command: `dotnet build ${quoteShell(project.path)} --no-restore`,
+      reason: dotnetProjectReason(project, changedProjects, affectedProjectPaths, "build"),
+      ecosystem: "dotnet",
+      required: false,
+      packageName: project.name,
+      packagePath: project.directory
+    });
+    if (plans.length > before) added += 1;
+  }
+
+  if (signal.framework === "aspnet-core") {
+    for (const project of affectedProjects.filter((candidate) => candidate.isAspNetCoreProject && !candidate.isTestProject)) {
+      const before = plans.length;
+      pushUnique(plans, {
+        id: `aspnet-core-project-${slug(project.name)}-publish`,
+        label: `${project.name} ASP.NET Core publish`,
+        command: `dotnet publish ${quoteShell(project.path)} --no-restore`,
+        reason: "Changed ASP.NET Core projects should still produce publishable deployment artifacts.",
+        ecosystem: "dotnet",
+        required: false,
+        packageName: project.name,
+        packagePath: project.directory
+      });
+      if (plans.length > before) added += 1;
+    }
+  }
+
+  return added;
+}
+
+function discoverDotnetProjects(root: string): DotnetProject[] {
+  return findFilesWithExtension(root, ".csproj", 5).map((path) => {
+    const content = readText(root, path);
+    const explicitName = firstXmlValue(content, "AssemblyName") ?? firstXmlValue(content, "RootNamespace");
+    const name = explicitName ?? basename(path, ".csproj");
+    return {
+      name,
+      path,
+      directory: parentPath(path) || ".",
+      references: dotnetProjectReferences(root, path, content),
+      isTestProject: isDotnetTestProject(path, content),
+      isAspNetCoreProject: isDotnetAspNetCoreProject(content)
+    };
+  });
+}
+
+function dotnetChangedProjects(projects: DotnetProject[], paths: string[]): DotnetProject[] {
+  return projects.filter((project) => paths.some((path) => path === project.path || path.startsWith(`${project.directory === "." ? "" : `${project.directory}/`}`)));
+}
+
+function includeDownstreamDotnetProjects(changedProjects: DotnetProject[], projects: DotnetProject[]): DotnetProject[] {
+  const affected = new Map<string, DotnetProject>();
+  const queue = [...changedProjects];
+  for (const project of changedProjects) affected.set(project.path, project);
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const changedProject = queue[index];
+    if (!changedProject) continue;
+    for (const candidate of projects) {
+      if (affected.has(candidate.path)) continue;
+      if (!candidate.references.includes(changedProject.path)) continue;
+      affected.set(candidate.path, candidate);
+      queue.push(candidate);
+    }
+  }
+
+  return [...affected.values()].sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function dotnetProjectReason(project: DotnetProject, changedProjects: DotnetProject[], affectedProjectPaths: Set<string>, command: "build" | "test"): string {
+  if (changedProjects.some((changedProject) => changedProject.path === project.path)) {
+    return `${project.name} changed under ${project.directory}, so its .NET ${command} should run.`;
+  }
+  const upstream = project.references.find((reference) => affectedProjectPaths.has(reference));
+  return `${project.name} references ${upstream ?? "a changed project"}, so its .NET ${command} should run.`;
+}
+
+function dotnetProjectReferences(root: string, projectPath: string, content: string): string[] {
+  const references: string[] = [];
+  const projectDir = dirname(projectPath);
+  const pattern = /<ProjectReference\b[^>]*\bInclude=["']([^"']+)["'][^>]*>/gi;
+  for (const match of content.matchAll(pattern)) {
+    const includePath = match[1];
+    if (!includePath) continue;
+    const normalizedIncludePath = normalize(includePath.replaceAll("\\", "/"));
+    const normalizedPath = toRepoPath(relative(root, join(root, projectDir, normalizedIncludePath)));
+    if (normalizedPath.endsWith(".csproj")) references.push(normalizedPath);
+  }
+  return [...new Set(references)].sort();
+}
+
+function isDotnetTestProject(path: string, content: string): boolean {
+  return (
+    /(^|[./_-])tests?([./_-]|$)/i.test(path) ||
+    /Microsoft\.NET\.Test\.Sdk|xunit|NUnit|MSTest\.TestFramework/i.test(content)
+  );
+}
+
+function isDotnetAspNetCoreProject(content: string): boolean {
+  return /Sdk=["']Microsoft\.NET\.Sdk\.Web["']|Microsoft\.AspNetCore/i.test(content);
+}
+
+function firstXmlValue(content: string, tagName: string): string | undefined {
+  const match = new RegExp(`<${tagName}>\\s*([^<]+?)\\s*</${tagName}>`, "i").exec(content);
+  return match?.[1]?.trim() || undefined;
+}
+
+function readText(root: string, path: string): string {
+  try {
+    return readFileSync(join(root, path), "utf8");
+  } catch {
+    return "";
   }
 }
 
@@ -911,6 +1073,10 @@ function touchesDotnet(paths: string[]): boolean {
   return touches(paths, [".cs", ".fs", ".vb", ".csproj", ".fsproj", ".vbproj", ".sln", ".props", ".targets", "global.json", "Directory.Build.props", "Directory.Build.targets"]);
 }
 
+function touchesDotnetRootMetadata(paths: string[]): boolean {
+  return paths.some((path) => path === "global.json" || path.endsWith(".sln") || path === "Directory.Build.props" || path === "Directory.Build.targets");
+}
+
 function touchesAndroid(paths: string[]): boolean {
   return paths.some((path) =>
     touches([path], [".java", ".kt", ".kts", ".xml", ".gradle", ".gradle.kts", "AndroidManifest.xml", "gradle.properties", "settings.gradle", "settings.gradle.kts"]) ||
@@ -971,6 +1137,32 @@ function nearestManifestRoot(root: string, path: string, manifestNames: string[]
   }
 }
 
+function findFilesWithExtension(root: string, extension: string, maxDepth: number): string[] {
+  const results: string[] = [];
+  const ignoredDirs = new Set([".git", "node_modules", "dist", "coverage", ".next", "bin", "obj"]);
+
+  const walk = (relativeDir: string, depth: number) => {
+    if (depth > maxDepth) return;
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(join(root, relativeDir), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!ignoredDirs.has(entry.name)) walk(relativePath, depth + 1);
+      } else if (entry.isFile() && entry.name.endsWith(extension)) {
+        results.push(relativePath);
+      }
+    }
+  };
+
+  walk("", 0);
+  return results.sort();
+}
+
 function kubernetesManifestRoot(path: string): string {
   const segments = path.split("/");
   const anchorIndex = segments.findIndex((segment) => ["k8s", "kubernetes", "manifests"].includes(segment.toLowerCase()));
@@ -981,6 +1173,10 @@ function kubernetesManifestRoot(path: string): string {
 function parentPath(path: string): string {
   const slash = path.lastIndexOf("/");
   return slash >= 0 ? path.slice(0, slash) : "";
+}
+
+function toRepoPath(path: string): string {
+  return path.replaceAll("\\", "/");
 }
 
 function isSourceLikePath(path: string): boolean {

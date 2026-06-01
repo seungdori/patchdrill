@@ -227,6 +227,59 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["dotnet-tests"]);
   });
 
+  it("targets .NET test projects that reference changed projects", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "src", "Api"), { recursive: true });
+    mkdirSync(join(root, "tests", "Api.Tests"), { recursive: true });
+    writeFileSync(
+      join(root, "src", "Api", "Api.csproj"),
+      [
+        '<Project Sdk="Microsoft.NET.Sdk.Web">',
+        "  <PropertyGroup>",
+        "    <TargetFramework>net8.0</TargetFramework>",
+        "  </PropertyGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+    writeFileSync(
+      join(root, "tests", "Api.Tests", "Api.Tests.csproj"),
+      [
+        '<Project Sdk="Microsoft.NET.Sdk">',
+        "  <ItemGroup>",
+        '    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />',
+        '    <ProjectReference Include="..\\..\\src\\Api\\Api.csproj" />',
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "src/Api/Service.cs", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", framework: "aspnet-core", manifestPath: "src/Api/Api.csproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "dotnet test tests/Api.Tests/Api.Tests.csproj",
+      "dotnet build src/Api/Api.csproj --no-restore",
+      "dotnet publish src/Api/Api.csproj --no-restore"
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["dotnet-project-api-tests-tests"]);
+  });
+
+  it("falls back to root .NET verification when solution metadata changes", () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "App.sln"), "Microsoft Visual Studio Solution File\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "App.sln", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", manifestPath: "App.sln" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["dotnet test", "dotnet build --no-restore"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

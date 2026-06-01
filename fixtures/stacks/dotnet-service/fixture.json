@@ -1,7 +1,7 @@
 {
   "name": "dotnet-service",
   "expectedEcosystems": ["dotnet"],
-  "expectedCommands": ["dotnet test", "dotnet build --no-restore"],
+  "expectedCommands": ["dotnet test tests/Api.Tests/Api.Tests.csproj", "dotnet build src/Api/Api.csproj --no-restore"],
   "baseFiles": [
     {
       "path": "global.json",
@@ -10,6 +10,17 @@
     {
       "path": "src/Api/Api.csproj",
       "lines": ["<Project Sdk=\"Microsoft.NET.Sdk\">", "  <PropertyGroup>", "    <TargetFramework>net8.0</TargetFramework>", "  </PropertyGroup>", "</Project>"]
+    },
+    {
+      "path": "tests/Api.Tests/Api.Tests.csproj",
+      "lines": [
+        "<Project Sdk=\"Microsoft.NET.Sdk\">",
+        "  <ItemGroup>",
+        "    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"17.10.0\" />",
+        "    <ProjectReference Include=\"../../src/Api/Api.csproj\" />",
+        "  </ItemGroup>",
+        "</Project>"
+      ]
     },
     {
       "path": "src/Api/Service.cs",

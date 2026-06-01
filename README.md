@@ -193,7 +193,7 @@ PatchDrill detects project shape from repo manifests:
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |
 | Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml` | `./gradlew testDebugUnitTest`, `./gradlew assembleDebug`, `./gradlew lintDebug` |
-| .NET | `global.json`, `.sln`, `.csproj` | `dotnet test`, `dotnet build --no-restore`, `dotnet publish --no-restore` |
+| .NET | `global.json`, `.sln`, `.csproj`, `ProjectReference` | `dotnet test tests/Api.Tests/Api.Tests.csproj`, `dotnet build src/Api/Api.csproj --no-restore`, `dotnet publish src/Api/Api.csproj --no-restore` |
 | Swift | `Package.swift`, `Package.resolved`, `*.swift` | `swift test`, `swift build` |
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`, Compose files | `docker build .` |
