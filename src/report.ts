@@ -195,7 +195,6 @@ export function renderMarkdown(report: PatchReport): string {
   lines.push("");
   lines.push("- Treat this report as triage evidence, not a replacement for review.");
   lines.push("- High-impact areas still need human sign-off even when automated commands pass.");
-  lines.push("");
 
   return `${lines.join("\n")}\n`;
 }
@@ -298,6 +297,8 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
   const failedCommands = report.commandResults.filter((result) => result.exitCode !== 0);
+  const runTrend = htmlRunTrend(options.history);
+  const commandResultsHtml = htmlCommandResults(report);
   const context = [
     report.base ? `Base: ${report.base}` : undefined,
     report.head ? `Head: ${report.head}` : undefined,
@@ -701,7 +702,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
       ${htmlMetric("Added lines", report.addedLines, "Diff lines scanned for risky content.")}
     </div>
 
-    ${htmlRunTrend(options.history)}
+${runTrend}
 
     <section>
       <div class="section-heading">
@@ -719,7 +720,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
       ${htmlVerificationPlan(report)}
     </section>
 
-    ${htmlCommandResults(report)}
+${commandResultsHtml}
 
     <section>
       <h2>Changed Files</h2>
@@ -911,11 +912,11 @@ function stableFingerprint(ruleId: string, file: string, line: number, title: st
 }
 
 function htmlMetric(label: string, value: string | number, detail: string, extra = ""): string {
+  const extraLine = extra ? `\n        ${extra}` : "";
   return `<div class="metric">
         <div class="metric-label">${escapeHtml(label)}</div>
         <div class="metric-value">${escapeHtml(value)}</div>
-        <div class="metric-detail">${escapeHtml(detail)}</div>
-        ${extra}
+        <div class="metric-detail">${escapeHtml(detail)}</div>${extraLine}
       </div>`;
 }
 
@@ -933,6 +934,9 @@ function htmlFindings(report: PatchReport): string {
           .map((finding) => {
             const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "Global";
             const tags = finding.tags && finding.tags.length > 0 ? `Tags: ${finding.tags.join(", ")}` : undefined;
+            const remediation = finding.remediation ? `\n          <p class="muted">Remediation: ${escapeHtml(finding.remediation)}</p>` : "";
+            const rule = finding.ruleId ? `\n          <p class="muted">Rule: <code>${escapeHtml(finding.ruleId)}</code></p>` : "";
+            const tagLine = tags ? `\n          <p class="muted">${escapeHtml(tags)}</p>` : "";
             return `<article class="finding">
           <div class="finding-head">
             <div>
@@ -941,10 +945,7 @@ function htmlFindings(report: PatchReport): string {
             </div>
             <span class="pill ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</span>
           </div>
-          <p>${escapeHtml(finding.detail)}</p>
-          ${finding.remediation ? `<p class="muted">Remediation: ${escapeHtml(finding.remediation)}</p>` : ""}
-          ${finding.ruleId ? `<p class="muted">Rule: <code>${escapeHtml(finding.ruleId)}</code></p>` : ""}
-          ${tags ? `<p class="muted">${escapeHtml(tags)}</p>` : ""}
+          <p>${escapeHtml(finding.detail)}</p>${remediation}${rule}${tagLine}
         </article>`;
           })
           .join("")}
@@ -976,15 +977,15 @@ function htmlCommandResults(report: PatchReport): string {
         ${report.commandResults
           .map((result) => {
             const tone = result.exitCode === 0 ? "pass" : "fail";
+            const stdout = result.stdout.trim() ? `\n            <h3>stdout</h3><pre>${escapeHtml(result.stdout.trim())}</pre>` : "";
+            const stderr = result.stderr.trim() ? `\n            <h3>stderr</h3><pre>${escapeHtml(result.stderr.trim())}</pre>` : "";
             return `<details>
           <summary>
             <span><code>${escapeHtml(result.command)}</code></span>
             <span class="pill ${tone}">exit ${escapeHtml(result.exitCode)}</span>
           </summary>
           <div class="command-body">
-            <p class="muted">Duration: ${escapeHtml(result.durationMs)}ms${result.timedOut ? " | Timed out: yes" : ""}</p>
-            ${result.stdout.trim() ? `<h3>stdout</h3><pre>${escapeHtml(result.stdout.trim())}</pre>` : ""}
-            ${result.stderr.trim() ? `<h3>stderr</h3><pre>${escapeHtml(result.stderr.trim())}</pre>` : ""}
+            <p class="muted">Duration: ${escapeHtml(result.durationMs)}ms${result.timedOut ? " | Timed out: yes" : ""}</p>${stdout}${stderr}
           </div>
         </details>`;
           })

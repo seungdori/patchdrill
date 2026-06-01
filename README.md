@@ -93,6 +93,12 @@ Try the output without a git repository:
 patchdrill demo --output patchdrill-demo
 ```
 
+Try the failure case that shows what PatchDrill catches in an agent-authored PR:
+
+```bash
+patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+```
+
 Analyze uncommitted work:
 
 ```bash
@@ -212,7 +218,7 @@ patchdrill init --policy-pack regulated
 ```text
 patchdrill scan [options]
 patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
-patchdrill demo [--output <directory>]
+patchdrill demo [--scenario <name>] [--output <directory>]
 patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
@@ -245,6 +251,7 @@ Options:
 | `--quiet` | Only use exit code. |
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
+| `--scenario <name>` | Demo scenario for `patchdrill demo`: `review-ready`, `risky-agent-pr`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema/dashboard file or demo artifact directory. |
 

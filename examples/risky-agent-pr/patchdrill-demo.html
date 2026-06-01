@@ -381,37 +381,37 @@
           <p class="eyebrow">PatchDrill</p>
           <h1>Verification Dashboard</h1>
         </div>
-        <span class="pill warn">WARN</span>
+        <span class="pill fail">FAIL</span>
       </div>
-      <div class="context"><span>Base: origin/main</span><span>Head: feature/auth-session-hardening</span><span>Generated: 2026-06-01T00:00:00.000Z</span><span>Schema: 1</span></div>
+      <div class="context"><span>Base: origin/main</span><span>Head: agent/refactor-release-flow</span><span>Generated: 2026-06-01T00:00:00.000Z</span><span>Schema: 1</span></div>
     </header>
 
     <div class="grid metrics">
       <div class="metric">
         <div class="metric-label">Risk score</div>
-        <div class="metric-value">58/100</div>
+        <div class="metric-value">94/100</div>
         <div class="metric-detail">Higher means more review proof is needed.</div>
-        <div class="bar" aria-hidden="true"><span class="warn" style="width: 58%;"></span></div>
+        <div class="bar" aria-hidden="true"><span class="fail" style="width: 94%;"></span></div>
       </div>
       <div class="metric">
         <div class="metric-label">Confidence</div>
-        <div class="metric-value">82/100</div>
+        <div class="metric-value">21/100</div>
         <div class="metric-detail">Higher means stronger verification evidence.</div>
-        <div class="bar" aria-hidden="true"><span class="pass" style="width: 82%;"></span></div>
+        <div class="bar" aria-hidden="true"><span class="pass" style="width: 21%;"></span></div>
       </div>
       <div class="metric">
         <div class="metric-label">Changed files</div>
-        <div class="metric-value">5</div>
-        <div class="metric-detail">+186 / -42</div>
+        <div class="metric-value">7</div>
+        <div class="metric-detail">+312 / -74</div>
       </div>
       <div class="metric">
         <div class="metric-label">Required checks</div>
-        <div class="metric-value">3</div>
-        <div class="metric-detail">1 optional, 0 failed</div>
+        <div class="metric-value">4</div>
+        <div class="metric-detail">1 optional, 1 failed</div>
       </div>
       <div class="metric">
         <div class="metric-label">Added lines</div>
-        <div class="metric-value">186</div>
+        <div class="metric-value">312</div>
         <div class="metric-detail">Diff lines scanned for risky content.</div>
       </div>
     </div>
@@ -421,45 +421,69 @@
     <section>
       <div class="section-heading">
         <h2>Findings</h2>
-        <span class="pill warn">4 total</span>
+        <span class="pill fail">6 total</span>
       </div>
       <div class="finding-list">
         <article class="finding">
           <div class="finding-head">
             <div>
+              <div class="finding-title">Privileged workflow checks out pull request code</div>
+              <div class="metric-detail">.github/workflows/release.yml:19</div>
+            </div>
+            <span class="pill critical">critical</span>
+          </div>
+          <p>A pull_request_target workflow can run untrusted pull request code while write tokens or repository secrets are available.</p>
+          <p class="muted">Remediation: Use pull_request for untrusted code, remove PR-head checkout, or split the privileged publishing step behind an environment gate.</p>
+          <p class="muted">Rule: <code>workflow.pull-request-target-head-checkout</code></p>
+          <p class="muted">Tags: ci, supply-chain, github-actions</p>
+        </article><article class="finding">
+          <div class="finding-head">
+            <div>
+              <div class="finding-title">Secret-looking value added</div>
+              <div class="metric-detail">.env.example:8</div>
+            </div>
+            <span class="pill critical">critical</span>
+          </div>
+          <p>A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body.</p>
+          <p class="muted">Remediation: Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as &lt;redacted&gt;.</p>
+          <p class="muted">Rule: <code>secret.added</code></p>
+          <p class="muted">Tags: secret, credentials</p>
+        </article><article class="finding">
+          <div class="finding-head">
+            <div>
+              <div class="finding-title">Agent instructions changed</div>
+              <div class="metric-detail">AGENTS.md</div>
+            </div>
+            <span class="pill high">high</span>
+          </div>
+          <p>Repository-level coding-agent instructions changed in the same patch as release and billing code.</p>
+          <p class="muted">Remediation: Review instruction changes separately and require maintainer approval before agent-visible rules change.</p>
+          <p class="muted">Rule: <code>agent.instructions-changed</code></p>
+          <p class="muted">Tags: agentic-coding, review</p>
+        </article><article class="finding">
+          <div class="finding-head">
+            <div>
               <div class="finding-title">High-impact product area changed</div>
-              <div class="metric-detail">apps/api/src/auth/session.ts</div>
+              <div class="metric-detail">apps/web/src/billing/checkout.ts</div>
             </div>
             <span class="pill high">high</span>
           </div>
-          <p>Authentication/session code changed and needs strong proof before merge.</p>
-          <p class="muted">Remediation: Require owner review and targeted session regression evidence.</p>
+          <p>Billing checkout and webhook code changed, which can affect payment capture, refunds, and entitlement state.</p>
+          <p class="muted">Remediation: Attach targeted billing regression tests and owner approval.</p>
           <p class="muted">Rule: <code>file.high-impact-area</code></p>
-          <p class="muted">Tags: security, auth</p>
+          <p class="muted">Tags: billing, payments</p>
         </article><article class="finding">
           <div class="finding-head">
             <div>
-              <div class="finding-title">Data migration review required</div>
-              <div class="metric-detail">packages/db/migrations/20260601090000_add_session_rotation.sql</div>
-            </div>
-            <span class="pill high">high</span>
-          </div>
-          <p>A database migration can alter production session state.</p>
-          <p class="muted">Remediation: Attach dry-run, rollback, and data-owner approval notes.</p>
-          <p class="muted">Rule: <code>file.migration-review</code></p>
-          <p class="muted">Tags: data, migration</p>
-        </article><article class="finding">
-          <div class="finding-head">
-            <div>
-              <div class="finding-title">OIDC deployment job should use a protected environment</div>
-              <div class="metric-detail">.github/workflows/deploy.yml:34</div>
+              <div class="finding-title">Source changed without matching test changes</div>
+              <div class="metric-detail">apps/web/src/billing/checkout.ts</div>
             </div>
             <span class="pill medium">medium</span>
           </div>
-          <p>A deployment workflow can mint cloud credentials without an explicit GitHub environment gate.</p>
-          <p class="muted">Remediation: Attach a protected environment or document why this job cannot deploy.</p>
-          <p class="muted">Rule: <code>workflow.oidc-environment</code></p>
-          <p class="muted">Tags: ci, oidc, supply-chain</p>
+          <p>Billing source files changed, but no matching checkout or webhook test files changed.</p>
+          <p class="muted">Remediation: Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates.</p>
+          <p class="muted">Rule: <code>test.missing-source-match</code></p>
+          <p class="muted">Tags: tests</p>
         </article><article class="finding">
           <div class="finding-head">
             <div>
@@ -468,7 +492,7 @@
             </div>
             <span class="pill low">low</span>
           </div>
-          <p>@acme/session-store changed from 1.8.2 to 1.9.0.</p>
+          <p>@acme/payments changed from 4.2.0 to 4.3.0.</p>
           <p class="muted">Remediation: Review release notes and verify transitive dependency impact.</p>
           <p class="muted">Rule: <code>dependency.lockfile-update</code></p>
           <p class="muted">Tags: dependencies</p>
@@ -479,7 +503,7 @@
     <section>
       <div class="section-heading">
         <h2>Verification Plan</h2>
-        <span class="pill info">3 required, 1 optional</span>
+        <span class="pill info">4 required, 1 optional</span>
       </div>
       <div class="table-wrap">
         <table>
@@ -487,7 +511,7 @@
             <tr><th>Required</th><th>Package</th><th>Command</th><th>Reason</th></tr>
           </thead>
           <tbody>
-            <tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run typecheck --filter=@acme/api</code></td><td>Auth source changed in @acme/api.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run test --filter=@acme/api</code></td><td>Session behavior changed and matching tests exist.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>pnpm run test:contracts</code></td><td>Repository policy requires contract tests for auth/session changes.</td></tr><tr><td><span class="pill info">no</span></td><td></td><td><code>pnpm run test:e2e</code></td><td>Optional browser coverage is available for session rotation flows.</td></tr>
+            <tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run lint --workspace @acme/web</code></td><td>Billing and release-adjacent source files changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm test --workspace @acme/web</code></td><td>Billing checkout and webhook behavior changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run build --workspace @acme/web</code></td><td>Production web package changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>gh workflow view release.yml --yaml</code></td><td>Repository policy requires human-readable workflow evidence when privileged release jobs change.</td></tr><tr><td><span class="pill info">no</span></td><td>@acme/web</td><td><code>npm run test:e2e -- --grep billing</code></td><td>Optional browser coverage is available for checkout flows.</td></tr>
           </tbody>
         </table>
       </div>
@@ -496,37 +520,38 @@
 <section>
       <div class="section-heading">
         <h2>Command Results</h2>
-        <span class="pill pass">0 failed</span>
+        <span class="pill fail">1 failed</span>
       </div>
       <div class="grid">
         <details>
           <summary>
-            <span><code>pnpm exec turbo run typecheck --filter=@acme/api</code></span>
+            <span><code>npm run lint --workspace @acme/web</code></span>
             <span class="pill pass">exit 0</span>
           </summary>
           <div class="command-body">
-            <p class="muted">Duration: 8421ms</p>
-            <h3>stdout</h3><pre>@acme/api:typecheck: cache miss, executing
-@acme/api:typecheck: ok</pre>
+            <p class="muted">Duration: 6240ms</p>
+            <h3>stdout</h3><pre>@acme/web lint: ok</pre>
           </div>
         </details><details>
           <summary>
-            <span><code>pnpm exec turbo run test --filter=@acme/api</code></span>
-            <span class="pill pass">exit 0</span>
+            <span><code>npm test --workspace @acme/web</code></span>
+            <span class="pill fail">exit 1</span>
           </summary>
           <div class="command-body">
-            <p class="muted">Duration: 12544ms</p>
-            <h3>stdout</h3><pre>@acme/api:test: 42 tests passed</pre>
+            <p class="muted">Duration: 11982ms</p>
+            <h3>stdout</h3><pre>CheckoutService.test.ts: 38 passed, 1 failed
+Webhook signature regression: expected 401, received 200</pre>
+            <h3>stderr</h3><pre>FAIL apps/web/src/billing/webhook.test.ts &gt; rejects unsigned webhook payloads</pre>
           </div>
         </details><details>
           <summary>
-            <span><code>pnpm run test:contracts</code></span>
+            <span><code>npm run build --workspace @acme/web</code></span>
             <span class="pill pass">exit 0</span>
           </summary>
           <div class="command-body">
-            <p class="muted">Duration: 15038ms</p>
-            <h3>stdout</h3><pre>contract auth-session passed
-contract deployment-claims passed</pre>
+            <p class="muted">Duration: 18321ms</p>
+            <h3>stdout</h3><pre>vite v6.0.0 building for production...
+built in 4.2s</pre>
           </div>
         </details>
       </div>
@@ -540,7 +565,7 @@ contract deployment-claims passed</pre>
             <tr><th>File</th><th>Status</th><th>+/-</th><th>Owners</th></tr>
           </thead>
           <tbody>
-            <tr><td>apps/api/src/auth/session.ts</td><td>modified</td><td>+54 / -16</td><td>@acme/security</td></tr><tr><td>apps/api/src/auth/session.test.ts</td><td>modified</td><td>+48 / -4</td><td>@acme/security</td></tr><tr><td>packages/db/migrations/20260601090000_add_session_rotation.sql</td><td>added</td><td>+38 / -0</td><td>@acme/data</td></tr><tr><td>.github/workflows/deploy.yml</td><td>modified</td><td>+22 / -12</td><td>@acme/platform</td></tr><tr><td>package-lock.json</td><td>modified</td><td>+24 / -10</td><td></td></tr>
+            <tr><td>AGENTS.md</td><td>modified</td><td>+28 / -4</td><td>@acme/platform</td></tr><tr><td>.github/workflows/release.yml</td><td>modified</td><td>+44 / -18</td><td>@acme/platform</td></tr><tr><td>apps/web/src/billing/checkout.ts</td><td>modified</td><td>+83 / -21</td><td>@acme/billing</td></tr><tr><td>apps/web/src/billing/webhook.ts</td><td>modified</td><td>+39 / -15</td><td>@acme/billing</td></tr><tr><td>scripts/deploy.sh</td><td>modified</td><td>+27 / -8</td><td>@acme/platform</td></tr><tr><td>.env.example</td><td>modified</td><td>+3 / -0</td><td>@acme/platform</td></tr><tr><td>package-lock.json</td><td>modified</td><td>+88 / -8</td><td></td></tr>
           </tbody>
         </table>
       </div>
@@ -555,7 +580,7 @@ contract deployment-claims passed</pre>
             <tr><th>Ecosystem</th><th>Framework</th><th>Entrypoint</th><th>Manifest</th><th>Package manager</th><th>Task runner</th></tr>
           </thead>
           <tbody>
-            <tr><td>node</td><td></td><td></td><td>package.json</td><td>pnpm</td><td>turbo</td></tr><tr><td>github-actions</td><td></td><td></td><td>.github/workflows/deploy.yml</td><td></td><td></td></tr>
+            <tr><td>node</td><td></td><td></td><td>package.json</td><td>npm</td><td></td></tr><tr><td>github-actions</td><td></td><td></td><td>.github/workflows/release.yml</td><td></td><td></td></tr>
           </tbody>
         </table>
       </div>
@@ -565,7 +590,7 @@ contract deployment-claims passed</pre>
         <div class="detail-list">
         <div class="detail-item">
           <div class="detail-label">Policy</div>
-          <div class="detail-value">.patchdrill.yml (2 rules)</div>
+          <div class="detail-value">.patchdrill.yml (4 rules)</div>
         </div><div class="detail-item">
           <div class="detail-label">Policy commands</div>
           <div class="detail-value">1 required, 1 optional</div>
@@ -577,19 +602,19 @@ contract deployment-claims passed</pre>
           <div class="detail-value">69</div>
         </div><div class="detail-item">
           <div class="detail-label">Code owners</div>
-          <div class="detail-value">.github/CODEOWNERS (3 rules)</div>
+          <div class="detail-value">.github/CODEOWNERS (4 rules)</div>
         </div><div class="detail-item">
           <div class="detail-label">Baseline</div>
-          <div class="detail-value">previous-patchdrill-report.json</div>
+          <div class="detail-value">main-patchdrill-report.json</div>
         </div><div class="detail-item">
           <div class="detail-label">Risk delta</div>
-          <div class="detail-value">+14</div>
+          <div class="detail-value">+63</div>
         </div><div class="detail-item">
           <div class="detail-label">Findings delta</div>
-          <div class="detail-value">2 new, 1 resolved, 3 unchanged</div>
+          <div class="detail-value">6 new, 0 resolved, 1 unchanged</div>
         </div><div class="detail-item">
           <div class="detail-label">Affected packages</div>
-          <div class="detail-value">@acme/api</div>
+          <div class="detail-value">@acme/web</div>
         </div>
       </div>
       </section>
@@ -603,7 +628,7 @@ contract deployment-claims passed</pre>
             <tr><th>File</th><th>Type</th><th>Package</th><th>Path</th><th>Change</th><th>Before</th><th>After</th></tr>
           </thead>
           <tbody>
-            <tr><td>package-lock.json</td><td>lockfile</td><td>@acme/session-store</td><td>node_modules/@acme/session-store</td><td>updated</td><td>1.8.2</td><td>1.9.0</td></tr>
+            <tr><td>package-lock.json</td><td>lockfile</td><td>yaml</td><td>node_modules/yaml</td><td>updated</td><td>2.8.1</td><td>2.9.0</td></tr><tr><td>package-lock.json</td><td>lockfile</td><td>@acme/payments</td><td>node_modules/@acme/payments</td><td>updated</td><td>4.2.0</td><td>4.3.0</td></tr>
           </tbody>
         </table>
       </div>

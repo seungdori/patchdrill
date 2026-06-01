@@ -12,3 +12,9 @@ patchdrill demo --output examples/demo
 - `patchdrill-demo.html`: self-contained static dashboard.
 
 The test suite keeps these committed examples synchronized with the demo renderer.
+
+For a fail-state demo that shows privileged workflow, secret, agent-instruction, and billing-test findings:
+
+```bash
+patchdrill demo --scenario risky-agent-pr --output examples/risky-agent-pr
+```

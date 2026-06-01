@@ -1,6 +1,18 @@
 import type { PatchReport } from "./types.js";
 
-export function createDemoReport(): PatchReport {
+export const demoScenarioNames = ["review-ready", "risky-agent-pr"] as const;
+
+export type DemoScenario = (typeof demoScenarioNames)[number];
+
+export function isDemoScenario(value: string): value is DemoScenario {
+  return demoScenarioNames.includes(value as DemoScenario);
+}
+
+export function createDemoReport(scenario: DemoScenario = "review-ready"): PatchReport {
+  return scenario === "risky-agent-pr" ? createRiskyAgentPrReport() : createReviewReadyReport();
+}
+
+function createReviewReadyReport(): PatchReport {
   return {
     schemaVersion: "1",
     generatedAt: "2026-06-01T00:00:00.000Z",
@@ -215,6 +227,268 @@ export function createDemoReport(): PatchReport {
         exitCode: 0,
         durationMs: 15038,
         stdout: "contract auth-session passed\ncontract deployment-claims passed\n",
+        stderr: ""
+      }
+    ]
+  };
+}
+
+function createRiskyAgentPrReport(): PatchReport {
+  return {
+    schemaVersion: "1",
+    generatedAt: "2026-06-01T00:00:00.000Z",
+    root: "/demo/checkout",
+    base: "origin/main",
+    head: "agent/refactor-release-flow",
+    summary: {
+      status: "fail",
+      riskScore: 94,
+      confidenceScore: 21,
+      changedFileCount: 7,
+      additions: 312,
+      deletions: 74,
+      requiredCommandCount: 4,
+      failedCommandCount: 1
+    },
+    changedFiles: [
+      { path: "AGENTS.md", status: "modified", additions: 28, deletions: 4, binary: false, owners: ["@acme/platform"] },
+      { path: ".github/workflows/release.yml", status: "modified", additions: 44, deletions: 18, binary: false, owners: ["@acme/platform"] },
+      { path: "apps/web/src/billing/checkout.ts", status: "modified", additions: 83, deletions: 21, binary: false, owners: ["@acme/billing"] },
+      { path: "apps/web/src/billing/webhook.ts", status: "modified", additions: 39, deletions: 15, binary: false, owners: ["@acme/billing"] },
+      { path: "scripts/deploy.sh", status: "modified", additions: 27, deletions: 8, binary: false, owners: ["@acme/platform"] },
+      { path: ".env.example", status: "modified", additions: 3, deletions: 0, binary: false, owners: ["@acme/platform"] },
+      { path: "package-lock.json", status: "modified", additions: 88, deletions: 8, binary: false }
+    ],
+    addedLines: 312,
+    projectSignals: [
+      {
+        ecosystem: "node",
+        manifestPath: "package.json",
+        packageManager: "npm",
+        scripts: {
+          lint: "eslint .",
+          test: "vitest run",
+          build: "vite build",
+          "test:e2e": "playwright test"
+        },
+        workspacePackages: [
+          {
+            name: "@acme/web",
+            projectName: "web",
+            path: "apps/web",
+            scripts: {
+              lint: "eslint src",
+              test: "vitest run",
+              build: "vite build"
+            },
+            targets: ["lint", "test", "build"],
+            dependencies: ["@acme/payments"]
+          },
+          {
+            name: "@acme/payments",
+            projectName: "payments",
+            path: "packages/payments",
+            scripts: {
+              test: "vitest run"
+            },
+            targets: ["test"]
+          }
+        ]
+      },
+      {
+        ecosystem: "github-actions",
+        manifestPath: ".github/workflows/release.yml"
+      }
+    ],
+    affectedPackages: [
+      {
+        name: "@acme/web",
+        projectName: "web",
+        path: "apps/web",
+        scripts: {
+          lint: "eslint src",
+          test: "vitest run",
+          build: "vite build"
+        },
+        targets: ["lint", "test", "build"],
+        dependencies: ["@acme/payments"]
+      }
+    ],
+    dependencyChanges: [
+      {
+        file: "package-lock.json",
+        packageName: "yaml",
+        packagePath: "node_modules/yaml",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "2.8.1",
+        after: "2.9.0"
+      },
+      {
+        file: "package-lock.json",
+        packageName: "@acme/payments",
+        packagePath: "node_modules/@acme/payments",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "4.2.0",
+        after: "4.3.0"
+      }
+    ],
+    policy: {
+      path: ".patchdrill.yml",
+      ignoredPaths: ["dist/**", "coverage/**"],
+      failOn: "high",
+      maxRisk: 69,
+      ruleCount: 4,
+      requiredCommandCount: 1,
+      optionalCommandCount: 1
+    },
+    codeOwners: {
+      path: ".github/CODEOWNERS",
+      ruleCount: 4
+    },
+    baseline: {
+      path: "main-patchdrill-report.json",
+      previousStatus: "warn",
+      currentStatus: "fail",
+      previousRiskScore: 31,
+      currentRiskScore: 94,
+      riskDelta: 63,
+      newFindingCount: 6,
+      resolvedFindingCount: 0,
+      unchangedFindingCount: 1
+    },
+    findings: [
+      {
+        ruleId: "workflow.pull-request-target-head-checkout",
+        severity: "critical",
+        title: "Privileged workflow checks out pull request code",
+        detail: "A pull_request_target workflow can run untrusted pull request code while write tokens or repository secrets are available.",
+        file: ".github/workflows/release.yml",
+        line: 19,
+        remediation: "Use pull_request for untrusted code, remove PR-head checkout, or split the privileged publishing step behind an environment gate.",
+        tags: ["ci", "supply-chain", "github-actions"]
+      },
+      {
+        ruleId: "secret.added",
+        severity: "critical",
+        title: "Secret-looking value added",
+        detail: "A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body.",
+        file: ".env.example",
+        line: 8,
+        remediation: "Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as <redacted>.",
+        tags: ["secret", "credentials"]
+      },
+      {
+        ruleId: "agent.instructions-changed",
+        severity: "high",
+        title: "Agent instructions changed",
+        detail: "Repository-level coding-agent instructions changed in the same patch as release and billing code.",
+        file: "AGENTS.md",
+        remediation: "Review instruction changes separately and require maintainer approval before agent-visible rules change.",
+        tags: ["agentic-coding", "review"]
+      },
+      {
+        ruleId: "file.high-impact-area",
+        severity: "high",
+        title: "High-impact product area changed",
+        detail: "Billing checkout and webhook code changed, which can affect payment capture, refunds, and entitlement state.",
+        file: "apps/web/src/billing/checkout.ts",
+        remediation: "Attach targeted billing regression tests and owner approval.",
+        tags: ["billing", "payments"]
+      },
+      {
+        ruleId: "test.missing-source-match",
+        severity: "medium",
+        title: "Source changed without matching test changes",
+        detail: "Billing source files changed, but no matching checkout or webhook test files changed.",
+        file: "apps/web/src/billing/checkout.ts",
+        remediation: "Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates.",
+        tags: ["tests"]
+      },
+      {
+        ruleId: "dependency.lockfile-update",
+        severity: "low",
+        title: "Dependency lockfile changed",
+        detail: "@acme/payments changed from 4.2.0 to 4.3.0.",
+        file: "package-lock.json",
+        remediation: "Review release notes and verify transitive dependency impact.",
+        tags: ["dependencies"]
+      }
+    ],
+    commandPlan: [
+      {
+        id: "node-web-lint",
+        label: "Lint affected web package",
+        command: "npm run lint --workspace @acme/web",
+        reason: "Billing and release-adjacent source files changed.",
+        ecosystem: "node",
+        required: true,
+        packageName: "@acme/web",
+        packagePath: "apps/web"
+      },
+      {
+        id: "node-web-test",
+        label: "Test affected web package",
+        command: "npm test --workspace @acme/web",
+        reason: "Billing checkout and webhook behavior changed.",
+        ecosystem: "node",
+        required: true,
+        packageName: "@acme/web",
+        packagePath: "apps/web"
+      },
+      {
+        id: "node-web-build",
+        label: "Build affected web package",
+        command: "npm run build --workspace @acme/web",
+        reason: "Production web package changed.",
+        ecosystem: "node",
+        required: true,
+        packageName: "@acme/web",
+        packagePath: "apps/web"
+      },
+      {
+        id: "policy-release-review",
+        label: "Release workflow review",
+        command: "gh workflow view release.yml --yaml",
+        reason: "Repository policy requires human-readable workflow evidence when privileged release jobs change.",
+        ecosystem: "github-actions",
+        required: true
+      },
+      {
+        id: "node-web-e2e",
+        label: "Billing browser e2e",
+        command: "npm run test:e2e -- --grep billing",
+        reason: "Optional browser coverage is available for checkout flows.",
+        ecosystem: "node",
+        required: false,
+        packageName: "@acme/web",
+        packagePath: "apps/web"
+      }
+    ],
+    commandResults: [
+      {
+        id: "node-web-lint",
+        command: "npm run lint --workspace @acme/web",
+        exitCode: 0,
+        durationMs: 6240,
+        stdout: "@acme/web lint: ok\n",
+        stderr: ""
+      },
+      {
+        id: "node-web-test",
+        command: "npm test --workspace @acme/web",
+        exitCode: 1,
+        durationMs: 11982,
+        stdout: "CheckoutService.test.ts: 38 passed, 1 failed\nWebhook signature regression: expected 401, received 200\n",
+        stderr: "FAIL apps/web/src/billing/webhook.test.ts > rejects unsigned webhook payloads\n"
+      },
+      {
+        id: "node-web-build",
+        command: "npm run build --workspace @acme/web",
+        exitCode: 0,
+        durationMs: 18321,
+        stdout: "vite v6.0.0 building for production...\nbuilt in 4.2s\n",
         stderr: ""
       }
     ]

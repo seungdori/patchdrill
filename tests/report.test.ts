@@ -173,6 +173,17 @@ describe("report", () => {
     expect(html).toContain("feature");
   });
 
+  it("renders Markdown and HTML without trailing whitespace", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 0 });
+    const markdown = renderMarkdown(report);
+    const html = renderHtml(report);
+
+    expect(markdown).toMatch(/\n$/);
+    expect(markdown).not.toMatch(/\n\n$/);
+    expect(linesWithTrailingWhitespace(markdown)).toEqual([]);
+    expect(linesWithTrailingWhitespace(html)).toEqual([]);
+  });
+
   it("renders a compact Markdown summary for PR surfaces", () => {
     const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 32, failedCommandCount: 1, head: "feature" });
     report.baseline = {
@@ -230,6 +241,10 @@ describe("report", () => {
     );
   });
 });
+
+function linesWithTrailingWhitespace(value: string): string[] {
+  return value.split("\n").filter((line) => /[ \t]+$/.test(line));
+}
 
 function htmlReport(overrides: { generatedAt: string; riskScore: number; failedCommandCount: number; head?: string }): PatchReport {
   return {

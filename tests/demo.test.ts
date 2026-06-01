@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { demoCommand, parseArgs } from "../src/cli.js";
-import { createDemoReport } from "../src/demo.js";
+import { createDemoReport, demoScenarioNames } from "../src/demo.js";
 import { readSchema } from "../src/schema.js";
 
 const tempDirs: string[] = [];
@@ -20,11 +20,16 @@ describe("demo", () => {
   it("produces a schema-valid representative report", () => {
     const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
     const validate = ajv.compile(JSON.parse(readSchema("report")));
-    const report = createDemoReport();
 
-    expect(validate(report)).toBe(true);
-    expect(report.commandPlan.some((command) => !command.required)).toBe(true);
-    expect(report.summary.failedCommandCount).toBe(0);
+    for (const scenario of demoScenarioNames) {
+      const report = createDemoReport(scenario);
+      expect(validate(report), scenario).toBe(true);
+      expect(report.commandPlan.some((command) => !command.required)).toBe(true);
+    }
+
+    expect(createDemoReport("review-ready").summary.failedCommandCount).toBe(0);
+    expect(createDemoReport("risky-agent-pr").summary.status).toBe("fail");
+    expect(createDemoReport("risky-agent-pr").findings.some((finding) => finding.severity === "critical")).toBe(true);
   });
 
   it("writes Markdown, JSON, SARIF, and HTML artifacts", () => {
@@ -45,5 +50,20 @@ describe("demo", () => {
     expect(JSON.parse(readFileSync(sarif, "utf8"))).toMatchObject({ version: "2.1.0" });
     expect(readFileSync(html, "utf8")).toContain("Verification Dashboard");
     expect(log).toHaveBeenCalledWith(`Wrote demo artifacts to ${output}`);
+  });
+
+  it("writes risky-agent-pr demo artifacts", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-demo-"));
+    tempDirs.push(root);
+    const output = join(root, "artifacts");
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    demoCommand(parseArgs(["demo", "--scenario", "risky-agent-pr", "--output", output]));
+
+    const markdown = readFileSync(join(output, "patchdrill-demo.md"), "utf8");
+    const report = JSON.parse(readFileSync(join(output, "patchdrill-demo.json"), "utf8")) as ReturnType<typeof createDemoReport>;
+    expect(markdown).toContain("Privileged workflow checks out pull request code");
+    expect(report.summary.status).toBe("fail");
+    expect(report.summary.failedCommandCount).toBe(1);
   });
 });

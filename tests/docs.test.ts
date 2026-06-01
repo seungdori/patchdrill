@@ -27,6 +27,15 @@ describe("documentation examples", () => {
     expect(readFileSync("examples/demo/patchdrill-demo.sarif", "utf8")).toBe(renderSarif(report));
     expect(readFileSync("examples/demo/patchdrill-demo.html", "utf8")).toBe(renderHtml(report));
   });
+
+  it("keeps committed risky PR demo artifacts synchronized with the demo renderer", () => {
+    const report = createDemoReport("risky-agent-pr");
+
+    expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.md", "utf8")).toBe(renderMarkdown(report));
+    expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.json", "utf8")).toBe(`${JSON.stringify(report, null, 2)}\n`);
+    expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.sarif", "utf8")).toBe(renderSarif(report));
+    expect(readFileSync("examples/risky-agent-pr/patchdrill-demo.html", "utf8")).toBe(renderHtml(report));
+  });
 });
 
 function readScore(contents: string, label: string): number {

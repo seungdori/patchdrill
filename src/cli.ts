@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createDemoReport } from "./demo.js";
+import { createDemoReport, demoScenarioNames, isDemoScenario, type DemoScenario } from "./demo.js";
 import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest, type EvidenceArtifactKind, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
@@ -152,7 +152,8 @@ export function dashboardCommand(parsed: ParsedArgs): void {
 }
 
 export function demoCommand(parsed: ParsedArgs): void {
-  const report = createDemoReport();
+  const scenario = readDemoScenario(flagString(parsed, "scenario"));
+  const report = createDemoReport(scenario);
   const output = flagString(parsed, "output");
   if (!output) {
     console.log(renderMarkdown(report).trimEnd());
@@ -368,6 +369,7 @@ function takesValue(flag: string): boolean {
     "max-output-chars",
     "command-timeout-ms",
     "policy-pack",
+    "scenario",
     "output"
   ].includes(flag);
 }
@@ -428,6 +430,14 @@ function optionalEvidenceArtifact(kind: EvidenceArtifactKind, path: string | und
   return path ? [{ kind, path, contents: readFileSync(path, "utf8") }] : [];
 }
 
+function readDemoScenario(value: string | undefined): DemoScenario {
+  if (value === undefined) return "review-ready";
+  if (!isDemoScenario(value)) {
+    throw new Error(`Invalid demo scenario "${value}". Expected one of ${demoScenarioNames.join(", ")}.`);
+  }
+  return value;
+}
+
 function readVersion(): string {
   const packagePath = join(new URL("..", import.meta.url).pathname, "package.json");
   if (!existsSync(packagePath)) return "0.1.0";
@@ -445,7 +455,7 @@ function printHelp(): void {
 Usage:
   patchdrill scan [options]
   patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
-  patchdrill demo [--output <directory>]
+  patchdrill demo [--scenario <name>] [--output <directory>]
   patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
@@ -480,6 +490,7 @@ Options:
   --policy            Create .patchdrill.yml when used with init
   --policy-pack <name>
                       Starter policy pack for init --policy: ${policyPackNames.join(", ")}
+  --scenario <name>   Demo scenario: ${demoScenarioNames.join(", ")}
   --list              List schemas when used with schema
   --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version

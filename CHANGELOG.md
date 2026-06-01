@@ -90,3 +90,4 @@
 - Added audit evidence manifests with report, artifact, and command-output digests.
 - Added evidence manifest verification against generated artifact hashes.
 - Added evidence manifest regeneration for finalized artifacts and CI verification before upload.
+- Added a `risky-agent-pr` demo scenario for showing fail-state agentic PR evidence without a live repository.
