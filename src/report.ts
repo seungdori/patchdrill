@@ -695,7 +695,7 @@ export function renderSarif(report: PatchReport): string {
           tool: {
             driver: {
               name: "PatchDrill",
-              informationUri: "https://github.com/patchdrill/patchdrill",
+              informationUri: "https://github.com/seungdori/patchdrill",
               rules: [...rules.values()]
             }
           },

@@ -28,7 +28,7 @@ The dashboard includes:
 For CI, upload the HTML alongside the JSON and Markdown artifacts:
 
 ```yaml
-- uses: patchdrill/patchdrill@v0
+- uses: seungdori/patchdrill@v0
   id: patchdrill
   with:
     base: origin/${{ github.base_ref }}

@@ -114,7 +114,7 @@ patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard
 Use the GitHub Action with PR comments:
 
 ```yaml
-- uses: patchdrill/patchdrill@v0
+- uses: seungdori/patchdrill@v0
   with:
     base: origin/${{ github.base_ref }}
     pr-comment: "true"

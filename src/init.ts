@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: patchdrill/patchdrill@v0
+      - uses: seungdori/patchdrill@v0
         id: patchdrill
         with:
           base: origin/\${{ github.base_ref || 'main' }}

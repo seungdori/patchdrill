@@ -19,7 +19,7 @@ describe("init", () => {
 
     expect(workflow).toContain("pull-requests: write");
     expect(workflow).toContain("security-events: write");
-    expect(workflow).toContain("patchdrill/patchdrill@v0");
+    expect(workflow).toContain("seungdori/patchdrill@v0");
     expect(workflow).toContain('pr-comment: "true"');
     expect(workflow).toContain("steps.patchdrill.outputs.report-sarif");
     expect(workflow).toContain("steps.patchdrill.outputs.report-html");

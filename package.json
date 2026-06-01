@@ -46,12 +46,12 @@
   "author": "PatchDrill contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/patchdrill/patchdrill.git"
+    "url": "git+https://github.com/seungdori/patchdrill.git"
   },
   "bugs": {
-    "url": "https://github.com/patchdrill/patchdrill/issues"
+    "url": "https://github.com/seungdori/patchdrill/issues"
   },
-  "homepage": "https://github.com/patchdrill/patchdrill#readme",
+  "homepage": "https://github.com/seungdori/patchdrill#readme",
   "license": "MIT",
   "engines": {
     "node": ">=20"
