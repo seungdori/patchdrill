@@ -691,23 +691,37 @@ function addXcodePlans(plans: CommandPlan[], root: string, paths: string[], sign
 
   for (const scheme of schemes) {
     const testPlanArg = scheme.testPlan ? ` -testPlan ${quoteShell(scheme.testPlan)}` : "";
+    const testDestinationArg = xcodeDestinationArg(scheme.destination, "test");
+    const buildDestinationArg = xcodeDestinationArg(scheme.destination, "build");
     pushUnique(plans, {
       id: `xcode-${slug(scheme.name)}-tests`,
       label: `${scheme.name} Xcode tests`,
-      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)}${testPlanArg} test`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)}${testPlanArg}${testDestinationArg} test`,
       reason: scheme.testPlan
-        ? `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath} with test plan ${scheme.testPlan}, so changed app or test files should run through that xcodebuild test plan.`
-        : `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath}, so changed app or test files should run through xcodebuild test.`,
+        ? `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath} with test plan ${scheme.testPlan}, so changed app or test files should run through that xcodebuild test plan${testDestinationArg ? ` on ${scheme.destination?.label}` : ""}.`
+        : `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath}, so changed app or test files should run through xcodebuild test${testDestinationArg ? ` on ${scheme.destination?.label}` : ""}.`,
       ecosystem: "xcode",
       required: true,
       packageName: scheme.name,
       packagePath: signal.manifestPath
     });
+    if (scheme.destination && !scheme.destination.testSpecifier) {
+      pushUnique(plans, {
+        id: `xcode-${slug(scheme.name)}-destinations`,
+        label: `${scheme.name} Xcode destinations`,
+        command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)} -showdestinations`,
+        reason: `${scheme.name} targets ${scheme.destination.label}; xcodebuild test needs a concrete simulator or device name, so list valid destinations before pinning CI to one.`,
+        ecosystem: "xcode",
+        required: false,
+        packageName: scheme.name,
+        packagePath: signal.manifestPath
+      });
+    }
     pushUnique(plans, {
       id: `xcode-${slug(scheme.name)}-build`,
       label: `${scheme.name} Xcode build`,
-      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)} build`,
-      reason: `${scheme.name} should still compile through Xcode after project, source, resource, or signing metadata changes.`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)}${buildDestinationArg} build`,
+      reason: `${scheme.name} should still compile through Xcode after project, source, resource, or signing metadata changes${buildDestinationArg ? ` using the ${scheme.destination?.label} destination.` : "."}`,
       ecosystem: "xcode",
       required: false,
       packageName: scheme.name,
@@ -724,10 +738,19 @@ function xcodeBuildSubject(manifestPath: string): string {
 interface XcodeScheme {
   name: string;
   testPlan?: string;
+  destination?: XcodeDestination;
+}
+
+type XcodePlatform = "ios" | "macos" | "tvos" | "visionos" | "watchos";
+
+interface XcodeDestination {
+  label: string;
+  buildSpecifier: string;
+  testSpecifier?: string;
 }
 
 function xcodeTargetSchemes(root: string, paths: string[], manifestPath: string): XcodeScheme[] {
-  const changedSchemes = paths.filter((path) => path.endsWith(".xcscheme")).map((path) => xcodeScheme(root, path));
+  const changedSchemes = paths.filter((path) => path.endsWith(".xcscheme")).map((path) => xcodeScheme(root, path, manifestPath));
   if (changedSchemes.length > 0) return uniqueXcodeSchemes(changedSchemes);
 
   const manifestSchemes = xcodeSharedSchemes(root, manifestPath);
@@ -735,21 +758,23 @@ function xcodeTargetSchemes(root: string, paths: string[], manifestPath: string)
 
   return uniqueXcodeSchemes(findFilesWithExtension(root, ".xcscheme", 7)
     .filter((path) => path.includes("/xcshareddata/xcschemes/"))
-    .map((path) => xcodeScheme(root, path)));
+    .map((path) => xcodeScheme(root, path, manifestPath)));
 }
 
 function xcodeSharedSchemes(root: string, manifestPath: string): XcodeScheme[] {
   const schemeRoot = joinPath(manifestPath, "xcshareddata", "xcschemes");
   return uniqueXcodeSchemes(findFilesWithExtension(root, ".xcscheme", 7)
     .filter((path) => path.startsWith(`${schemeRoot}/`))
-    .map((path) => xcodeScheme(root, path)));
+    .map((path) => xcodeScheme(root, path, manifestPath)));
 }
 
-function xcodeScheme(root: string, path: string): XcodeScheme {
+function xcodeScheme(root: string, path: string, manifestPath: string): XcodeScheme {
   const testPlan = xcodeSchemeTestPlan(root, path);
+  const destination = xcodeSchemeDestination(root, path, manifestPath);
   return {
     name: basename(path, ".xcscheme"),
-    ...(testPlan ? { testPlan } : {})
+    ...(testPlan ? { testPlan } : {}),
+    ...(destination ? { destination } : {})
   };
 }
 
@@ -765,6 +790,152 @@ function xcodeTestPlanName(reference: string | undefined): string | undefined {
   const cleanReference = reference.replace(/^container:/, "");
   if (!cleanReference.endsWith(".xctestplan")) return undefined;
   return basename(cleanReference, ".xctestplan");
+}
+
+function xcodeSchemeDestination(root: string, path: string, manifestPath: string): XcodeDestination | undefined {
+  const content = readText(root, path);
+  const platforms = uniqueStrings([...content.matchAll(/<BuildableReference\b[^>]*>/gi)]
+    .map((match) => xcodeBuildableReferencePlatform(root, path, manifestPath, match[0]))
+    .filter((platform): platform is XcodePlatform => Boolean(platform)));
+  if (platforms.length !== 1) return undefined;
+  return xcodeDestinationForPlatform(platforms[0] as XcodePlatform);
+}
+
+function xcodeBuildableReferencePlatform(root: string, schemePath: string, manifestPath: string, tag: string): XcodePlatform | undefined {
+  const targetId = xmlAttribute(tag, "BlueprintIdentifier");
+  if (!targetId) return undefined;
+  const projectPath = xcodeReferencedProjectPath(root, schemePath, manifestPath, xmlAttribute(tag, "ReferencedContainer"));
+  if (!projectPath) return undefined;
+  return xcodeProjectTargetPlatform(root, projectPath, targetId);
+}
+
+function xcodeReferencedProjectPath(root: string, schemePath: string, manifestPath: string, reference: string | undefined): string | undefined {
+  const rawReference = reference?.replace(/^container:/, "").trim();
+  if (!rawReference) return manifestPath.endsWith(".xcodeproj") ? manifestPath : undefined;
+  const directPath = normalizeRepoPath(rawReference);
+  if (directPath?.endsWith(".xcodeproj") && existsSync(join(root, directPath, "project.pbxproj"))) return directPath;
+
+  const schemeContainer = xcodeSchemeContainerPath(schemePath);
+  const containerParent = schemeContainer ? dirname(schemeContainer).replaceAll("\\", "/") : "";
+  const relativePath = normalizeRepoPath(joinPath(containerParent === "." ? "" : containerParent, rawReference));
+  if (relativePath?.endsWith(".xcodeproj") && existsSync(join(root, relativePath, "project.pbxproj"))) return relativePath;
+
+  if (manifestPath.endsWith(".xcodeproj")) return manifestPath;
+  return directPath?.endsWith(".xcodeproj") ? directPath : undefined;
+}
+
+function xcodeProjectTargetPlatform(root: string, projectPath: string, targetId: string): XcodePlatform | undefined {
+  const content = readText(root, joinPath(projectPath, "project.pbxproj"));
+  const targetBlock = xcodeObjectBlock(content, targetId);
+  if (!targetBlock) return undefined;
+  const buildConfigurationIds = xcodeTargetBuildConfigurationIds(content, targetBlock);
+  for (const configurationId of buildConfigurationIds) {
+    const platform = xcodeBuildConfigurationPlatform(content, configurationId);
+    if (platform) return platform;
+  }
+  return xcodeProductTypePlatform(firstPbxValue(targetBlock, "productType"));
+}
+
+function xcodeTargetBuildConfigurationIds(content: string, targetBlock: string): string[] {
+  const configurationListId = firstPbxValue(targetBlock, "buildConfigurationList");
+  if (!configurationListId) return [];
+  const configurationListBlock = xcodeObjectBlock(content, configurationListId);
+  const configurations = /buildConfigurations\s*=\s*\(([\s\S]*?)\);/.exec(configurationListBlock ?? "");
+  const configurationIds = configurations?.[1];
+  if (!configurationIds) return [];
+  return [...configurationIds.matchAll(/\b([A-Za-z0-9_]+)\b\s*(?:\/\*[\s\S]*?\*\/)?\s*,/g)]
+    .map((match) => match[1])
+    .filter((id): id is string => Boolean(id));
+}
+
+function xcodeBuildConfigurationPlatform(content: string, configurationId: string): XcodePlatform | undefined {
+  const block = xcodeObjectBlock(content, configurationId);
+  if (!block) return undefined;
+  return (
+    xcodePlatformFromTokens(xcodeBuildSettingValues(block, "SDKROOT")) ??
+    xcodePlatformFromTokens(xcodeBuildSettingValues(block, "SUPPORTED_PLATFORMS"))
+  );
+}
+
+function xcodeBuildSettingValues(content: string, key: string): string[] {
+  return [...content.matchAll(new RegExp(`\\b${escapeRegExp(key)}\\s*=\\s*([^;]+);`, "g"))]
+    .flatMap((match) => (match[1] ?? "").split(/[\s"',()]+/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function xcodePlatformFromTokens(tokens: string[]): XcodePlatform | undefined {
+  const value = tokens.join(" ").toLowerCase();
+  if (/\bmacosx\b/.test(value)) return "macos";
+  if (/\b(xros|xrsimulator|visionos)\b/.test(value)) return "visionos";
+  if (/\b(watchos|watchsimulator)\b/.test(value)) return "watchos";
+  if (/\b(appletvos|appletvsimulator)\b/.test(value)) return "tvos";
+  if (/\b(iphoneos|iphonesimulator)\b/.test(value)) return "ios";
+  return undefined;
+}
+
+function xcodeProductTypePlatform(productType: string | undefined): XcodePlatform | undefined {
+  if (!productType) return undefined;
+  const value = productType.toLowerCase();
+  if (value.includes("watch")) return "watchos";
+  if (value.includes("tv")) return "tvos";
+  return undefined;
+}
+
+function xcodeDestinationForPlatform(platform: XcodePlatform): XcodeDestination {
+  switch (platform) {
+    case "macos":
+      return { label: "macOS", buildSpecifier: "platform=macOS", testSpecifier: "platform=macOS" };
+    case "visionos":
+      return { label: "visionOS", buildSpecifier: "generic/platform=visionOS" };
+    case "watchos":
+      return { label: "watchOS", buildSpecifier: "generic/platform=watchOS" };
+    case "tvos":
+      return { label: "tvOS", buildSpecifier: "generic/platform=tvOS" };
+    case "ios":
+      return { label: "iOS", buildSpecifier: "generic/platform=iOS" };
+  }
+}
+
+function xcodeDestinationArg(destination: XcodeDestination | undefined, action: "build" | "test"): string {
+  const specifier = action === "test" ? destination?.testSpecifier : destination?.buildSpecifier;
+  return specifier ? ` -destination ${quoteShell(specifier)}` : "";
+}
+
+function xcodeObjectBlock(content: string, id: string): string | undefined {
+  const match = new RegExp(`\\b${escapeRegExp(id)}\\b\\s*(?:\\/\\*[\\s\\S]*?\\*\\/\\s*)?=\\s*\\{`).exec(content);
+  if (!match) return undefined;
+  const start = match.index + match[0].lastIndexOf("{");
+  let depth = 0;
+  for (let index = start; index < content.length; index += 1) {
+    const char = content[index];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return content.slice(start + 1, index);
+    }
+  }
+  return undefined;
+}
+
+function firstPbxValue(content: string, key: string): string | undefined {
+  return new RegExp(`\\b${escapeRegExp(key)}\\s*=\\s*([^;]+);`).exec(content)?.[1]?.replace(/\/\*[\s\S]*?\*\//g, "").replaceAll('"', "").trim();
+}
+
+function xmlAttribute(tag: string, name: string): string | undefined {
+  return new RegExp(`\\b${escapeRegExp(name)}\\s*=\\s*["']([^"']+)["']`, "i").exec(tag)?.[1];
+}
+
+function xcodeSchemeContainerPath(path: string): string | undefined {
+  const parts = path.split("/");
+  const index = parts.findIndex((part) => part.endsWith(".xcodeproj") || part.endsWith(".xcworkspace"));
+  return index >= 0 ? parts.slice(0, index + 1).join("/") : undefined;
+}
+
+function normalizeRepoPath(path: string): string | undefined {
+  const normalized = normalize(path).replaceAll("\\", "/").replace(/^\.\//, "");
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../") || normalized.startsWith("/")) return undefined;
+  return normalized;
 }
 
 function uniqueXcodeSchemes(schemes: XcodeScheme[]): XcodeScheme[] {

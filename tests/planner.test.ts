@@ -209,6 +209,50 @@ describe("planCommands", () => {
     expect(commands[0]?.reason).toContain("test plan AppTests");
   });
 
+  it("adds macOS destination-aware Xcode verification", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(join(root, "App.xcodeproj", "project.pbxproj"), xcodeProject("macosx"));
+    writeFileSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes", "App.xcscheme"), xcodeScheme());
+
+    const commands = planCommands(
+      root,
+      [{ path: "App/Sources/AppDelegate.swift", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "xcode", manifestPath: "App.xcodeproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "xcodebuild -project App.xcodeproj -scheme App -destination platform=macOS test",
+      "xcodebuild -project App.xcodeproj -scheme App -destination platform=macOS build"
+    ]);
+    expect(commands[0]?.reason).toContain("on macOS");
+  });
+
+  it.each([
+    ["iphoneos", "iOS"],
+    ["appletvos", "tvOS"],
+    ["xros", "visionOS"],
+    ["watchos", "watchOS"]
+  ])("adds %s generic build destinations and destination discovery for Xcode tests", (sdkRoot, platform) => {
+    const root = tempRoot();
+    mkdirSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(join(root, "App.xcodeproj", "project.pbxproj"), xcodeProject(sdkRoot));
+    writeFileSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes", "App.xcscheme"), xcodeScheme());
+
+    const commands = planCommands(
+      root,
+      [{ path: "App/Sources/ContentView.swift", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "xcode", manifestPath: "App.xcodeproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "xcodebuild -project App.xcodeproj -scheme App test",
+      "xcodebuild -project App.xcodeproj -scheme App -showdestinations",
+      `xcodebuild -project App.xcodeproj -scheme App -destination generic/platform=${platform} build`
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["xcode-app-tests"]);
+  });
+
   it("adds Django framework verification", () => {
     const commands = planCommands(
       process.cwd(),
@@ -867,3 +911,45 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["pants-changed-tests"]);
   });
 });
+
+function xcodeScheme(): string {
+  return [
+    "<Scheme>",
+    "  <BuildAction>",
+    "    <BuildActionEntries>",
+    "      <BuildActionEntry>",
+    "        <BuildableReference BlueprintIdentifier=\"APP_TARGET\" ReferencedContainer=\"container:App.xcodeproj\" />",
+    "      </BuildActionEntry>",
+    "    </BuildActionEntries>",
+    "  </BuildAction>",
+    "</Scheme>"
+  ].join("\n");
+}
+
+function xcodeProject(sdkRoot: string): string {
+  return [
+    "// !$*UTF8*$!",
+    "{",
+    "  objects = {",
+    "    APP_TARGET /* App */ = {",
+    "      isa = PBXNativeTarget;",
+    "      buildConfigurationList = APP_CONFIGS /* Build configuration list for PBXNativeTarget App */;",
+    "      productType = \"com.apple.product-type.application\";",
+    "    };",
+    "    APP_CONFIGS /* Build configuration list for PBXNativeTarget App */ = {",
+    "      isa = XCConfigurationList;",
+    "      buildConfigurations = (",
+    "        APP_DEBUG /* Debug */,",
+    "      );",
+    "    };",
+    "    APP_DEBUG /* Debug */ = {",
+    "      isa = XCBuildConfiguration;",
+    "      buildSettings = {",
+    `        SDKROOT = ${sdkRoot};`,
+    `        SUPPORTED_PLATFORMS = "${sdkRoot}";`,
+    "      };",
+    "    };",
+    "  };",
+    "}"
+  ].join("\n");
+}

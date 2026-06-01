@@ -90,10 +90,11 @@
 - Android generated-source variant detection and `variantFilter` disabled-variant avoidance.
 - Nested local reusable workflow loading for downstream reusable workflow secret and OIDC trust-boundary findings.
 - Cloud OIDC credential exchange findings for AWS, Azure, GCP, and Vault auth jobs without GitHub environment protection.
+- Xcode scheme target-platform detection with macOS test destinations, mobile generic build destinations, and destination discovery planning.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
 - Bazel/Buck query output promotion into executable downstream test target plans.
-- Xcode destination selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.
+- Xcode simulator and device fixture corpora for concrete iOS, visionOS, watchOS, and tvOS test destination naming.

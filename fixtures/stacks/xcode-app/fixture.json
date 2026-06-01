@@ -3,17 +3,49 @@
   "expectedEcosystems": ["xcode"],
   "expectedCommands": [
     "xcodebuild -project App.xcodeproj -scheme App -testPlan AppTests test",
-    "xcodebuild -project App.xcodeproj -scheme App build"
+    "xcodebuild -project App.xcodeproj -scheme App -showdestinations",
+    "xcodebuild -project App.xcodeproj -scheme App -destination generic/platform=iOS build"
   ],
   "baseFiles": [
     {
       "path": "App.xcodeproj/project.pbxproj",
-      "lines": ["// !$*UTF8*$!"]
+      "lines": [
+        "// !$*UTF8*$!",
+        "{",
+        "  objects = {",
+        "    APP_TARGET /* App */ = {",
+        "      isa = PBXNativeTarget;",
+        "      buildConfigurationList = APP_CONFIGS /* Build configuration list for PBXNativeTarget App */;",
+        "      productType = \"com.apple.product-type.application\";",
+        "    };",
+        "    APP_CONFIGS /* Build configuration list for PBXNativeTarget App */ = {",
+        "      isa = XCConfigurationList;",
+        "      buildConfigurations = (",
+        "        APP_DEBUG /* Debug */,",
+        "      );",
+        "    };",
+        "    APP_DEBUG /* Debug */ = {",
+        "      isa = XCBuildConfiguration;",
+        "      buildSettings = {",
+        "        SDKROOT = iphoneos;",
+        "        SUPPORTED_PLATFORMS = \"iphoneos iphonesimulator\";",
+        "      };",
+        "    };",
+        "  };",
+        "}"
+      ]
     },
     {
       "path": "App.xcodeproj/xcshareddata/xcschemes/App.xcscheme",
       "lines": [
         "<Scheme LastUpgradeVersion=\"1600\" version=\"1.7\">",
+        "  <BuildAction>",
+        "    <BuildActionEntries>",
+        "      <BuildActionEntry>",
+        "        <BuildableReference BlueprintIdentifier=\"APP_TARGET\" ReferencedContainer=\"container:App.xcodeproj\" />",
+        "      </BuildActionEntry>",
+        "    </BuildActionEntries>",
+        "  </BuildAction>",
         "  <TestAction>",
         "    <TestPlans>",
         "      <TestPlanReference reference=\"container:AppTests.xctestplan\" default=\"YES\" />",
