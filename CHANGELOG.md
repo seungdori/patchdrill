@@ -55,3 +55,4 @@
 - Added Kubernetes and Helm project detection with manifest dry-run, Kustomize render, and Helm lint plans.
 - Expanded stack fixtures with Kustomize, Java/Gradle, and .NET service examples.
 - Added Bazel and Buck2 workspace detection with graph-wide test and build plans.
+- Added Swift Package Manager detection with `swift test` and `swift build` plans.

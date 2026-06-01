@@ -37,6 +37,7 @@ export interface ProjectSignal {
     | "ruby"
     | "php"
     | "dotnet"
+    | "swift"
     | "terraform"
     | "docker"
     | "kubernetes"

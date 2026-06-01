@@ -63,6 +63,17 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Swift packages", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "Package.swift"), "// swift-tools-version: 5.10\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "swift",
+      manifestPath: "Package.swift"
+    });
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

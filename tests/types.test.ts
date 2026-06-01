@@ -32,6 +32,15 @@ describe("types", () => {
 
     expect([bazel.ecosystem, buck.ecosystem]).toEqual(["bazel", "buck"]);
   });
+
+  it("includes Swift as a supported project ecosystem", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "swift",
+      manifestPath: "Package.swift"
+    };
+
+    expect(signal.ecosystem).toBe("swift");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

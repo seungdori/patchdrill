@@ -98,6 +98,24 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         required: true
       });
     }
+    if (signal.ecosystem === "swift" && touches(paths, [".swift", "Package.swift", "Package.resolved"])) {
+      pushUnique(plans, {
+        id: "swift-tests",
+        label: "Swift tests",
+        command: "swift test",
+        reason: "Swift package source or package metadata changed.",
+        ecosystem: "swift",
+        required: true
+      });
+      pushUnique(plans, {
+        id: "swift-build",
+        label: "Swift build",
+        command: "swift build",
+        reason: "Swift packages should still build after source or dependency changes.",
+        ecosystem: "swift",
+        required: false
+      });
+    }
     if (signal.ecosystem === "terraform" && paths.some((path) => path.endsWith(".tf") || path.endsWith(".tfvars"))) {
       pushUnique(plans, {
         id: "terraform-validate",

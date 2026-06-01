@@ -1,0 +1,21 @@
+{
+  "name": "swift-package",
+  "expectedEcosystems": ["swift"],
+  "expectedCommands": ["swift test", "swift build"],
+  "baseFiles": [
+    {
+      "path": "Package.swift",
+      "lines": ["// swift-tools-version: 5.10", "import PackageDescription", "let package = Package(name: \"App\", products: [.library(name: \"App\", targets: [\"App\"])], targets: [.target(name: \"App\")])"]
+    },
+    {
+      "path": "Sources/App/App.swift",
+      "lines": ["public struct App {", "  public func ok() -> Bool { true }", "}"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "Sources/App/App.swift",
+      "lines": ["public struct App {", "  public func ok() -> Bool { false }", "}"]
+    }
+  ]
+}

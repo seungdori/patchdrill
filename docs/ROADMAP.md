@@ -63,6 +63,7 @@
 - Kubernetes and Helm manifest verification planning.
 - First-party stack fixtures for Kustomize, Java/Gradle, and .NET services.
 - Bazel and Buck2 workspace detection with graph-wide verification planning.
+- Swift Package Manager verification planning.
 
 ## Contribution Targets
 
@@ -73,3 +74,4 @@ PatchDrill needs real-world fixtures from:
 - .NET services.
 - Bazel/Buck changed-target narrowing beyond graph-wide defaults.
 - Mobile apps.
+- Xcode scheme-aware iOS and macOS app test planning.

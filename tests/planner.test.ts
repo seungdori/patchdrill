@@ -79,6 +79,17 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["buck-tests"]);
   });
 
+  it("adds Swift package verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "Sources/App/App.swift", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "swift", manifestPath: "Package.swift" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["swift test", "swift build"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["swift-tests"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

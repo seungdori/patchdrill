@@ -35,9 +35,11 @@ describe("schemas", () => {
     expect(reportSchema.$defs.ecosystem?.enum).toContain("kubernetes");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("buck");
+    expect(reportSchema.$defs.ecosystem?.enum).toContain("swift");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("kubernetes");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("buck");
+    expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 

@@ -57,6 +57,7 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       manifestPath: firstExisting(root, ["global.json"]) ?? "*.csproj"
     });
   }
+  if (exists(root, "Package.swift")) add({ ecosystem: "swift", manifestPath: "Package.swift" });
   if (exists(root, "Dockerfile") || exists(root, "compose.yaml") || exists(root, "docker-compose.yml")) {
     add({
       ecosystem: "docker",
