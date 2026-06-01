@@ -116,6 +116,142 @@ uvicorn[standard]==0.29.0 ; python_version >= "3.10"
     ]);
   });
 
+  it("reports .NET PackageReference additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-dotnet-deps-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeFileSync(
+      join(root, "Api.csproj"),
+      [
+        '<Project Sdk="Microsoft.NET.Sdk">',
+        "  <ItemGroup>",
+        '    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />',
+        '    <PackageReference Include="xunit">',
+        "      <Version>2.5.0</Version>",
+        "    </PackageReference>",
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(
+      join(root, "Api.csproj"),
+      [
+        '<Project Sdk="Microsoft.NET.Sdk">',
+        "  <ItemGroup>",
+        '    <PackageReference Include="FluentAssertions" Version="6.12.0" />',
+        '    <PackageReference Include="xunit">',
+        "      <Version>2.6.0</Version>",
+        "    </PackageReference>",
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "Api.csproj", status: "modified", additions: 3, deletions: 3, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "Api.csproj",
+        packageName: "FluentAssertions",
+        packagePath: "PackageReference",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "6.12.0"
+      },
+      {
+        file: "Api.csproj",
+        packageName: "Newtonsoft.Json",
+        packagePath: "PackageReference",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "13.0.1"
+      },
+      {
+        file: "Api.csproj",
+        packageName: "xunit",
+        packagePath: "PackageReference",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "2.5.0",
+        after: "2.6.0"
+      }
+    ]);
+  });
+
+  it("reports .NET central PackageVersion additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-dotnet-central-deps-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeFileSync(
+      join(root, "Directory.Packages.props"),
+      [
+        "<Project>",
+        "  <ItemGroup>",
+        '    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />',
+        '    <PackageVersion Include="Serilog" Version="3.1.1" />',
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeFileSync(
+      join(root, "Directory.Packages.props"),
+      [
+        "<Project>",
+        "  <ItemGroup>",
+        '    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />',
+        '    <PackageVersion Include="Npgsql" Version="8.0.3" />',
+        "  </ItemGroup>",
+        "</Project>"
+      ].join("\n")
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "Directory.Packages.props", status: "modified", additions: 2, deletions: 2, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "Directory.Packages.props",
+        packageName: "Microsoft.Extensions.Hosting",
+        packagePath: "PackageVersion",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "8.0.0",
+        after: "8.0.1"
+      },
+      {
+        file: "Directory.Packages.props",
+        packageName: "Npgsql",
+        packagePath: "PackageVersion",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "8.0.3"
+      },
+      {
+        file: "Directory.Packages.props",
+        packageName: "Serilog",
+        packagePath: "PackageVersion",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "3.1.1"
+      }
+    ]);
+  });
+
   it("reports npm package-lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-lock-"));
     tempDirs.push(root);

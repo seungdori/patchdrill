@@ -76,6 +76,7 @@
 - Context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
 - Python and FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
 - Whole-file GitHub Actions context analysis for changed workflows with pre-existing privileged triggers or checkout steps.
+- NuGet PackageReference and central PackageVersion dependency change summaries.
 
 ## Contribution Targets
 
@@ -83,7 +84,7 @@ PatchDrill needs real-world fixtures from:
 
 - Workflow trust-boundary modeling across reusable workflows and inherited secrets.
 - FastAPI dependency-override and router import graph targeting.
-- .NET solution filter and central package management targeting.
+- .NET solution filter targeting for very large solutions.
 - Android flavor-dimension parsing beyond explicit variant source sets.
 - Bazel/Buck downstream affected-target query planning beyond changed-package defaults.
 - Mobile apps.

@@ -25,7 +25,7 @@ npx patchdrill scan --base origin/main --run \
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Gradle, Spring Boot, Android Gradle, .NET, ASP.NET Core, SwiftPM, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
-- Explains package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
+- Explains package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 
 ## What It Does
@@ -224,7 +224,7 @@ The current deterministic rules look for:
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
 - Workflow supply-chain risk: broad token writes, `pull_request_target`, inherited secrets, unpinned actions, remote script pipes, untrusted PR metadata interpolation, and privileged PR-head checkout combinations.
 - Dependency manifest and lockfile changes.
-- package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
+- package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
 - Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.
 - Source changes without nearby or mirrored matching test changes.
 - Large line deltas and binary files.
@@ -322,7 +322,7 @@ PatchDrill includes a release workflow for npm trusted publishing and provenance
 
 ## Dependency Review
 
-PatchDrill summarizes dependency changes from changed `package.json`, `requirements.txt`, npm `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `go.sum`, `Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `Gemfile.lock`, and `composer.lock` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
+PatchDrill summarizes dependency changes from changed `package.json`, `requirements.txt`, NuGet `PackageReference` / `PackageVersion` manifests, npm `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, `go.sum`, `Cargo.lock`, `poetry.lock`, `Pipfile.lock`, `Gemfile.lock`, and `composer.lock` files, listing the package, dependency section or lockfile path, change type, previous version, and new version in Markdown and JSON reports. This complements heavier SCA tools by making reviewer-visible dependency intent explicit.
 
 ## Design Principles
 

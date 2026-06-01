@@ -17,6 +17,12 @@ interface RequirementPackage {
   key: string;
   spec: string;
 }
+interface ManifestDependency {
+  name: string;
+  key: string;
+  spec: string;
+  packagePath: string;
+}
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
   const changes: DependencyChange[] = [];
@@ -33,6 +39,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     const after = parseRequirements(pair.after);
     if (!before && !after) continue;
     changes.push(...diffRequirementPackages(file.path, before ?? new Map(), after ?? new Map()));
+  }
+  for (const file of changedFiles.filter((candidate) => isDotnetDependencyManifest(candidate.path))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseDotnetDependencyManifest(pair.before);
+    const after = parseDotnetDependencyManifest(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
     const pair = readFilePair(options, file.path);
@@ -173,6 +186,48 @@ function diffRequirementPackages(file: string, before: Map<string, RequirementPa
   return changes;
 }
 
+function diffManifestDependencies(file: string, before: Map<string, ManifestDependency>, after: Map<string, ManifestDependency>): DependencyChange[] {
+  const changes: DependencyChange[] = [];
+  const keys = new Set([...before.keys(), ...after.keys()]);
+  for (const key of keys) {
+    const beforePackage = before.get(key);
+    const afterPackage = after.get(key);
+    if (beforePackage?.spec === afterPackage?.spec) continue;
+    const packageName = afterPackage?.name ?? beforePackage?.name ?? key;
+    const packagePath = afterPackage?.packagePath ?? beforePackage?.packagePath;
+    if (!beforePackage && afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: afterPackage.spec
+      });
+    } else if (beforePackage && !afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: beforePackage.spec
+      });
+    } else if (beforePackage && afterPackage) {
+      changes.push({
+        file,
+        packageName,
+        ...(packagePath ? { packagePath } : {}),
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: beforePackage.spec,
+        after: afterPackage.spec
+      });
+    }
+  }
+  return changes;
+}
+
 function parsePackageJson(value: string | undefined): PackageJson | undefined {
   if (!value) return undefined;
   try {
@@ -192,6 +247,29 @@ function parseRequirements(value: string | undefined): Map<string, RequirementPa
     const parsed = parseRequirementLine(line);
     if (!parsed) continue;
     packages.set(parsed.key, parsed);
+  }
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseDotnetDependencyManifest(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const packagePattern = /<(PackageReference|PackageVersion)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/gi;
+  for (const match of value.matchAll(packagePattern)) {
+    const kind = match[1];
+    const attributes = match[2] ?? "";
+    const inner = match[3] ?? "";
+    if (!kind) continue;
+    const name = readXmlAttribute(attributes, "Include") ?? readXmlAttribute(attributes, "Update");
+    if (!name) continue;
+    const version = readXmlAttribute(attributes, "Version") ?? readXmlElement(inner, "Version") ?? "*";
+    const packagePath = kind;
+    packages.set(`${kind}:${name.toLowerCase()}`, {
+      name,
+      key: `${kind}:${name.toLowerCase()}`,
+      spec: version,
+      packagePath
+    });
   }
   return packages.size > 0 ? packages : undefined;
 }
@@ -464,6 +542,21 @@ function parseComposerLock(value: string | undefined): Map<string, LockPackage> 
 function isRequirementsFile(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
+}
+
+function isDotnetDependencyManifest(path: string): boolean {
+  const fileName = path.split("/").at(-1) ?? path;
+  return /\.(csproj|fsproj|vbproj)$/i.test(fileName) || fileName === "Directory.Packages.props";
+}
+
+function readXmlAttribute(attributes: string, name: string): string | undefined {
+  const match = new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(attributes);
+  return match?.[1]?.trim() || undefined;
+}
+
+function readXmlElement(content: string, name: string): string | undefined {
+  const match = new RegExp(`<${name}>\\s*([^<]+?)\\s*</${name}>`, "i").exec(content);
+  return match?.[1]?.trim() || undefined;
 }
 
 function cleanRequirementLine(rawLine: string): string | undefined {

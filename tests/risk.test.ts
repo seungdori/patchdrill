@@ -309,6 +309,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags .NET package manifests as dependency manifests", () => {
+    const assessment = assessRisk(
+      [{ path: "Directory.Packages.props", status: "modified", additions: 2, deletions: 1, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "Directory.Packages.props"
+      })
+    );
+  });
+
   it("adds migration guidance for binary Bun lockfiles", () => {
     const assessment = assessRisk(
       [{ path: "bun.lockb", status: "modified", additions: 0, deletions: 0, binary: true }],

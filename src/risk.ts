@@ -290,7 +290,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
         tags: ["dependencies", "supply-chain", "bun"]
       });
     }
-    if (isRequirementsFile(file.path)) {
+    if (isDependencyManifest(file.path)) {
       risk += 12;
       findings.push({
         ruleId: "file.dependency-manifest",
@@ -557,9 +557,14 @@ function joinPath(...parts: string[]): string {
   return parts.filter(Boolean).join("/");
 }
 
-function isRequirementsFile(path: string): boolean {
+function isDependencyManifest(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
-  return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
+  return (
+    /^requirements([-.].*)?\.txt$/i.test(fileName) ||
+    /^.*[-.]requirements\.txt$/i.test(fileName) ||
+    /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||
+    fileName === "Directory.Packages.props"
+  );
 }
 
 function isBinaryBunLockfile(path: string): boolean {
