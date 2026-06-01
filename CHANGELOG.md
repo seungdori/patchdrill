@@ -98,3 +98,4 @@
 - Added structured package script change summaries to JSON, Markdown, and HTML reports.
 - Expanded `patchdrill explain` with a clearer AI-reviewer boundary, deterministic guarantees, and first-run commands.
 - Ignored all default generated PatchDrill report artifacts to prevent accidental report commits after local scans.
+- Added mutable `docker://` GitHub Action image findings while allowing sha256 digest-pinned references.

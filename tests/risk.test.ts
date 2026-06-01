@@ -206,6 +206,54 @@ describe("assessRisk", () => {
     expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.unpinned-action");
   });
 
+  it("flags mutable Docker action image references in workflow additions", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/ci.yml", status: "modified", additions: 2, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [
+          { file: ".github/workflows/ci.yml", line: 12, content: "      - uses: docker://alpine:3.19" },
+          { file: ".github/workflows/ci.yml", line: 16, content: "      - uses: docker://ghcr.io/acme/ci-tool" }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.mutable-docker-action",
+        severity: "medium",
+        file: ".github/workflows/ci.yml",
+        line: 12
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.mutable-docker-action",
+        file: ".github/workflows/ci.yml",
+        line: 16
+      })
+    );
+  });
+
+  it("does not flag digest-pinned Docker action images", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/ci.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [
+          {
+            file: ".github/workflows/ci.yml",
+            line: 12,
+            content:
+              "      - uses: docker://ghcr.io/acme/ci-tool@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.mutable-docker-action");
+  });
+
   it("flags remote script pipes and untrusted PR context in workflows", () => {
     const assessment = assessRisk(
       [{ path: ".github/workflows/ci.yml", status: "modified", additions: 2, deletions: 0, binary: false }],

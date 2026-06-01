@@ -114,6 +114,7 @@
 - Structured package script change summaries in JSON, Markdown, and HTML reports.
 - Clearer `patchdrill explain` first-run guidance for teams comparing deterministic evidence with AI PR reviewers.
 - Repository hygiene for default generated report artifacts after local scans.
+- Mutable `docker://` GitHub Action image findings with digest-pinned allowlisting.
 
 ## Contribution Targets
 

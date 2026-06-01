@@ -196,6 +196,15 @@ const WORKFLOW_ADDED_LINE_RULES: Array<{
     tags: ["ci", "github-actions", "supply-chain"]
   },
   {
+    ruleId: "workflow.mutable-docker-action",
+    severity: "medium",
+    title: "Mutable Docker action image added",
+    detail: "A newly added workflow action uses a Docker image tag or implicit latest image instead of an immutable digest.",
+    matches: workflowUsesMutableDockerAction,
+    remediation: "Pin docker:// action images to a reviewed sha256 digest instead of a mutable tag.",
+    tags: ["ci", "github-actions", "supply-chain", "docker"]
+  },
+  {
     ruleId: "workflow.remote-script-pipe",
     severity: "high",
     title: "Remote script pipe added to workflow",
@@ -657,6 +666,15 @@ function workflowUsesUnpinnedAction(content: string): boolean {
   if (refSeparator < 0) return true;
   const ref = action.slice(refSeparator + 1);
   return !/^[a-f0-9]{40}$/i.test(ref);
+}
+
+function workflowUsesMutableDockerAction(content: string): boolean {
+  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  if (!match?.[1]) return false;
+  const action = match[1];
+  if (!action.startsWith("docker://")) return false;
+  const image = action.slice("docker://".length);
+  return !/@sha256:[a-f0-9]{64}$/i.test(image);
 }
 
 function packageScriptFindings(scriptChanges: PackageScriptChange[]): RiskFinding[] {
