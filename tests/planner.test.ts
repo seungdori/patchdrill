@@ -85,7 +85,11 @@ describe("planCommands", () => {
       [{ ecosystem: "bazel", manifestPath: "MODULE.bazel" }]
     );
 
-    expect(commands.map((command) => command.command)).toEqual(["bazel test //src/app/...", "bazel build //src/app/..."]);
+    expect(commands.map((command) => command.command)).toEqual([
+      "bazel test //src/app/...",
+      "bazel build //src/app/...",
+      "bazel query 'rdeps(//..., set(//src/app/...))'"
+    ]);
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["bazel-changed-tests"]);
   });
 
@@ -111,7 +115,11 @@ describe("planCommands", () => {
       [{ ecosystem: "buck", manifestPath: ".buckconfig" }]
     );
 
-    expect(commands.map((command) => command.command)).toEqual(["buck2 test //src/app/...", "buck2 build //src/app/..."]);
+    expect(commands.map((command) => command.command)).toEqual([
+      "buck2 test //src/app/...",
+      "buck2 build //src/app/...",
+      "buck2 uquery 'rdeps(//..., set(//src/app/...))'"
+    ]);
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["buck-changed-tests"]);
   });
 

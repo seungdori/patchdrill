@@ -73,6 +73,7 @@
 - FastAPI changed router/dependency module import-smoke planning.
 - GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 - Bazel and Buck2 changed-package target narrowing with graph-wide fallback for root metadata changes.
+- Bazel/Buck reverse-dependency query commands for downstream affected-target discovery.
 - .NET project-aware test, build, and ASP.NET Core publish planning through `ProjectReference` relationships.
 - Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
 - Android product-flavor source set parsing for debug variant task planning.
@@ -91,5 +92,5 @@ PatchDrill needs real-world fixtures from:
 - FastAPI dependency-override test selection from dependency call sites.
 - .NET solution filter selection from multiple overlapping filters.
 - Android variantFilter and generated source set awareness.
-- Bazel/Buck downstream affected-target query planning beyond changed-package defaults.
+- Bazel/Buck query output promotion into executable downstream test target plans.
 - Xcode destination and test-plan selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.

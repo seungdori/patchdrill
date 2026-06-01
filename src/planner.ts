@@ -865,6 +865,16 @@ function addBazelPlans(plans: CommandPlan[], root: string, paths: string[]): voi
     ecosystem: "bazel",
     required: false
   });
+  if (narrowed) {
+    pushUnique(plans, {
+      id: "bazel-downstream-query",
+      label: "Bazel downstream reverse-dependency query",
+      command: `${bazel} query ${quoteShell(`rdeps(//..., set(${targetArgs}))`)}`,
+      reason: "Bazel changed-package patterns can miss downstream owners; rdeps shows graph-wide reverse dependencies for review before expanding tests.",
+      ecosystem: "bazel",
+      required: false
+    });
+  }
 }
 
 function addBuckPlans(plans: CommandPlan[], root: string, paths: string[]): void {
@@ -892,6 +902,16 @@ function addBuckPlans(plans: CommandPlan[], root: string, paths: string[]): void
     ecosystem: "buck",
     required: false
   });
+  if (narrowed) {
+    pushUnique(plans, {
+      id: "buck-downstream-uquery",
+      label: "Buck downstream reverse-dependency query",
+      command: `${buck} uquery ${quoteShell(`rdeps(//..., set(${targetArgs}))`)}`,
+      reason: "Buck changed-package patterns can miss downstream owners; uquery rdeps shows graph-wide reverse dependencies for review before expanding tests.",
+      ecosystem: "buck",
+      required: false
+    });
+  }
 }
 
 function bazelChangedTargetPatterns(root: string, paths: string[]): string[] {
