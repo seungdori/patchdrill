@@ -195,7 +195,7 @@ PatchDrill detects project shape from repo manifests:
 | Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml`, build types, product flavors, variant source sets | `./gradlew testDebugUnitTest`, `./gradlew testReleaseUnitTest`, `./gradlew testFreeDebugUnitTest`, `./gradlew testMinApi24DemoDebugUnitTest`, `./gradlew assemble<Variant>`, `./gradlew lint<Variant>` |
 | .NET | `global.json`, `.slnf`, `.sln`, `.csproj`, `ProjectReference` | `dotnet test App.slnf`, `dotnet test tests/Api.Tests/Api.Tests.csproj`, `dotnet build src/Api/Api.csproj --no-restore`, `dotnet publish src/Api/Api.csproj --no-restore` |
 | Swift | `Package.swift`, `Package.resolved`, `*.swift` | `swift test`, `swift build` |
-| Xcode | `.xcworkspace`, `.xcodeproj`, shared `.xcscheme`, Apple app source/resources | `xcodebuild -workspace App.xcworkspace -scheme App test`, `xcodebuild -project App.xcodeproj -scheme App build` |
+| Xcode | `.xcworkspace`, `.xcodeproj`, shared `.xcscheme`, `.xctestplan`, Apple app source/resources | `xcodebuild -workspace App.xcworkspace -scheme App -testPlan AppTests test`, `xcodebuild -project App.xcodeproj -scheme App build` |
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`, Compose files | `docker build .` |
 | Kubernetes | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `kubernetes/`, `manifests/` | `helm lint .`, `kubectl kustomize .`, `kubectl apply --dry-run=client -f k8s` |

@@ -690,24 +690,27 @@ function addXcodePlans(plans: CommandPlan[], root: string, paths: string[], sign
   }
 
   for (const scheme of schemes) {
+    const testPlanArg = scheme.testPlan ? ` -testPlan ${quoteShell(scheme.testPlan)}` : "";
     pushUnique(plans, {
-      id: `xcode-${slug(scheme)}-tests`,
-      label: `${scheme} Xcode tests`,
-      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme)} test`,
-      reason: `${scheme} is an Xcode shared scheme for ${signal.manifestPath}, so changed app or test files should run through xcodebuild test.`,
+      id: `xcode-${slug(scheme.name)}-tests`,
+      label: `${scheme.name} Xcode tests`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)}${testPlanArg} test`,
+      reason: scheme.testPlan
+        ? `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath} with test plan ${scheme.testPlan}, so changed app or test files should run through that xcodebuild test plan.`
+        : `${scheme.name} is an Xcode shared scheme for ${signal.manifestPath}, so changed app or test files should run through xcodebuild test.`,
       ecosystem: "xcode",
       required: true,
-      packageName: scheme,
+      packageName: scheme.name,
       packagePath: signal.manifestPath
     });
     pushUnique(plans, {
-      id: `xcode-${slug(scheme)}-build`,
-      label: `${scheme} Xcode build`,
-      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme)} build`,
-      reason: `${scheme} should still compile through Xcode after project, source, resource, or signing metadata changes.`,
+      id: `xcode-${slug(scheme.name)}-build`,
+      label: `${scheme.name} Xcode build`,
+      command: `xcodebuild ${subject} -scheme ${quoteShell(scheme.name)} build`,
+      reason: `${scheme.name} should still compile through Xcode after project, source, resource, or signing metadata changes.`,
       ecosystem: "xcode",
       required: false,
-      packageName: scheme,
+      packageName: scheme.name,
       packagePath: signal.manifestPath
     });
   }
@@ -718,27 +721,59 @@ function xcodeBuildSubject(manifestPath: string): string {
   return `-project ${quoteShell(manifestPath)}`;
 }
 
-function xcodeTargetSchemes(root: string, paths: string[], manifestPath: string): string[] {
-  const changedSchemeNames = paths.filter((path) => path.endsWith(".xcscheme")).map((path) => basename(path, ".xcscheme"));
-  if (changedSchemeNames.length > 0) return uniqueStrings(changedSchemeNames).sort();
-
-  const manifestSchemes = xcodeSharedSchemeNames(root, manifestPath);
-  if (manifestSchemes.length > 0) return manifestSchemes;
-
-  return findFilesWithExtension(root, ".xcscheme", 7)
-    .filter((path) => path.includes("/xcshareddata/xcschemes/"))
-    .map((path) => basename(path, ".xcscheme"))
-    .filter(Boolean)
-    .sort();
+interface XcodeScheme {
+  name: string;
+  testPlan?: string;
 }
 
-function xcodeSharedSchemeNames(root: string, manifestPath: string): string[] {
+function xcodeTargetSchemes(root: string, paths: string[], manifestPath: string): XcodeScheme[] {
+  const changedSchemes = paths.filter((path) => path.endsWith(".xcscheme")).map((path) => xcodeScheme(root, path));
+  if (changedSchemes.length > 0) return uniqueXcodeSchemes(changedSchemes);
+
+  const manifestSchemes = xcodeSharedSchemes(root, manifestPath);
+  if (manifestSchemes.length > 0) return manifestSchemes;
+
+  return uniqueXcodeSchemes(findFilesWithExtension(root, ".xcscheme", 7)
+    .filter((path) => path.includes("/xcshareddata/xcschemes/"))
+    .map((path) => xcodeScheme(root, path)));
+}
+
+function xcodeSharedSchemes(root: string, manifestPath: string): XcodeScheme[] {
   const schemeRoot = joinPath(manifestPath, "xcshareddata", "xcschemes");
-  return findFilesWithExtension(root, ".xcscheme", 7)
+  return uniqueXcodeSchemes(findFilesWithExtension(root, ".xcscheme", 7)
     .filter((path) => path.startsWith(`${schemeRoot}/`))
-    .map((path) => basename(path, ".xcscheme"))
-    .filter(Boolean)
-    .sort();
+    .map((path) => xcodeScheme(root, path)));
+}
+
+function xcodeScheme(root: string, path: string): XcodeScheme {
+  const testPlan = xcodeSchemeTestPlan(root, path);
+  return {
+    name: basename(path, ".xcscheme"),
+    ...(testPlan ? { testPlan } : {})
+  };
+}
+
+function xcodeSchemeTestPlan(root: string, path: string): string | undefined {
+  const content = readText(root, path);
+  const references = [...content.matchAll(/<TestPlanReference\b[^>]*\breference\s*=\s*"([^"]+)"[^>]*>/gi)];
+  const defaultReference = references.find((match) => /\bdefault\s*=\s*"YES"/i.test(match[0]));
+  return xcodeTestPlanName(defaultReference?.[1] ?? references[0]?.[1]);
+}
+
+function xcodeTestPlanName(reference: string | undefined): string | undefined {
+  if (!reference) return undefined;
+  const cleanReference = reference.replace(/^container:/, "");
+  if (!cleanReference.endsWith(".xctestplan")) return undefined;
+  return basename(cleanReference, ".xctestplan");
+}
+
+function uniqueXcodeSchemes(schemes: XcodeScheme[]): XcodeScheme[] {
+  const byName = new Map<string, XcodeScheme>();
+  for (const scheme of schemes) {
+    if (!scheme.name || byName.has(scheme.name)) continue;
+    byName.set(scheme.name, scheme);
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function fastApiChangedImportModules(paths: string[]): string[] {
@@ -1600,6 +1635,7 @@ function touchesXcode(paths: string[]): boolean {
       ".xcconfig",
       ".entitlements",
       ".xcscheme",
+      ".xctestplan",
       "Package.resolved",
       "project.pbxproj"
     ]) ||

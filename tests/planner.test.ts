@@ -180,6 +180,35 @@ describe("planCommands", () => {
     ]);
   });
 
+  it("adds Xcode test-plan-aware test verification", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "App.xcodeproj", "xcshareddata", "xcschemes"), { recursive: true });
+    writeFileSync(
+      join(root, "App.xcodeproj", "xcshareddata", "xcschemes", "App.xcscheme"),
+      [
+        "<Scheme>",
+        "  <TestAction>",
+        "    <TestPlans>",
+        "      <TestPlanReference reference=\"container:AppTests.xctestplan\" default=\"YES\" />",
+        "    </TestPlans>",
+        "  </TestAction>",
+        "</Scheme>"
+      ].join("\n")
+    );
+
+    const commands = planCommands(
+      root,
+      [{ path: "AppTests/AppTests.xctestplan", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "xcode", manifestPath: "App.xcodeproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "xcodebuild -project App.xcodeproj -scheme App -testPlan AppTests test",
+      "xcodebuild -project App.xcodeproj -scheme App build"
+    ]);
+    expect(commands[0]?.reason).toContain("test plan AppTests");
+  });
+
   it("adds Django framework verification", () => {
     const commands = planCommands(
       process.cwd(),

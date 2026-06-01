@@ -86,6 +86,7 @@
 - .NET solution filter targeting for very large solutions.
 - FastAPI dependency override test targeting for changed dependency helper functions.
 - .NET solution-filter selection for changed projects when multiple overlapping `.slnf` files exist.
+- Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.
 
 ## Contribution Targets
 
@@ -94,4 +95,4 @@ PatchDrill needs real-world fixtures from:
 - Nested reusable workflow propagation and cloud-provider OIDC policy fixtures.
 - Android variantFilter and generated source set awareness.
 - Bazel/Buck query output promotion into executable downstream test target plans.
-- Xcode destination and test-plan selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.
+- Xcode destination selection for iOS, visionOS, watchOS, tvOS, and macOS schemes.

@@ -78,3 +78,4 @@
 - Added .NET solution filter (`.slnf`) detection and filtered `dotnet test`/`dotnet build` plans for large solutions.
 - Added FastAPI dependency override test targeting for changed dependency helper functions.
 - Added .NET solution-filter selection for changed projects when multiple overlapping `.slnf` files exist.
+- Added Xcode `.xctestplan` detection from shared schemes and `xcodebuild test -testPlan` planning.

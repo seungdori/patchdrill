@@ -2,7 +2,7 @@
   "name": "xcode-app",
   "expectedEcosystems": ["xcode"],
   "expectedCommands": [
-    "xcodebuild -project App.xcodeproj -scheme App test",
+    "xcodebuild -project App.xcodeproj -scheme App -testPlan AppTests test",
     "xcodebuild -project App.xcodeproj -scheme App build"
   ],
   "baseFiles": [
@@ -12,7 +12,19 @@
     },
     {
       "path": "App.xcodeproj/xcshareddata/xcschemes/App.xcscheme",
-      "lines": ["<Scheme LastUpgradeVersion=\"1600\" version=\"1.7\"></Scheme>"]
+      "lines": [
+        "<Scheme LastUpgradeVersion=\"1600\" version=\"1.7\">",
+        "  <TestAction>",
+        "    <TestPlans>",
+        "      <TestPlanReference reference=\"container:AppTests.xctestplan\" default=\"YES\" />",
+        "    </TestPlans>",
+        "  </TestAction>",
+        "</Scheme>"
+      ]
+    },
+    {
+      "path": "AppTests/AppTests.xctestplan",
+      "lines": ["{", "  \"version\": 1", "}"]
     },
     {
       "path": "App/ContentView.swift",
