@@ -73,15 +73,8 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         required: true
       });
     }
-    if (signal.ecosystem === "dotnet" && touches(paths, [".cs", ".fs", ".vb", ".csproj", ".sln"])) {
-      pushUnique(plans, {
-        id: "dotnet-tests",
-        label: ".NET tests",
-        command: "dotnet test",
-        reason: ".NET source or project metadata changed.",
-        ecosystem: "dotnet",
-        required: true
-      });
+    if (signal.ecosystem === "dotnet" && touchesDotnet(paths)) {
+      addDotnetPlans(plans, signal);
     }
     if (signal.ecosystem === "swift" && touches(paths, [".swift", "Package.swift", "Package.resolved"])) {
       pushUnique(plans, {
@@ -147,6 +140,35 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   }
 
   return plans;
+}
+
+function addDotnetPlans(plans: CommandPlan[], signal: ProjectSignal): void {
+  pushUnique(plans, {
+    id: "dotnet-tests",
+    label: ".NET tests",
+    command: "dotnet test",
+    reason: ".NET source or project metadata changed.",
+    ecosystem: "dotnet",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "dotnet-build",
+    label: ".NET build",
+    command: "dotnet build --no-restore",
+    reason: ".NET projects should still compile after source or project metadata changes.",
+    ecosystem: "dotnet",
+    required: false
+  });
+  if (signal.framework === "aspnet-core") {
+    pushUnique(plans, {
+      id: "aspnet-core-publish",
+      label: "ASP.NET Core publish",
+      command: "dotnet publish --no-restore",
+      reason: "ASP.NET Core services should still produce a publishable deployment artifact.",
+      ecosystem: "dotnet",
+      required: false
+    });
+  }
 }
 
 function addPythonPlans(plans: CommandPlan[]): void {
@@ -808,6 +830,10 @@ function touchesJava(paths: string[], root: string): boolean {
     paths.some((path) => path === "gradlew" || path === "mvnw" || path.startsWith("gradle/")) ||
     existsSync(join(root, "mvnw"))
   );
+}
+
+function touchesDotnet(paths: string[]): boolean {
+  return touches(paths, [".cs", ".fs", ".vb", ".csproj", ".fsproj", ".vbproj", ".sln", ".props", ".targets", "global.json", "Directory.Build.props", "Directory.Build.targets"]);
 }
 
 function touchesAndroid(paths: string[]): boolean {

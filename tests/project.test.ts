@@ -125,6 +125,19 @@ describe("discoverProjectSignals", () => {
     ]);
   });
 
+  it("detects ASP.NET Core project files", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    mkdirSync(join(root, "src", "Api"), { recursive: true });
+    writeFileSync(join(root, "src", "Api", "Api.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "dotnet",
+      framework: "aspnet-core",
+      manifestPath: "src/Api/Api.csproj"
+    });
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

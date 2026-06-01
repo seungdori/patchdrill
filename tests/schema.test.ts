@@ -43,7 +43,7 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("buck");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("android");
-    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot"]);
+    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "aspnet-core"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 
@@ -122,6 +122,11 @@ describe("schemas", () => {
         {
           ecosystem: "android",
           manifestPath: "app/build.gradle"
+        },
+        {
+          ecosystem: "dotnet",
+          framework: "aspnet-core",
+          manifestPath: "src/Api/Api.csproj"
         }
       ],
       affectedPackages: [

@@ -133,6 +133,28 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["android-unit-tests"]);
   });
 
+  it("adds .NET build verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/Api/Service.cs", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", manifestPath: "src/Api/Api.csproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["dotnet test", "dotnet build --no-restore"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["dotnet-tests"]);
+  });
+
+  it("adds ASP.NET Core publish verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/Api/Program.cs", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "dotnet", framework: "aspnet-core", manifestPath: "src/Api/Api.csproj" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["dotnet test", "dotnet build --no-restore", "dotnet publish --no-restore"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["dotnet-tests"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

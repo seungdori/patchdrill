@@ -63,10 +63,13 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
   }
   if (exists(root, "Gemfile")) add({ ecosystem: "ruby", manifestPath: "Gemfile" });
   if (exists(root, "composer.json")) add({ ecosystem: "php", manifestPath: "composer.json" });
-  if (exists(root, "global.json") || hasFileWithExtension(root, ".csproj", 2)) {
+  const dotnetManifestPath = findDotnetManifestPath(root);
+  if (dotnetManifestPath) {
+    const framework = detectDotnetFramework(root);
     add({
       ecosystem: "dotnet",
-      manifestPath: firstExisting(root, ["global.json"]) ?? "*.csproj"
+      manifestPath: dotnetManifestPath,
+      ...(framework ? { framework } : {})
     });
   }
   if (exists(root, "Package.swift")) add({ ecosystem: "swift", manifestPath: "Package.swift" });
@@ -160,6 +163,15 @@ function pythonManifestMentionsPackage(root: string, path: string, packageName: 
 function detectJavaFramework(root: string): ProjectSignal["framework"] | undefined {
   if (javaManifestMentions(root, ["org.springframework.boot", "spring-boot-starter"])) return "spring-boot";
   return undefined;
+}
+
+function detectDotnetFramework(root: string): ProjectSignal["framework"] | undefined {
+  if (findFileWithExtensionMentioning(root, ".csproj", ["Microsoft.NET.Sdk.Web", "Microsoft.AspNetCore"], 4)) return "aspnet-core";
+  return undefined;
+}
+
+function findDotnetManifestPath(root: string): string | undefined {
+  return firstExisting(root, ["global.json"]) ?? findFileWithExtension(root, ".sln", 2) ?? findFileWithExtension(root, ".csproj", 3);
 }
 
 function findAndroidManifestPath(root: string): string | undefined {
@@ -562,6 +574,10 @@ function hasFileWithExtension(root: string, extension: string, maxDepth: number)
   return walkForExtension(root, extension, maxDepth, 0);
 }
 
+function findFileWithExtension(root: string, extension: string, maxDepth: number): string | undefined {
+  return walkForExtensionPath(root, root, extension, maxDepth, 0);
+}
+
 function walkForExtension(directory: string, extension: string, maxDepth: number, depth: number): boolean {
   if (depth > maxDepth) return false;
   try {
@@ -576,6 +592,25 @@ function walkForExtension(directory: string, extension: string, maxDepth: number
     return false;
   }
   return false;
+}
+
+function walkForExtensionPath(root: string, directory: string, extension: string, maxDepth: number, depth: number): string | undefined {
+  if (depth > maxDepth) return undefined;
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    for (const entry of entries) {
+      if (shouldSkipDirectory(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.isFile() && entry.name.endsWith(extension)) return relativePath(root, path);
+      if (entry.isDirectory()) {
+        const match = walkForExtensionPath(root, path, extension, maxDepth, depth + 1);
+        if (match) return match;
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 function hasTerraform(root: string): boolean {
@@ -613,6 +648,10 @@ function findFileMentioning(root: string, fileNames: string[], needles: string[]
   return walkForFileMentioning(root, root, new Set(fileNames), needles.map((needle) => needle.toLowerCase()), maxDepth, 0);
 }
 
+function findFileWithExtensionMentioning(root: string, extension: string, needles: string[], maxDepth: number): string | undefined {
+  return walkForExtensionMentioning(root, root, extension, needles.map((needle) => needle.toLowerCase()), maxDepth, 0);
+}
+
 function walkForFileMentioning(directory: string, root: string, fileNames: Set<string>, needles: string[], maxDepth: number, depth: number): string | undefined {
   if (depth > maxDepth) return undefined;
   try {
@@ -626,6 +665,28 @@ function walkForFileMentioning(directory: string, root: string, fileNames: Set<s
       }
       if (entry.isDirectory()) {
         const match = walkForFileMentioning(path, root, fileNames, needles, maxDepth, depth + 1);
+        if (match) return match;
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+function walkForExtensionMentioning(root: string, directory: string, extension: string, needles: string[], maxDepth: number, depth: number): string | undefined {
+  if (depth > maxDepth) return undefined;
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    for (const entry of entries) {
+      if (shouldSkipDirectory(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.isFile() && entry.name.endsWith(extension)) {
+        const content = readFileSync(path, "utf8").toLowerCase();
+        if (needles.some((needle) => content.includes(needle.toLowerCase()))) return relativePath(root, path);
+      }
+      if (entry.isDirectory()) {
+        const match = walkForExtensionMentioning(root, path, extension, needles, maxDepth, depth + 1);
         if (match) return match;
       }
     }

@@ -48,7 +48,7 @@ export interface ProjectSignal {
     | "github-actions"
     | "unknown";
   manifestPath: string;
-  framework?: "django" | "fastapi" | "spring-boot";
+  framework?: "django" | "fastapi" | "spring-boot" | "aspnet-core";
   packageManager?: string;
   taskRunner?: "turbo" | "nx";
   scripts?: Record<string, string>;

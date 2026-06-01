@@ -70,6 +70,16 @@ describe("types", () => {
 
     expect(signal.ecosystem).toBe("android");
   });
+
+  it("includes ASP.NET Core framework metadata", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "dotnet",
+      framework: "aspnet-core",
+      manifestPath: "src/Api/Api.csproj"
+    };
+
+    expect(signal.framework).toBe("aspnet-core");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

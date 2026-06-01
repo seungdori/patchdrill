@@ -1,0 +1,21 @@
+{
+  "name": "aspnet-core-service",
+  "expectedEcosystems": ["dotnet"],
+  "expectedCommands": ["dotnet test", "dotnet build --no-restore", "dotnet publish --no-restore"],
+  "baseFiles": [
+    {
+      "path": "src/Api/Api.csproj",
+      "lines": ["<Project Sdk=\"Microsoft.NET.Sdk.Web\">", "  <PropertyGroup>", "    <TargetFramework>net8.0</TargetFramework>", "    <Nullable>enable</Nullable>", "  </PropertyGroup>", "</Project>"]
+    },
+    {
+      "path": "src/Api/Program.cs",
+      "lines": ["var builder = WebApplication.CreateBuilder(args);", "var app = builder.Build();", "app.MapGet(\"/health\", () => Results.Ok(new { ok = true }));", "app.Run();"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/Api/Program.cs",
+      "lines": ["var builder = WebApplication.CreateBuilder(args);", "var app = builder.Build();", "app.MapGet(\"/health\", () => Results.Ok(new { ok = false }));", "app.Run();"]
+    }
+  ]
+}

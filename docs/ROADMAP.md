@@ -67,13 +67,14 @@
 - Django framework detection with `manage.py test` and `manage.py check` planning.
 - Spring Boot framework detection with Gradle `bootJar` packaging plans.
 - Android Gradle detection with debug unit test, assemble, and lint planning.
+- ASP.NET Core detection with .NET build and publish planning.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
 - FastAPI route-aware verification planning.
-- .NET services.
+- .NET solution and test-project targeting.
 - Android variant-aware task narrowing.
 - Bazel/Buck changed-target narrowing beyond graph-wide defaults.
 - Mobile apps.

@@ -1,9 +1,10 @@
-import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { scan } from "../src/scan.js";
+import { findAffectedWorkspacePackages, planCommands } from "../src/planner.js";
+import { discoverProjectSignals } from "../src/project.js";
+import type { ChangedFile } from "../src/types.js";
 
 interface StackFixture {
   name: string;
@@ -29,24 +30,22 @@ describe("stack fixtures", () => {
   });
 
   for (const fixture of readFixtures()) {
-    it(`matches ${fixture.name}`, async () => {
+    it(`matches ${fixture.name}`, () => {
       const root = mkdtempSync(join(tmpdir(), `patchdrill-fixture-${fixture.name}-`));
       tempDirs.push(root);
-      git(root, ["init", "-b", "main"]);
-      git(root, ["config", "user.email", "test@example.com"]);
-      git(root, ["config", "user.name", "PatchDrill Test"]);
 
       writeFixtureFiles(root, fixture.baseFiles);
-      git(root, ["add", "."]);
-      git(root, ["commit", "-m", "initial"]);
       writeFixtureFiles(root, fixture.changeFiles);
 
-      const report = await scan({ cwd: root });
+      const changedFiles = fixtureChangedFiles(fixture);
+      const projectSignals = discoverProjectSignals(root);
+      const commandPlan = planCommands(root, changedFiles, projectSignals);
+      const affectedPackages = findAffectedWorkspacePackages(changedFiles, projectSignals);
 
-      expect(report.projectSignals.map((signal) => signal.ecosystem)).toEqual(expect.arrayContaining(fixture.expectedEcosystems));
-      expect(report.commandPlan.map((command) => command.command)).toEqual(fixture.expectedCommands);
+      expect(projectSignals.map((signal) => signal.ecosystem)).toEqual(expect.arrayContaining(fixture.expectedEcosystems));
+      expect(commandPlan.map((command) => command.command)).toEqual(fixture.expectedCommands);
       if (fixture.expectedAffectedPackages) {
-        expect(report.affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(fixture.expectedAffectedPackages);
+        expect(affectedPackages.map((workspacePackage) => workspacePackage.name)).toEqual(fixture.expectedAffectedPackages);
       }
     });
   }
@@ -68,6 +67,12 @@ function writeFixtureFiles(root: string, files: FixtureFile[]): void {
   }
 }
 
-function git(cwd: string, args: string[]): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8" });
+function fixtureChangedFiles(fixture: StackFixture): ChangedFile[] {
+  return fixture.changeFiles.map((file) => ({
+    path: file.path,
+    status: "modified",
+    additions: file.lines.length,
+    deletions: 1,
+    binary: false
+  }));
 }

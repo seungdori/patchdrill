@@ -212,7 +212,7 @@
         },
         "framework": {
           "type": "string",
-          "enum": ["django", "fastapi", "spring-boot"]
+          "enum": ["django", "fastapi", "spring-boot", "aspnet-core"]
         },
         "packageManager": {
           "type": "string"
