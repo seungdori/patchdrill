@@ -7,7 +7,7 @@
 
 ## Later
 
-- Expand language-aware changed-test matching with framework-specific conventions.
+- Expand language-aware changed-test matching with more framework-specific conventions.
 - Optional MCP server for coding agents.
 - Optional LLM summarization that can only summarize deterministic findings.
 - Rule confidence calibration from anonymized fixture corpora.
@@ -94,6 +94,7 @@
 - Rails, RSpec, Composer script, Laravel, PHPUnit, and PHP syntax fallback command planning.
 - Multi-run static dashboard trends for CI artifact history.
 - GitHub Action `dashboard-history` input for re-rendering trend dashboards from previous JSON report artifacts.
+- Framework-specific changed-test matching for Rails/RSpec, Python app packages, JVM source sets, and Laravel unit/feature tests.
 
 ## Contribution Targets
 

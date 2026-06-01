@@ -613,4 +613,56 @@ describe("assessRisk", () => {
 
     expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
   });
+
+  it("accepts Rails app-to-spec and app-to-test conventions", () => {
+    const assessment = assessRisk(
+      [
+        { path: "app/models/user.rb", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "app/controllers/users_controller.rb", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "spec/models/user_spec.rb", status: "modified", additions: 3, deletions: 1, binary: false },
+        { path: "test/controllers/users_controller_test.rb", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
+  });
+
+  it("accepts Python app package tests mirrored under tests", () => {
+    const assessment = assessRisk(
+      [
+        { path: "app/routers/users.py", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "tests/routers/test_users.py", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
+  });
+
+  it("accepts JVM source-set test mirrors", () => {
+    const assessment = assessRisk(
+      [
+        { path: "src/main/java/com/acme/BillingService.java", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "src/test/java/com/acme/BillingServiceTest.java", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
+  });
+
+  it("accepts Laravel unit and feature test mirrors", () => {
+    const assessment = assessRisk(
+      [
+        { path: "app/Services/BillingService.php", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "app/Http/Controllers/CheckoutController.php", status: "modified", additions: 5, deletions: 1, binary: false },
+        { path: "tests/Unit/Services/BillingServiceTest.php", status: "modified", additions: 3, deletions: 1, binary: false },
+        { path: "tests/Feature/Http/Controllers/CheckoutControllerTest.php", status: "modified", additions: 3, deletions: 1, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("test.source-without-test-change");
+  });
 });

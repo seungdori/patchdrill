@@ -521,13 +521,8 @@ function hasMatchingChangedTest(sourcePath: string, changedTestPaths: Set<string
 function testCandidates(sourcePath: string): string[] {
   const parsed = parsePath(sourcePath);
   if (!parsed) return [];
-  const testNames = [
-    `${parsed.name}.test${parsed.extension}`,
-    `${parsed.name}.spec${parsed.extension}`,
-    `test_${parsed.name}${parsed.extension}`,
-    `${parsed.name}_test${parsed.extension}`,
-    `${parsed.name}_spec${parsed.extension}`
-  ];
+  const testNames = testFileNames(parsed.name, parsed.extension);
+  const mirroredDirectories = testMirrorDirectories(parsed.directory);
   const candidates = new Set<string>();
   for (const testName of testNames) {
     candidates.add(joinPath(parsed.directory, testName));
@@ -538,18 +533,56 @@ function testCandidates(sourcePath: string): string[] {
     candidates.add(joinPath("tests", testName));
     candidates.add(joinPath("test", testName));
     candidates.add(joinPath("spec", testName));
-    if (parsed.directory.startsWith("src/")) {
-      const withoutSrc = parsed.directory.slice(4);
-      candidates.add(joinPath("tests", withoutSrc, testName));
-      candidates.add(joinPath("test", withoutSrc, testName));
-      candidates.add(joinPath("spec", withoutSrc, testName));
-    }
-    if (parsed.directory.startsWith("app/")) {
-      candidates.add(joinPath("tests", parsed.directory, testName));
-      candidates.add(joinPath("test", parsed.directory, testName));
+    for (const directory of mirroredDirectories) {
+      candidates.add(joinPath(directory, testName));
+      candidates.add(joinPath("tests", directory, testName));
+      candidates.add(joinPath("test", directory, testName));
+      candidates.add(joinPath("spec", directory, testName));
+      candidates.add(joinPath("tests", "Unit", directory, testName));
+      candidates.add(joinPath("tests", "Feature", directory, testName));
     }
   }
   return [...candidates];
+}
+
+function testFileNames(name: string, extension: string): string[] {
+  const names = new Set<string>();
+  for (const testExtension of relatedTestExtensions(extension)) {
+    names.add(`${name}.test${testExtension}`);
+    names.add(`${name}.spec${testExtension}`);
+    names.add(`test_${name}${testExtension}`);
+    names.add(`${name}_test${testExtension}`);
+    names.add(`${name}_spec${testExtension}`);
+    names.add(`${name}Test${testExtension}`);
+    names.add(`${name}Tests${testExtension}`);
+    names.add(`${name}Spec${testExtension}`);
+    names.add(`${name}Specs${testExtension}`);
+  }
+  return [...names];
+}
+
+function relatedTestExtensions(extension: string): string[] {
+  if (extension === ".tsx") return [".tsx", ".ts", ".jsx", ".js"];
+  if (extension === ".ts") return [".ts", ".tsx", ".js", ".jsx"];
+  if (extension === ".jsx") return [".jsx", ".js", ".tsx", ".ts"];
+  if (extension === ".js" || extension === ".mjs" || extension === ".cjs") return [extension, ".js", ".jsx", ".ts", ".tsx"];
+  return [extension];
+}
+
+function testMirrorDirectories(directory: string): string[] {
+  const directories = new Set<string>();
+  directories.add(directory);
+  for (const root of ["src", "app"]) {
+    if (directory.startsWith(`${root}/`)) {
+      directories.add(directory.slice(root.length + 1));
+    }
+  }
+  for (const root of ["src/main/java", "src/main/kotlin", "src/main/scala"]) {
+    if (directory.startsWith(`${root}/`)) {
+      directories.add(directory.replace(root, root.replace("/main/", "/test/")));
+    }
+  }
+  return [...directories];
 }
 
 function parsePath(path: string): { directory: string; name: string; extension: string } | undefined {

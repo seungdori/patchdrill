@@ -256,7 +256,7 @@ The current deterministic rules look for:
 - Dependency manifest and lockfile changes.
 - package.json, requirements.txt, NuGet PackageReference and central PackageVersion files, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
 - Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.
-- Source changes without nearby or mirrored matching test changes.
+- Source changes without nearby, mirrored, or framework-convention matching test changes.
 - Large line deltas and binary files.
 - Failed verification commands.
 - Custom policy rules from `.patchdrill.yml`.
