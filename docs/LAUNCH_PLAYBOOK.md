@@ -25,6 +25,7 @@ Done for the public repository:
 - Public GitHub repository with CodeQL, OpenSSF Scorecard, Dependabot, issue forms, pull request template, and repository topics.
 - Self-contained GitHub Action that builds from the checked-out action source before running PatchDrill.
 - SARIF output, Markdown output, JSON output, static HTML dashboard output, and PR comment upsert mode.
+- README terminal demo asset showing the risk summary and portable report outputs.
 - First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
 - Example report and release provenance documentation.
 
@@ -32,7 +33,6 @@ Still needed for launch distribution:
 
 - Publish npm package as `patchdrill`.
 - Move the `v0` GitHub Action tag after each compatible 0.x action update.
-- Add a GIF or terminal recording to the README.
 - Dogfood on 20 real pull requests and add anonymized example reports.
 - Submit to GitHub Trending-adjacent communities: Hacker News Show HN, r/programming, r/ClaudeCode, r/codex, r/opensource, DevTools directories.
 - Write a blog post: "AI made patches faster. Here is how to make review evidence faster too."

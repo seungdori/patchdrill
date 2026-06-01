@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("documentation examples", () => {
@@ -8,6 +8,13 @@ describe("documentation examples", () => {
     const confidence = readScore(report, "Confidence score");
 
     expect(confidence).toBe(100 - risk);
+  });
+
+  it("keeps the README terminal demo asset wired", () => {
+    const readme = readFileSync("README.md", "utf8");
+
+    expect(readme).toContain("![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)");
+    expect(existsSync("docs/assets/patchdrill-demo.svg")).toBe(true);
   });
 });
 

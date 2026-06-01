@@ -4,6 +4,8 @@ PatchDrill is a local-first CI drill for proving that AI-generated and human pat
 
 AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, and SARIF evidence that reviewers and CI systems can inspect.
 
+![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)
+
 ```bash
 npx --yes github:seungdori/patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="520" viewBox="0 0 980 520" role="img" aria-labelledby="title desc">
+  <title id="title">PatchDrill terminal demo</title>
+  <desc id="desc">A terminal showing PatchDrill turning an auth diff into deterministic risk findings and required verification commands.</desc>
+  <rect width="980" height="520" rx="14" fill="#0b1020"/>
+  <rect x="24" y="24" width="932" height="472" rx="10" fill="#111827" stroke="#334155"/>
+  <circle cx="52" cy="50" r="7" fill="#ef4444"/>
+  <circle cx="76" cy="50" r="7" fill="#f59e0b"/>
+  <circle cx="100" cy="50" r="7" fill="#22c55e"/>
+  <text x="126" y="55" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14">patchdrill scan</text>
+  <text x="48" y="98" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ patchdrill scan --base origin/main</text>
+  <text x="48" y="136" fill="#86efac" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">PatchDrill Gate PASS</text>
+  <text x="268" y="136" fill="#facc15" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">assessment WARN</text>
+  <text x="48" y="174" fill="#e5e7eb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">risk 44/100  confidence 56/100</text>
+  <text x="48" y="212" fill="#cbd5e1" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Changed files: 1, +1/-1</text>
+  <text x="48" y="250" fill="#cbd5e1" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Required commands: 2</text>
+  <text x="48" y="300" fill="#fca5a5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Top findings:</text>
+  <text x="72" y="338" fill="#fecaca" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">[high] High-impact product area changed</text>
+  <text x="72" y="372" fill="#fed7aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">[medium] Source changed without matching test changes</text>
+  <text x="48" y="430" fill="#93c5fd" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Reports: Markdown + JSON + SARIF + self-contained HTML</text>
+  <text x="48" y="464" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">No LLM required. Same diff, same evidence, every run.</text>
+</svg>
