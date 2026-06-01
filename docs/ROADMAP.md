@@ -74,13 +74,14 @@
 - .NET project-aware test, build, and ASP.NET Core publish planning through `ProjectReference` relationships.
 - Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
 - Context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
+- Python and FastAPI changed-test targeting for matching pytest files with whole-suite fallback.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
 - Workflow whole-file context analysis for pre-existing privileged triggers and checkout steps.
-- FastAPI route-level changed-test targeting.
+- FastAPI dependency-override and router import graph targeting.
 - .NET solution filter and central package management targeting.
 - Android flavor-dimension parsing beyond explicit variant source sets.
 - Bazel/Buck downstream affected-target query planning beyond changed-package defaults.

@@ -66,3 +66,4 @@
 - Added .NET project-aware test, build, and ASP.NET Core publish plans using `ProjectReference` relationships.
 - Added Android Gradle variant-aware test, assemble, and lint planning from changed source sets.
 - Added context-aware GitHub Actions finding for `pull_request_target` workflows that check out pull request head code.
+- Added Python/FastAPI changed-test targeting for matching pytest files with whole-suite fallback.

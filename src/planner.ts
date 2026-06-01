@@ -19,7 +19,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       if (isDjangoProject(root, signal)) {
         addDjangoPlans(plans);
       } else {
-        addPythonPlans(plans);
+        addPythonPlans(plans, root, paths);
         if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, signal.entrypoint);
       }
     }
@@ -334,12 +334,13 @@ function readText(root: string, path: string): string {
   }
 }
 
-function addPythonPlans(plans: CommandPlan[]): void {
+function addPythonPlans(plans: CommandPlan[], root: string, paths: string[]): void {
+  const testTargets = pythonChangedTestTargets(root, paths);
   pushUnique(plans, {
-    id: "python-tests",
-    label: "Python tests",
-    command: "python -m pytest",
-    reason: "Python files or Python project metadata changed.",
+    id: testTargets.length > 0 ? "python-targeted-tests" : "python-tests",
+    label: testTargets.length > 0 ? "Python targeted tests" : "Python tests",
+    command: testTargets.length > 0 ? `python -m pytest ${testTargets.map(quoteShell).join(" ")}` : "python -m pytest",
+    reason: testTargets.length > 0 ? "Python source changes have matching changed-test targets on disk." : "Python files or Python project metadata changed.",
     ecosystem: "python",
     required: true
   });
@@ -351,6 +352,64 @@ function addPythonPlans(plans: CommandPlan[]): void {
     ecosystem: "python",
     required: true
   });
+}
+
+function pythonChangedTestTargets(root: string, paths: string[]): string[] {
+  const targets = new Set<string>();
+  for (const path of paths) {
+    if (!path.endsWith(".py")) continue;
+    if (isPythonTestPath(path) && existsSync(join(root, path))) {
+      targets.add(path);
+      continue;
+    }
+    for (const candidate of pythonTestCandidates(path)) {
+      if (existsSync(join(root, candidate))) targets.add(candidate);
+    }
+  }
+  return [...targets].sort();
+}
+
+function pythonTestCandidates(path: string): string[] {
+  const parsed = parsePath(path);
+  if (!parsed) return [];
+  const testNames = [`test_${parsed.name}${parsed.extension}`, `${parsed.name}_test${parsed.extension}`];
+  const candidates = new Set<string>();
+  const directories = [parsed.directory];
+  if (parsed.directory.startsWith("src/")) directories.push(parsed.directory.slice("src/".length));
+  if (parsed.directory.startsWith("app/")) directories.push(parsed.directory.slice("app/".length));
+
+  for (const directory of directories.filter((value, index, values) => values.indexOf(value) === index)) {
+    for (const testName of testNames) {
+      candidates.add(joinPath(directory, testName));
+      candidates.add(joinPath(directory, "tests", testName));
+      candidates.add(joinPath("tests", directory, testName));
+      candidates.add(joinPath("test", directory, testName));
+      candidates.add(joinPath("tests", testName));
+      candidates.add(joinPath("test", testName));
+    }
+  }
+  return [...candidates];
+}
+
+function isPythonTestPath(path: string): boolean {
+  return /(^|\/)(tests?|spec)\//i.test(path) || /(^|\/)test_[^/]+\.py$/i.test(path) || /_test\.py$/i.test(path);
+}
+
+function parsePath(path: string): { directory: string; name: string; extension: string } | undefined {
+  const slash = path.lastIndexOf("/");
+  const directory = slash >= 0 ? path.slice(0, slash) : "";
+  const fileName = slash >= 0 ? path.slice(slash + 1) : path;
+  const dot = fileName.lastIndexOf(".");
+  if (dot <= 0) return undefined;
+  return {
+    directory,
+    name: fileName.slice(0, dot),
+    extension: fileName.slice(dot)
+  };
+}
+
+function joinPath(...parts: string[]): string {
+  return parts.filter(Boolean).join("/");
 }
 
 function addDjangoPlans(plans: CommandPlan[]): void {

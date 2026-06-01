@@ -163,6 +163,27 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-tests", "python-compile"]);
   });
 
+  it("targets matching pytest files for Python source changes", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "app", "routers"), { recursive: true });
+    mkdirSync(join(root, "tests", "routers"), { recursive: true });
+    writeFileSync(join(root, "app", "routers", "users.py"), "def list_users():\n    return []\n");
+    writeFileSync(join(root, "tests", "routers", "test_users.py"), "def test_list_users():\n    assert True\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "app/routers/users.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", entrypoint: "app.main:app", framework: "fastapi", manifestPath: "requirements.txt" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "python -m pytest tests/routers/test_users.py",
+      "python -m compileall .",
+      "python -c \"import importlib, sys; sys.path[:0] = ['src', '.']; target = 'app.main:app'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)\""
+    ]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-targeted-tests", "python-compile"]);
+  });
+
   it("does not plan FastAPI import smoke for invalid entrypoint syntax", () => {
     const commands = planCommands(
       process.cwd(),
