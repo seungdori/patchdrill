@@ -43,6 +43,30 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["node-typecheck", "node-test"]);
   });
 
+  it("uses common Node script aliases for typecheck, unit, and browser tests", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/page.tsx", status: "modified", additions: 10, deletions: 2, binary: false }],
+      [
+        {
+          ecosystem: "node",
+          manifestPath: "package.json",
+          packageManager: "npm",
+          scripts: {
+            "check:types": "tsc --noEmit",
+            "test:unit": "vitest run",
+            build: "vite build",
+            "test:e2e": "playwright test"
+          }
+        }
+      ]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["npm run check:types", "npm run test:unit", "npm run build", "npm run test:e2e"]);
+    expect(commands.map((command) => command.id)).toEqual(["node-typecheck", "node-test", "node-build", "node-e2e"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["node-typecheck", "node-test", "node-build"]);
+  });
+
   it("adds Terraform validation for tf files", () => {
     const commands = planCommands(
       process.cwd(),
@@ -868,6 +892,41 @@ describe("planCommands", () => {
       "pnpm exec turbo run test --filter=@acme/web"
     ]);
     expect(commands.every((command) => command.reason.includes("detected turbo"))).toBe(true);
+  });
+
+  it("uses workspace Node script aliases with task runners", () => {
+    const files: ChangedFile[] = [
+      { path: "apps/web/src/page.tsx", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "node",
+        manifestPath: "package.json",
+        packageManager: "pnpm",
+        taskRunner: "turbo",
+        workspacePackages: [
+          {
+            name: "@acme/web",
+            path: "apps/web",
+            scripts: {
+              "check:types": "tsc --noEmit",
+              "test:unit": "vitest run",
+              "test:e2e": "playwright test"
+            }
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "pnpm exec turbo run check:types --filter=@acme/web",
+      "pnpm exec turbo run test:unit --filter=@acme/web",
+      "pnpm exec turbo run test:e2e --filter=@acme/web"
+    ]);
+    expect(commands.map((command) => command.id)).toEqual(["node-turbo-acme-web-typecheck", "node-turbo-acme-web-test", "node-turbo-acme-web-e2e"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["node-turbo-acme-web-typecheck", "node-turbo-acme-web-test"]);
   });
 
   it("uses Nx project targets when package scripts are absent", () => {

@@ -146,6 +146,21 @@ interface DotnetSolutionFilter {
   projects: string[];
 }
 
+interface NodeTask {
+  id: string;
+  label: string;
+  aliases: string[];
+  required: boolean;
+}
+
+const NODE_TASKS: NodeTask[] = [
+  { id: "typecheck", label: "typecheck", aliases: ["typecheck", "check:types", "types", "tsc"], required: true },
+  { id: "lint", label: "lint", aliases: ["lint"], required: false },
+  { id: "test", label: "test", aliases: ["test", "test:unit", "unit"], required: true },
+  { id: "build", label: "build", aliases: ["build"], required: true },
+  { id: "e2e", label: "e2e", aliases: ["test:e2e", "e2e", "playwright", "cypress", "cy:run"], required: false }
+];
+
 function addDotnetPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
   const solutionFilterPlanCount = addDotnetSolutionFilterPlans(plans, root, paths);
   if (solutionFilterPlanCount > 0) return;
@@ -1617,15 +1632,16 @@ export function findAffectedWorkspacePackages(changedFiles: ChangedFile[], signa
 
 function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
   const scripts = signal.scripts ?? {};
-  for (const script of ["typecheck", "lint", "test", "build"]) {
-    if (!scripts[script]) continue;
+  for (const task of NODE_TASKS) {
+    const script = nodeTaskScript(scripts, task);
+    if (!script) continue;
     pushUnique(plans, {
-      id: `node-${script}`,
-      label: `Node ${script}`,
+      id: `node-${task.id}`,
+      label: `Node ${task.label}`,
       command: nodeRun(signal.packageManager ?? "npm", script),
       reason: `package.json defines "${script}", and Node-related files changed.`,
       ecosystem: "node",
-      required: script === "test" || script === "typecheck" || script === "build"
+      required: task.required
     });
   }
 }
@@ -1659,15 +1675,16 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
 
   let added = 0;
   for (const workspacePackage of affectedPackages) {
-    for (const script of ["typecheck", "lint", "test", "build"]) {
-      if (!workspacePackage.scripts[script]) continue;
+    for (const task of NODE_TASKS) {
+      const script = nodeTaskScript(workspacePackage.scripts, task);
+      if (!script) continue;
       const plan: CommandPlan = {
-        id: `node-workspace-${slug(workspacePackage.name)}-${script}`,
-        label: `${workspacePackage.name} ${script}`,
+        id: `node-workspace-${slug(workspacePackage.name)}-${task.id}`,
+        label: `${workspacePackage.name} ${task.label}`,
         command: workspaceRun(signal.packageManager ?? "npm", workspacePackage.name, script),
         reason: workspaceReason(workspacePackage, script, directlyAffected, affectedNames, rootWideChange),
         ecosystem: "node",
-        required: script === "test" || script === "typecheck" || script === "build",
+        required: task.required,
         packageName: workspacePackage.name,
         packagePath: workspacePackage.path
       };
@@ -1786,16 +1803,17 @@ function addNodeTaskRunnerPlans(
   if (!signal.taskRunner || affectedPackages.length === 0) return 0;
   let added = 0;
   for (const workspacePackage of affectedPackages) {
-    for (const script of ["typecheck", "lint", "test", "build"]) {
-      if (!workspaceSupportsTask(workspacePackage, script, signal.taskRunner)) continue;
+    for (const task of NODE_TASKS) {
+      const script = workspaceTaskName(workspacePackage, task, signal.taskRunner);
+      if (!script) continue;
       const projectName = workspacePackage.projectName ?? workspacePackage.name;
       const plan: CommandPlan = {
-        id: `node-${signal.taskRunner}-${slug(projectName)}-${script}`,
-        label: `${workspacePackage.name} ${script}`,
+        id: `node-${signal.taskRunner}-${slug(projectName)}-${task.id}`,
+        label: `${workspacePackage.name} ${task.label}`,
         command: taskRunnerRun(signal.packageManager ?? "npm", signal.taskRunner, workspacePackage, script),
         reason: `${workspaceTaskRunnerReason(workspacePackage, script, directlyAffected, affectedNames, rootWideChange)} PatchDrill detected ${signal.taskRunner} and will use its task graph.`,
         ecosystem: "node",
-        required: script === "test" || script === "typecheck" || script === "build",
+        required: task.required,
         packageName: workspacePackage.name,
         packagePath: workspacePackage.path
       };
@@ -1807,9 +1825,15 @@ function addNodeTaskRunnerPlans(
   return added;
 }
 
-function workspaceSupportsTask(workspacePackage: WorkspacePackage, script: string, taskRunner: NonNullable<ProjectSignal["taskRunner"]>): boolean {
-  if (workspacePackage.scripts[script]) return true;
-  return taskRunner === "nx" && Boolean(workspacePackage.targets?.includes(script));
+function nodeTaskScript(scripts: Record<string, string>, task: NodeTask): string | undefined {
+  return task.aliases.find((script) => scripts[script]);
+}
+
+function workspaceTaskName(workspacePackage: WorkspacePackage, task: NodeTask, taskRunner: NonNullable<ProjectSignal["taskRunner"]>): string | undefined {
+  const script = nodeTaskScript(workspacePackage.scripts, task);
+  if (script) return script;
+  if (taskRunner !== "nx") return undefined;
+  return task.aliases.find((alias) => workspacePackage.targets?.includes(alias));
 }
 
 function affectedPackagesForSignal(paths: string[], signal: ProjectSignal, rootWideChange: boolean): WorkspacePackage[] {

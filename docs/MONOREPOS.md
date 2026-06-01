@@ -32,6 +32,8 @@ PatchDrill detects `turbo.json`, `nx.json`, root `turbo`/`nx` dependencies, and 
 
 Turborepo plans still use package names from `package.json`. Nx plans use `project.json` names when present, otherwise the package name. If a package has no script but `project.json` declares a matching target, PatchDrill can still plan `test`, `build`, `lint`, or `typecheck` through Nx.
 
+For Node package scripts, PatchDrill recognizes common aliases such as `check:types`, `test:unit`, and optional browser/e2e checks like `test:e2e`, `playwright`, and `cypress`. This keeps inferred plans useful for real front-end and full-stack repositories without forcing every package to expose only `test` and `typecheck`.
+
 ## Cargo Workspaces
 
 PatchDrill reads `[workspace].members` from root `Cargo.toml`, expands member globs, reads each member crate name, and keeps workspace-internal crate dependencies. A change under `crates/core` marks that crate as affected and also marks downstream workspace crates that depend on it.

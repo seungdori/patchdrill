@@ -95,6 +95,7 @@
 - Multi-run static dashboard trends for CI artifact history.
 - GitHub Action `dashboard-history` input for re-rendering trend dashboards from previous JSON report artifacts.
 - Framework-specific changed-test matching for Rails/RSpec, Python app packages, JVM source sets, and Laravel unit/feature tests.
+- Node script alias planning for typecheck, unit, and optional browser/e2e verification scripts.
 
 ## Contribution Targets
 
