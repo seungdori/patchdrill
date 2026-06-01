@@ -160,7 +160,7 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("| --- | --- | --- | --- |");
     for (const command of report.commandPlan) {
       lines.push(
-        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? "")} | \`${escapeBackticks(command.command)}\` | ${escapePipe(command.reason)} |`
+        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(command.reason)} |`
       );
     }
   }
@@ -195,6 +195,82 @@ export function renderMarkdown(report: PatchReport): string {
   lines.push("");
   lines.push("- Treat this report as triage evidence, not a replacement for review.");
   lines.push("- High-impact areas still need human sign-off even when automated commands pass.");
+  lines.push("");
+
+  return `${lines.join("\n")}\n`;
+}
+
+export function renderSummaryMarkdown(report: PatchReport): string {
+  const lines: string[] = [];
+  const statusIcon = report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL";
+  const requiredCommands = report.commandPlan.filter((command) => command.required);
+  const optionalCommands = report.commandPlan.filter((command) => !command.required);
+  const failedCommands = report.commandResults.filter((result) => result.exitCode !== 0);
+
+  lines.push("# PatchDrill Summary");
+  lines.push("");
+  lines.push(`**${statusIcon}** - risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`);
+  lines.push("");
+  lines.push(`- Changed files: ${report.summary.changedFileCount} (+${report.summary.additions} / -${report.summary.deletions})`);
+  lines.push(`- Verification plan: ${requiredCommands.length} required, ${optionalCommands.length} optional`);
+  lines.push(`- Command results: ${report.commandResults.length} run, ${failedCommands.length} failed`);
+  if (report.baseline) {
+    lines.push(`- Baseline risk delta: ${formatDelta(report.baseline.riskDelta)} (${report.baseline.newFindingCount} new findings)`);
+  }
+  lines.push("");
+
+  lines.push("## Changed Files");
+  lines.push("");
+  if (report.changedFiles.length === 0) {
+    lines.push("No changed files detected.");
+  } else {
+    for (const file of report.changedFiles.slice(0, 5)) {
+      const path = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
+      lines.push(`- \`${escapeBackticks(path)}\` (${file.status}, +${file.additions} / -${file.deletions}${file.binary ? ", binary" : ""})`);
+    }
+    if (report.changedFiles.length > 5) {
+      lines.push("");
+      lines.push(`_${report.changedFiles.length - 5} more changed files in the full report._`);
+    }
+  }
+  lines.push("");
+
+  lines.push("## Top Findings");
+  lines.push("");
+  if (report.findings.length === 0) {
+    lines.push("No risk findings.");
+  } else {
+    lines.push("| Severity | Finding | Location |");
+    lines.push("| --- | --- | --- |");
+    for (const finding of report.findings.slice(0, 5)) {
+      lines.push(`| ${finding.severity} | ${escapePipe(finding.title)} | ${escapePipe(findingLocation(finding))} |`);
+    }
+    if (report.findings.length > 5) {
+      lines.push("");
+      lines.push(`_${report.findings.length - 5} more findings in the full report._`);
+    }
+  }
+  lines.push("");
+
+  lines.push("## Required Checks");
+  lines.push("");
+  if (requiredCommands.length === 0) {
+    lines.push("No required verification commands were inferred.");
+  } else {
+    lines.push("| Command | Result |");
+    lines.push("| --- | --- |");
+    for (const command of requiredCommands.slice(0, 5)) {
+      const result = report.commandResults.find((candidate) => candidate.id === command.id);
+      lines.push(`| ${markdownTableCode(command.command)} | ${result ? (result.exitCode === 0 ? "passed" : `failed (${result.exitCode})`) : "planned"} |`);
+    }
+    if (requiredCommands.length > 5) {
+      lines.push("");
+      lines.push(`_${requiredCommands.length - 5} more required checks in the full report._`);
+    }
+  }
+  lines.push("");
+
+  lines.push("Full Markdown, JSON, SARIF, and HTML reports remain available as CI artifacts when configured.");
   lines.push("");
 
   return `${lines.join("\n")}\n`;
@@ -792,6 +868,10 @@ function sarifLevel(severity: Severity): "error" | "warning" | "note" | "none" {
   return "none";
 }
 
+function findingLocation(finding: { file?: string; line?: number }): string {
+  return finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "Global";
+}
+
 function githubAnnotationCommand(severity: Severity): "error" | "warning" | "notice" {
   if (severity === "critical" || severity === "high") return "error";
   if (severity === "medium") return "warning";
@@ -812,6 +892,10 @@ function escapePipe(value: string): string {
 
 function escapeBackticks(value: string): string {
   return value.replaceAll("`", "\\`");
+}
+
+function markdownTableCode(value: string): string {
+  return `\`${escapePipe(escapeBackticks(value))}\``;
 }
 
 function formatDelta(value: number): string {

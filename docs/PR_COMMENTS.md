@@ -1,6 +1,6 @@
 # Pull Request Comments
 
-PatchDrill's composite GitHub Action can upsert the Markdown report as a pull request comment.
+PatchDrill's composite GitHub Action can upsert a compact Markdown summary as a pull request comment.
 
 ```yaml
 permissions:
@@ -15,6 +15,7 @@ steps:
   - uses: seungdori/patchdrill@v0
     with:
       base: origin/${{ github.base_ref }}
+      summary: patchdrill-summary.md
       markdown: patchdrill-report.md
       json: patchdrill-report.json
       sarif: patchdrill.sarif
@@ -22,7 +23,7 @@ steps:
       comment-marker: "<!-- patchdrill-report -->"
 ```
 
-PatchDrill finds an existing bot comment containing the marker and updates it. If no marker is present, it creates a new comment. This keeps PR discussions readable while preserving the latest verification evidence.
+PatchDrill finds an existing bot comment containing the marker and updates it. If no marker is present, it creates a new comment. The comment uses the compact summary by default, while the full Markdown, JSON, SARIF, and HTML reports remain available as workflow artifacts.
 
 ## Permissions
 

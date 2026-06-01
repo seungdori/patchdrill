@@ -7,10 +7,12 @@ describe("types", () => {
       cwd: "/repo",
       run: true,
       runOptional: true,
+      summaryMarkdownPath: "patchdrill-summary.md",
       htmlPath: "patchdrill-dashboard.html"
     });
 
     expect(options.htmlPath).toBe("patchdrill-dashboard.html");
+    expect(options.summaryMarkdownPath).toBe("patchdrill-summary.md");
     expect(options.runOptional).toBe(true);
   });
 

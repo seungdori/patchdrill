@@ -191,6 +191,7 @@ export interface ScanOptions {
   failOn?: Severity;
   configPath?: string;
   baselinePath?: string;
+  summaryMarkdownPath?: string;
   markdownPath?: string;
   jsonPath?: string;
   sarifPath?: string;

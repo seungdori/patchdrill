@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderGitHubAnnotations, renderHtml, renderMarkdown, shouldFail } from "../src/report.js";
+import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSummaryMarkdown, shouldFail } from "../src/report.js";
 import type { PatchReport } from "../src/types.js";
 
 describe("report", () => {
@@ -171,6 +171,34 @@ describe("report", () => {
     expect(html).toContain("2 latest");
     expect(html).toContain("2026-06-01T00:00:00.000Z");
     expect(html).toContain("feature");
+  });
+
+  it("renders a compact Markdown summary for PR surfaces", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 32, failedCommandCount: 1, head: "feature" });
+    report.baseline = {
+      path: "previous.json",
+      previousStatus: "pass",
+      currentStatus: "fail",
+      previousRiskScore: 12,
+      currentRiskScore: 32,
+      riskDelta: 20,
+      newFindingCount: 2,
+      resolvedFindingCount: 0,
+      unchangedFindingCount: 1
+    };
+    report.commandPlan[0]!.command = "npm test | tee test.log";
+    report.commandResults[0]!.command = "npm test | tee test.log";
+
+    const summary = renderSummaryMarkdown(report);
+
+    expect(summary).toContain("# PatchDrill Summary");
+    expect(summary).toContain("**FAIL** - risk 32/100, confidence 70/100");
+    expect(summary).toContain("- Command results: 1 run, 1 failed");
+    expect(summary).toContain("- Baseline risk delta: +20 (2 new findings)");
+    expect(summary).toContain("- `src/app.ts` (modified, +4 / -1)");
+    expect(summary).toContain("| medium | Example finding | Global |");
+    expect(summary).toContain("| `npm test \\| tee test.log` | failed (1) |");
+    expect(summary).toContain("Full Markdown, JSON, SARIF, and HTML reports remain available");
   });
 
   it("renders escaped GitHub Actions annotations for findings", () => {

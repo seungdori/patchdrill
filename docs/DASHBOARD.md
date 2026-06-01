@@ -42,6 +42,7 @@ For CI, upload the HTML alongside the JSON and Markdown artifacts:
   id: patchdrill
   with:
     base: origin/${{ github.base_ref }}
+    summary: patchdrill-summary.md
     json: patchdrill-report.json
     html: patchdrill-dashboard.html
 - uses: actions/upload-artifact@v7
@@ -50,6 +51,7 @@ For CI, upload the HTML alongside the JSON and Markdown artifacts:
     name: patchdrill-report
     path: |
       ${{ steps.patchdrill.outputs.report-json }}
+      ${{ steps.patchdrill.outputs.report-summary }}
       ${{ steps.patchdrill.outputs.report-html }}
 ```
 

@@ -42,6 +42,10 @@ inputs:
     description: Execute optional inferred verification commands when run is true.
     required: false
     default: "false"
+  summary:
+    description: Compact Markdown summary output path for PR comments and step summaries.
+    required: false
+    default: patchdrill-summary.md
   markdown:
     description: Markdown report output path.
     required: false
@@ -67,11 +71,11 @@ inputs:
     required: false
     default: "true"
   step-summary:
-    description: Append the Markdown report to the GitHub Actions step summary.
+    description: Append the compact Markdown summary to the GitHub Actions step summary.
     required: false
     default: "true"
   pr-comment:
-    description: Upsert the Markdown report as a pull request comment.
+    description: Upsert the compact Markdown summary as a pull request comment.
     required: false
     default: "false"
   comment-marker:
@@ -79,6 +83,9 @@ inputs:
     required: false
     default: "<!-- patchdrill-report -->"
 outputs:
+  report-summary:
+    description: Path to the generated compact Markdown summary.
+    value: ${{ steps.paths.outputs.summary }}
   report-json:
     description: Path to the generated JSON report.
     value: ${{ steps.paths.outputs.json }}
@@ -121,6 +128,7 @@ runs:
         PATCHDRILL_BASELINE: ${{ inputs.baseline }}
         PATCHDRILL_RUN: ${{ inputs.run }}
         PATCHDRILL_RUN_OPTIONAL: ${{ inputs.run-optional }}
+        PATCHDRILL_SUMMARY: ${{ inputs.summary }}
         PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
@@ -130,6 +138,7 @@ runs:
         args=(
           scan
           --base "$PATCHDRILL_BASE"
+          --summary-markdown "$PATCHDRILL_SUMMARY"
           --markdown "$PATCHDRILL_MARKDOWN"
           --json "$PATCHDRILL_JSON"
           --sarif "$PATCHDRILL_SARIF"
@@ -184,27 +193,27 @@ runs:
       if: inputs.step-summary == 'true'
       shell: bash
       env:
-        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
+        PATCHDRILL_SUMMARY: ${{ inputs.summary }}
       run: |
-        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$PATCHDRILL_MARKDOWN" ]; then
-          cat -- "$PATCHDRILL_MARKDOWN" >> "$GITHUB_STEP_SUMMARY"
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$PATCHDRILL_SUMMARY" ]; then
+          cat -- "$PATCHDRILL_SUMMARY" >> "$GITHUB_STEP_SUMMARY"
         fi
     - name: Upsert PR comment
       if: inputs.pr-comment == 'true' && github.event_name == 'pull_request'
       uses: actions/github-script@v9
       env:
-        PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
+        PATCHDRILL_SUMMARY: ${{ inputs.summary }}
         PATCHDRILL_MARKER: ${{ inputs.comment-marker }}
       with:
         script: |
           const fs = require("fs");
           const marker = process.env.PATCHDRILL_MARKER || "<!-- patchdrill-report -->";
-          const markdownPath = process.env.PATCHDRILL_MARKDOWN || "patchdrill-report.md";
-          if (!fs.existsSync(markdownPath)) {
-            core.warning(`PatchDrill markdown report not found: ${markdownPath}`);
+          const summaryPath = process.env.PATCHDRILL_SUMMARY || "patchdrill-summary.md";
+          if (!fs.existsSync(summaryPath)) {
+            core.warning(`PatchDrill summary report not found: ${summaryPath}`);
             return;
           }
-          const body = `${marker}\n${fs.readFileSync(markdownPath, "utf8")}`;
+          const body = `${marker}\n${fs.readFileSync(summaryPath, "utf8")}`;
           const { owner, repo } = context.repo;
           const issue_number = context.payload.pull_request.number;
           const comments = await github.paginate(github.rest.issues.listComments, {
@@ -233,6 +242,7 @@ runs:
       id: paths
       shell: bash
       env:
+        PATCHDRILL_SUMMARY: ${{ inputs.summary }}
         PATCHDRILL_MARKDOWN: ${{ inputs.markdown }}
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
@@ -248,6 +258,7 @@ runs:
             printf '%s\n' "$delimiter"
           } >> "$GITHUB_OUTPUT"
         }
+        write_output summary "$PATCHDRILL_SUMMARY"
         write_output json "$PATCHDRILL_JSON"
         write_output markdown "$PATCHDRILL_MARKDOWN"
         write_output sarif "$PATCHDRILL_SARIF"

@@ -13,6 +13,11 @@ describe("composite action", () => {
     expect(action).toContain("annotations:");
     expect(action).toContain("PATCHDRILL_ANNOTATIONS");
     expect(action).toContain("args+=(--github-annotations)");
+    expect(action).toContain("summary:");
+    expect(action).toContain("PATCHDRILL_SUMMARY");
+    expect(action).toContain('--summary-markdown "$PATCHDRILL_SUMMARY"');
+    expect(action).toContain("report-summary:");
+    expect(action).toContain("write_output summary");
     expect(action).toContain("run-optional:");
     expect(action).toContain("PATCHDRILL_RUN_OPTIONAL");
     expect(action).toContain("args+=(--run-optional)");
@@ -37,11 +42,18 @@ describe("composite action", () => {
   it("keeps action metadata parseable with dashboard history support", () => {
     const action = parse(readFileSync("action.yml", "utf8")) as {
       inputs?: Record<string, { description?: string; default?: string }>;
-      runs?: { steps?: Array<{ name?: string; if?: string; run?: string }> };
+      outputs?: Record<string, { description?: string; value?: string }>;
+      runs?: { steps?: Array<{ name?: string; if?: string; run?: string; env?: Record<string, string>; with?: Record<string, string> }> };
     };
 
     expect(action.inputs?.["dashboard-history"]?.default).toBe("");
     expect(action.inputs?.annotations?.default).toBe("true");
+    expect(action.inputs?.summary?.default).toBe("patchdrill-summary.md");
+    expect(action.outputs?.["report-summary"]?.value).toBe("${{ steps.paths.outputs.summary }}");
+    const summaryStep = action.runs?.steps?.find((step) => step.name === "Write step summary");
+    expect(summaryStep?.run).toContain('cat -- "$PATCHDRILL_SUMMARY"');
+    const commentStep = action.runs?.steps?.find((step) => step.name === "Upsert PR comment");
+    expect(JSON.stringify(commentStep)).toContain("PATCHDRILL_SUMMARY");
     const historyStep = action.runs?.steps?.find((step) => step.name === "Render dashboard history");
     expect(historyStep?.if).toBe("inputs.dashboard-history != ''");
     expect(historyStep?.run).toContain('args+=(--json "$PATCHDRILL_JSON" --output "$PATCHDRILL_HTML")');

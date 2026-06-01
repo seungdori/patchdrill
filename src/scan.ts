@@ -7,7 +7,7 @@ import { gitRoot, readAddedLines, readChangedFiles, readFilePair } from "./git.j
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
 import { discoverProjectSignals } from "./project.js";
-import { renderHtml, renderMarkdown, renderSarif } from "./report.js";
+import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "./report.js";
 import { runCommandPlan } from "./runner.js";
 import { assessRisk } from "./risk.js";
 import type { PatchReport, ScanOptions } from "./types.js";
@@ -109,6 +109,9 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   }
   if (options.markdownPath) {
     writeOutput(options.markdownPath, renderMarkdown(report), root);
+  }
+  if (options.summaryMarkdownPath) {
+    writeOutput(options.summaryMarkdownPath, renderSummaryMarkdown(report), root);
   }
   if (options.sarifPath) {
     writeOutput(options.sarifPath, renderSarif(report), root);

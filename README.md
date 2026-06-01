@@ -121,6 +121,7 @@ Write reports:
 
 ```bash
 patchdrill scan --base origin/main \
+  --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
@@ -211,6 +212,7 @@ Options:
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
+| `--summary-markdown <path>` | Write a compact Markdown summary for PR comments or step summaries. |
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |
@@ -339,6 +341,7 @@ jobs:
         id: patchdrill
         with:
           base: origin/${{ github.base_ref }}
+          summary: patchdrill-summary.md
           markdown: patchdrill-report.md
           json: patchdrill-report.json
           sarif: patchdrill.sarif
@@ -361,6 +364,7 @@ jobs:
           name: patchdrill-report
           path: |
             ${{ steps.patchdrill.outputs.report-markdown }}
+            ${{ steps.patchdrill.outputs.report-summary }}
             ${{ steps.patchdrill.outputs.report-json }}
             ${{ steps.patchdrill.outputs.report-html }}
             ${{ steps.patchdrill.outputs.report-sarif }}

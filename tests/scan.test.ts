@@ -535,7 +535,7 @@ backend_packages = ["pants.backend.python"]
     ]);
   });
 
-  it("writes a static HTML dashboard during scan", async () => {
+  it("writes static report surfaces during scan", async () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-"));
     tempDirs.push(root);
     git(root, ["init", "-b", "main"]);
@@ -550,13 +550,21 @@ backend_packages = ["pants.backend.python"]
 
     writeFileSync(join(root, "src", "scan.ts"), "export const after = true;\n");
 
-    const report = await scan({ cwd: root, htmlPath: "reports/patchdrill-dashboard.html" });
+    const report = await scan({
+      cwd: root,
+      htmlPath: "reports/patchdrill-dashboard.html",
+      summaryMarkdownPath: "reports/patchdrill-summary.md"
+    });
     const html = readFileSync(join(root, "reports", "patchdrill-dashboard.html"), "utf8");
+    const summary = readFileSync(join(root, "reports", "patchdrill-summary.md"), "utf8");
 
     expect(html).toContain("<title>PatchDrill Dashboard</title>");
     expect(html).toContain("Verification Dashboard");
     expect(html).toContain(`${report.summary.riskScore}/100`);
     expect(html).toContain("src/scan.ts");
+    expect(summary).toContain("# PatchDrill Summary");
+    expect(summary).toContain(`risk ${report.summary.riskScore}/100`);
+    expect(summary).toContain("src/scan.ts");
   });
 
   it("includes dependency changes in reports", async () => {

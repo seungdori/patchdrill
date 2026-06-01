@@ -69,6 +69,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const head = flagString(parsed, "head");
   const configPath = flagString(parsed, "config");
   const baselinePath = flagString(parsed, "baseline");
+  const summaryMarkdownPath = flagString(parsed, "summary-markdown");
   const markdownPath = flagString(parsed, "markdown");
   const jsonPath = flagString(parsed, "json");
   const sarifPath = flagString(parsed, "sarif");
@@ -92,6 +93,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     run,
     ...(runOptional ? { runOptional: true } : {}),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
+    ...(summaryMarkdownPath ? { summaryMarkdownPath } : {}),
     ...(markdownPath ? { markdownPath } : {}),
     ...(jsonPath ? { jsonPath } : {}),
     ...(sarifPath ? { sarifPath } : {}),
@@ -304,6 +306,7 @@ function takesValue(flag: string): boolean {
     "head",
     "config",
     "baseline",
+    "summary-markdown",
     "markdown",
     "json",
     "sarif",
@@ -401,6 +404,8 @@ Options:
   --run-optional      With --run, also execute optional verification commands
   --github-annotations
                       Emit GitHub Actions log annotations for findings
+  --summary-markdown <path>
+                      Write a compact Markdown summary for PR comments or step summaries
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
   --sarif <path>      Write a SARIF report for GitHub code scanning

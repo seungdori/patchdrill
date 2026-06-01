@@ -51,6 +51,7 @@ jobs:
         id: patchdrill
         with:
           base: origin/\${{ github.base_ref || 'main' }}
+          summary: patchdrill-summary.md
           markdown: patchdrill-report.md
           json: patchdrill-report.json
           sarif: patchdrill.sarif
@@ -72,6 +73,7 @@ jobs:
           name: patchdrill-report
           path: |
             \${{ steps.patchdrill.outputs.report-markdown }}
+            \${{ steps.patchdrill.outputs.report-summary }}
             \${{ steps.patchdrill.outputs.report-json }}
             \${{ steps.patchdrill.outputs.report-sarif }}
             \${{ steps.patchdrill.outputs.report-html }}
