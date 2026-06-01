@@ -24,6 +24,10 @@ describe("cli", () => {
       command: "scan",
       flags: { "summary-markdown": "patchdrill-summary.md" }
     });
+    expect(parseArgs(["scan", "--evidence", "patchdrill-evidence.json"])).toMatchObject({
+      command: "scan",
+      flags: { evidence: "patchdrill-evidence.json" }
+    });
     expect(parseArgs(["scan", "--run", "--run-optional"])).toMatchObject({
       command: "scan",
       flags: { run: true, "run-optional": true }

@@ -13,6 +13,11 @@ describe("composite action", () => {
     expect(action).toContain("annotations:");
     expect(action).toContain("PATCHDRILL_ANNOTATIONS");
     expect(action).toContain("args+=(--github-annotations)");
+    expect(action).toContain("evidence:");
+    expect(action).toContain("PATCHDRILL_EVIDENCE");
+    expect(action).toContain('--evidence "$PATCHDRILL_EVIDENCE"');
+    expect(action).toContain("report-evidence:");
+    expect(action).toContain("write_output evidence");
     expect(action).toContain("summary:");
     expect(action).toContain("PATCHDRILL_SUMMARY");
     expect(action).toContain('--summary-markdown "$PATCHDRILL_SUMMARY"');
@@ -48,6 +53,8 @@ describe("composite action", () => {
 
     expect(action.inputs?.["dashboard-history"]?.default).toBe("");
     expect(action.inputs?.annotations?.default).toBe("true");
+    expect(action.inputs?.evidence?.default).toBe("patchdrill-evidence.json");
+    expect(action.outputs?.["report-evidence"]?.value).toBe("${{ steps.paths.outputs.evidence }}");
     expect(action.inputs?.summary?.default).toBe("patchdrill-summary.md");
     expect(action.outputs?.["report-summary"]?.value).toBe("${{ steps.paths.outputs.summary }}");
     const summaryStep = action.runs?.steps?.find((step) => step.name === "Write step summary");

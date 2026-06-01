@@ -7,10 +7,12 @@ describe("types", () => {
       cwd: "/repo",
       run: true,
       runOptional: true,
+      evidencePath: "patchdrill-evidence.json",
       summaryMarkdownPath: "patchdrill-summary.md",
       htmlPath: "patchdrill-dashboard.html"
     });
 
+    expect(options.evidencePath).toBe("patchdrill-evidence.json");
     expect(options.htmlPath).toBe("patchdrill-dashboard.html");
     expect(options.summaryMarkdownPath).toBe("patchdrill-summary.md");
     expect(options.runOptional).toBe(true);

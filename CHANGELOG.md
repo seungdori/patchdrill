@@ -87,3 +87,4 @@
 - Updated generated workflows to make annotations and step summaries explicit.
 - Added compact Markdown summaries for GitHub step summaries and PR comments.
 - Added first-party Maven and Spring Boot Maven stack fixtures.
+- Added audit evidence manifests with report, artifact, and command-output digests.

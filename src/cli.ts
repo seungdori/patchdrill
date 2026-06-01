@@ -69,6 +69,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const head = flagString(parsed, "head");
   const configPath = flagString(parsed, "config");
   const baselinePath = flagString(parsed, "baseline");
+  const evidencePath = flagString(parsed, "evidence");
   const summaryMarkdownPath = flagString(parsed, "summary-markdown");
   const markdownPath = flagString(parsed, "markdown");
   const jsonPath = flagString(parsed, "json");
@@ -90,6 +91,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(head ? { head } : {}),
     ...(configPath ? { configPath } : {}),
     ...(baselinePath ? { baselinePath } : {}),
+    ...(evidencePath ? { evidencePath } : {}),
     run,
     ...(runOptional ? { runOptional: true } : {}),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
@@ -306,6 +308,7 @@ function takesValue(flag: string): boolean {
     "head",
     "config",
     "baseline",
+    "evidence",
     "summary-markdown",
     "markdown",
     "json",
@@ -400,6 +403,7 @@ Options:
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
+  --evidence <path>   Write an audit evidence manifest with report, artifact, and command hashes
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
   --github-annotations

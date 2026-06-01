@@ -2,7 +2,7 @@
 
 PatchDrill is a local-first CI drill for proving that AI-generated and human patches are safe before merge.
 
-AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, and SARIF evidence that reviewers and CI systems can inspect.
+AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, SARIF, HTML, and audit evidence that reviewers and CI systems can inspect.
 
 ![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)
 
@@ -22,7 +22,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
-- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, and a self-contained HTML dashboard.
+- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and an audit manifest with report, artifact, and command-output hashes.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
@@ -121,6 +121,7 @@ Write reports:
 
 ```bash
 patchdrill scan --base origin/main \
+  --evidence patchdrill-evidence.json \
   --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
@@ -198,7 +199,7 @@ patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <d
 patchdrill demo [--output <directory>]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
-patchdrill schema [policy|report] [--output <path>]
+patchdrill schema [policy|report|evidence] [--output <path>]
 ```
 
 Options:
@@ -209,6 +210,7 @@ Options:
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
+| `--evidence <path>` | Write an audit evidence manifest with report, artifact, and command-output hashes. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
@@ -341,6 +343,7 @@ jobs:
         id: patchdrill
         with:
           base: origin/${{ github.base_ref }}
+          evidence: patchdrill-evidence.json
           summary: patchdrill-summary.md
           markdown: patchdrill-report.md
           json: patchdrill-report.json
@@ -363,6 +366,7 @@ jobs:
         with:
           name: patchdrill-report
           path: |
+            ${{ steps.patchdrill.outputs.report-evidence }}
             ${{ steps.patchdrill.outputs.report-markdown }}
             ${{ steps.patchdrill.outputs.report-summary }}
             ${{ steps.patchdrill.outputs.report-json }}

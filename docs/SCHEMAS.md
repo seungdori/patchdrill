@@ -1,10 +1,11 @@
 # JSON Schemas
 
-PatchDrill ships JSON Schema draft 2020-12 contracts for policy files and machine-readable reports.
+PatchDrill ships JSON Schema draft 2020-12 contracts for policy files, machine-readable reports, and audit evidence manifests.
 
 ```bash
 patchdrill schema policy > patchdrill-policy.schema.json
 patchdrill schema report > patchdrill-report.schema.json
+patchdrill schema evidence > patchdrill-evidence.schema.json
 ```
 
 Write a schema to a file:
@@ -32,3 +33,7 @@ For editor completion in YAML, add a language-server schema comment:
 ## Report Schema
 
 Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, findings, verification plans, and command results.
+
+## Evidence Schema
+
+Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr.

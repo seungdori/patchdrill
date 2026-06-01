@@ -552,15 +552,33 @@ backend_packages = ["pants.backend.python"]
 
     const report = await scan({
       cwd: root,
+      evidencePath: "reports/patchdrill-evidence.json",
       htmlPath: "reports/patchdrill-dashboard.html",
+      jsonPath: "reports/patchdrill-report.json",
       summaryMarkdownPath: "reports/patchdrill-summary.md"
     });
+    const evidence = JSON.parse(readFileSync(join(root, "reports", "patchdrill-evidence.json"), "utf8")) as {
+      schemaVersion: string;
+      report: { sha256: string };
+      artifacts: Array<{ kind: string; path: string; sha256: string }>;
+    };
     const html = readFileSync(join(root, "reports", "patchdrill-dashboard.html"), "utf8");
+    const json = readFileSync(join(root, "reports", "patchdrill-report.json"), "utf8");
     const summary = readFileSync(join(root, "reports", "patchdrill-summary.md"), "utf8");
 
+    expect(evidence.schemaVersion).toBe("1");
+    expect(evidence.report.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(evidence.artifacts.map((artifact) => artifact.kind)).toEqual(["summary-markdown", "json", "html"]);
+    expect(evidence.artifacts.map((artifact) => artifact.path)).toEqual([
+      "reports/patchdrill-summary.md",
+      "reports/patchdrill-report.json",
+      "reports/patchdrill-dashboard.html"
+    ]);
+    expect(evidence.artifacts.every((artifact) => /^[a-f0-9]{64}$/.test(artifact.sha256))).toBe(true);
     expect(html).toContain("<title>PatchDrill Dashboard</title>");
     expect(html).toContain("Verification Dashboard");
     expect(html).toContain(`${report.summary.riskScore}/100`);
+    expect(json).toContain(`"riskScore": ${report.summary.riskScore}`);
     expect(html).toContain("src/scan.ts");
     expect(summary).toContain("# PatchDrill Summary");
     expect(summary).toContain(`risk ${report.summary.riskScore}/100`);

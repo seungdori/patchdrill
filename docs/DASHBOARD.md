@@ -35,13 +35,14 @@ The dashboard includes:
 - Verification plans and command results.
 - Changed files, project signals, policy context, baseline context, owner context, and dependency changes.
 
-For CI, upload the HTML alongside the JSON and Markdown artifacts:
+For CI, upload the HTML alongside the JSON, Markdown, and evidence artifacts:
 
 ```yaml
 - uses: seungdori/patchdrill@v0
   id: patchdrill
   with:
     base: origin/${{ github.base_ref }}
+    evidence: patchdrill-evidence.json
     summary: patchdrill-summary.md
     json: patchdrill-report.json
     html: patchdrill-dashboard.html
@@ -50,6 +51,7 @@ For CI, upload the HTML alongside the JSON and Markdown artifacts:
   with:
     name: patchdrill-report
     path: |
+      ${{ steps.patchdrill.outputs.report-evidence }}
       ${{ steps.patchdrill.outputs.report-json }}
       ${{ steps.patchdrill.outputs.report-summary }}
       ${{ steps.patchdrill.outputs.report-html }}

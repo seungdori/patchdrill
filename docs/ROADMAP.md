@@ -103,6 +103,7 @@
 - Generated workflow templates that explicitly enable annotations and step summaries.
 - Compact Markdown summaries for GitHub step summaries and pull request comments.
 - First-party Maven and Spring Boot Maven stack fixtures.
+- Audit evidence manifests with report, artifact, and command-output digests.
 
 ## Contribution Targets
 

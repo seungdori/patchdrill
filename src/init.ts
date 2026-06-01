@@ -51,6 +51,7 @@ jobs:
         id: patchdrill
         with:
           base: origin/\${{ github.base_ref || 'main' }}
+          evidence: patchdrill-evidence.json
           summary: patchdrill-summary.md
           markdown: patchdrill-report.md
           json: patchdrill-report.json
@@ -72,6 +73,7 @@ jobs:
         with:
           name: patchdrill-report
           path: |
+            \${{ steps.patchdrill.outputs.report-evidence }}
             \${{ steps.patchdrill.outputs.report-markdown }}
             \${{ steps.patchdrill.outputs.report-summary }}
             \${{ steps.patchdrill.outputs.report-json }}

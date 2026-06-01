@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patchdrill.dev/schemas/patchdrill-evidence.schema.json",
+  "title": "PatchDrill Evidence Manifest",
+  "description": "Audit manifest emitted by PatchDrill scan --evidence with report, artifact, and command-output digests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "tool",
+    "root",
+    "git",
+    "summary",
+    "report",
+    "artifacts",
+    "commands"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "reportSchemaVersion"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "patchdrill"
+        },
+        "reportSchemaVersion": {
+          "type": "string",
+          "const": "1"
+        }
+      }
+    },
+    "root": {
+      "type": "string"
+    },
+    "base": {
+      "type": "string"
+    },
+    "head": {
+      "type": "string"
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "headSha": {
+          "$ref": "#/$defs/sha1"
+        },
+        "baseSha": {
+          "$ref": "#/$defs/sha1"
+        }
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/patchSummary"
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes", "findingCount", "commandPlanCount", "commandResultCount"],
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commandPlanCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commandResultCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/command"
+      }
+    }
+  },
+  "$defs": {
+    "sha1": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "patchStatus": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail"]
+    },
+    "patchSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "riskScore",
+        "confidenceScore",
+        "changedFileCount",
+        "additions",
+        "deletions",
+        "requiredCommandCount",
+        "failedCommandCount"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/patchStatus"
+        },
+        "riskScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "confidenceScore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "changedFileCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "additions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deletions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiredCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failedCommandCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "bytes"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["summary-markdown", "markdown", "json", "sarif", "html"]
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes"],
+      "properties": {
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "command", "exitCode", "durationMs", "stdout", "stderr"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "stdout": {
+          "$ref": "#/$defs/digest"
+        },
+        "stderr": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    }
+  }
+}

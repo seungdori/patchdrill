@@ -20,11 +20,13 @@ describe("init", () => {
     expect(workflow).toContain("pull-requests: write");
     expect(workflow).toContain("security-events: write");
     expect(workflow).toContain("seungdori/patchdrill@v0");
+    expect(workflow).toContain("evidence: patchdrill-evidence.json");
     expect(workflow).toContain("summary: patchdrill-summary.md");
     expect(workflow).toContain('annotations: "true"');
     expect(workflow).toContain('step-summary: "true"');
     expect(workflow).toContain('pr-comment: "true"');
     expect(workflow).toContain("steps.patchdrill.outputs.report-sarif");
+    expect(workflow).toContain("steps.patchdrill.outputs.report-evidence");
     expect(workflow).toContain("steps.patchdrill.outputs.report-summary");
     expect(workflow).toContain("steps.patchdrill.outputs.report-html");
     expect(workflow).toContain("html: patchdrill-dashboard.html");

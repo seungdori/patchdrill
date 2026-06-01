@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import { compareBaseline } from "./baseline.js";
 import { annotateCodeOwners, loadCodeOwners } from "./codeowners.js";
 import { analyzeDependencyChanges } from "./dependency.js";
+import { renderEvidenceManifest, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot, readAddedLines, readChangedFiles, readFilePair } from "./git.js";
 import { findAffectedWorkspacePackages, planCommands } from "./planner.js";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "./policy.js";
@@ -104,20 +105,18 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     commandResults
   };
 
-  if (options.jsonPath) {
-    writeOutput(options.jsonPath, `${JSON.stringify(report, null, 2)}\n`, root);
+  const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+  const artifacts: RenderedEvidenceArtifact[] = [];
+  if (options.summaryMarkdownPath) artifacts.push({ kind: "summary-markdown", path: options.summaryMarkdownPath, contents: renderSummaryMarkdown(report) });
+  if (options.markdownPath) artifacts.push({ kind: "markdown", path: options.markdownPath, contents: renderMarkdown(report) });
+  if (options.jsonPath) artifacts.push({ kind: "json", path: options.jsonPath, contents: reportJson });
+  if (options.sarifPath) artifacts.push({ kind: "sarif", path: options.sarifPath, contents: renderSarif(report) });
+  if (options.htmlPath) artifacts.push({ kind: "html", path: options.htmlPath, contents: renderHtml(report) });
+  for (const artifact of artifacts) {
+    writeOutput(artifact.path, artifact.contents, root);
   }
-  if (options.markdownPath) {
-    writeOutput(options.markdownPath, renderMarkdown(report), root);
-  }
-  if (options.summaryMarkdownPath) {
-    writeOutput(options.summaryMarkdownPath, renderSummaryMarkdown(report), root);
-  }
-  if (options.sarifPath) {
-    writeOutput(options.sarifPath, renderSarif(report), root);
-  }
-  if (options.htmlPath) {
-    writeOutput(options.htmlPath, renderHtml(report), root);
+  if (options.evidencePath) {
+    writeOutput(options.evidencePath, renderEvidenceManifest(report, artifacts, root, reportJson), root);
   }
 
   return report;

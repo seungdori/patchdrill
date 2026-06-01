@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { isSchemaName, readSchema, schemaNames } from "../src/schema.js";
 
 describe("schemas", () => {
-  it("exposes policy and report schemas using JSON Schema draft 2020-12", () => {
-    expect(schemaNames).toEqual(["policy", "report"]);
+  it("exposes policy, report, and evidence schemas using JSON Schema draft 2020-12", () => {
+    expect(schemaNames).toEqual(["policy", "report", "evidence"]);
 
     for (const name of schemaNames) {
       const schema = JSON.parse(readSchema(name)) as { $schema?: string; $defs?: Record<string, unknown> };
@@ -16,6 +16,7 @@ describe("schemas", () => {
   it("recognizes valid schema names", () => {
     expect(isSchemaName("policy")).toBe(true);
     expect(isSchemaName("report")).toBe(true);
+    expect(isSchemaName("evidence")).toBe(true);
     expect(isSchemaName("sarif")).toBe(false);
   });
 
@@ -47,6 +48,23 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("android");
     expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "rails", "laravel", "aspnet-core"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
+  });
+
+  it("documents the evidence manifest contract surface", () => {
+    const evidenceSchema = JSON.parse(readSchema("evidence")) as {
+      required: string[];
+      properties: Record<string, unknown>;
+      $defs: {
+        artifact?: { properties?: { kind?: { enum?: string[] } } };
+      };
+    };
+
+    expect(evidenceSchema.required).toContain("schemaVersion");
+    expect(evidenceSchema.required).toContain("report");
+    expect(evidenceSchema.required).toContain("artifacts");
+    expect(evidenceSchema.required).toContain("commands");
+    expect(evidenceSchema.properties.git).toBeDefined();
+    expect(evidenceSchema.$defs.artifact?.properties?.kind?.enum).toEqual(["summary-markdown", "markdown", "json", "sarif", "html"]);
   });
 
   it("validates representative policy and report payloads", () => {
@@ -236,13 +254,71 @@ describe("schemas", () => {
         }
       ]
     };
+    const evidence = {
+      schemaVersion: "1",
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      tool: {
+        name: "patchdrill",
+        reportSchemaVersion: "1"
+      },
+      root: "/repo",
+      base: "origin/main",
+      head: "HEAD",
+      git: {
+        branch: "main",
+        headSha: "0123456789abcdef0123456789abcdef01234567",
+        baseSha: "89abcdef0123456789abcdef0123456789abcdef"
+      },
+      summary: {
+        status: "warn",
+        riskScore: 42,
+        confidenceScore: 80,
+        changedFileCount: 1,
+        additions: 10,
+        deletions: 2,
+        requiredCommandCount: 1,
+        failedCommandCount: 0
+      },
+      report: {
+        sha256: "a".repeat(64),
+        bytes: 1000,
+        findingCount: 1,
+        commandPlanCount: 1,
+        commandResultCount: 1
+      },
+      artifacts: [
+        {
+          kind: "json",
+          path: "patchdrill-report.json",
+          sha256: "b".repeat(64),
+          bytes: 1000
+        }
+      ],
+      commands: [
+        {
+          id: "unit-tests",
+          command: "npm test",
+          exitCode: 0,
+          durationMs: 1200,
+          stdout: {
+            sha256: "c".repeat(64),
+            bytes: 2
+          },
+          stderr: {
+            sha256: "d".repeat(64),
+            bytes: 0
+          }
+        }
+      ]
+    };
 
     expectValid("policy", policy);
     expectValid("report", report);
+    expectValid("evidence", evidence);
   });
 });
 
-function expectValid(name: "policy" | "report", value: unknown): void {
+function expectValid(name: "policy" | "report" | "evidence", value: unknown): void {
   const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   const validate = ajv.compile(JSON.parse(readSchema(name)));
   if (!validate(value)) {
