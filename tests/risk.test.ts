@@ -365,6 +365,123 @@ describe("assessRisk", () => {
     expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.reusable-unpinned-secret-call");
   });
 
+  it("flags pull_request_target workflows that can mint OIDC tokens from full workflow context", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/deploy.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/deploy.yml", line: 6, content: "      id-token: write" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/deploy.yml",
+            content: [
+              "name: Deploy",
+              "on:",
+              "  pull_request_target:",
+              "permissions:",
+              "  contents: read",
+              "  id-token: write",
+              "jobs:",
+              "  deploy:",
+              "    runs-on: ubuntu-latest",
+              "    steps:",
+              "      - uses: aws-actions/configure-aws-credentials@172239021f7ba04fe7327647b213799853a9eb89"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.pull-request-target-oidc",
+        severity: "high",
+        file: ".github/workflows/deploy.yml",
+        line: 6
+      })
+    );
+  });
+
+  it("flags remote reusable workflows that receive caller OIDC permission", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/reuse.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/reuse.yml", line: 8, content: "      id-token: write" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/reuse.yml",
+            content: [
+              "on:",
+              "  workflow_dispatch:",
+              "jobs:",
+              "  deploy:",
+              "    uses: octo-org/platform/.github/workflows/deploy.yml@v1",
+              "    permissions:",
+              "      contents: read",
+              "      id-token: write"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-oidc-token-boundary",
+        severity: "high",
+        file: ".github/workflows/reuse.yml",
+        line: 8
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.reusable-unpinned-oidc-call",
+        severity: "critical",
+        file: ".github/workflows/reuse.yml",
+        line: 5
+      })
+    );
+  });
+
+  it("flags environment jobs that can mint OIDC deployment tokens", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/release.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/release.yml", line: 10, content: "      id-token: write" }],
+        workflowFiles: [
+          {
+            file: ".github/workflows/release.yml",
+            content: [
+              "on:",
+              "  push:",
+              "    branches: [main]",
+              "jobs:",
+              "  publish:",
+              "    runs-on: ubuntu-latest",
+              "    environment: production",
+              "    permissions:",
+              "      contents: read",
+              "      id-token: write",
+              "    steps:",
+              "      - uses: pypa/gh-action-pypi-publish@172239021f7ba04fe7327647b213799853a9eb89"
+            ].join("\n")
+          }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.environment-oidc-token",
+        severity: "high",
+        file: ".github/workflows/release.yml",
+        line: 10
+      })
+    );
+  });
+
   it("flags Python requirements files as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],

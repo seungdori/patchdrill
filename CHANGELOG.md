@@ -74,4 +74,5 @@
 - Added whole-file GitHub Actions context so privileged PR-head checkout findings work when only one side of the dangerous pattern is newly added.
 - Added NuGet PackageReference and central PackageVersion dependency change summaries.
 - Added context-aware GitHub Actions findings for reusable workflows that inherit all caller secrets, including mutable remote reusable workflow refs.
+- Added workflow trust-boundary findings for `pull_request_target` OIDC token minting, environment-scoped OIDC jobs, and remote reusable workflows receiving caller OIDC permissions.
 - Added .NET solution filter (`.slnf`) detection and filtered `dotnet test`/`dotnet build` plans for large solutions.

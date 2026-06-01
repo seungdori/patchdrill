@@ -596,6 +596,7 @@ function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{
     const finding = workflowHeadCheckoutFinding(file, lines, "New workflow lines combine the privileged pull_request_target event with checkout of attacker-controlled pull request code.");
     if (finding) findings.push(finding);
     findings.push(...workflowReusableSecretFindings(file, lines));
+    findings.push(...workflowOidcTrustBoundaryFindings(file, lines));
   }
 
   for (const workflowFile of workflowFiles) {
@@ -607,6 +608,7 @@ function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{
     );
     if (finding) findings.push(finding);
     findings.push(...workflowReusableSecretFindings(workflowFile.file, lines));
+    findings.push(...workflowOidcTrustBoundaryFindings(workflowFile.file, lines));
   }
 
   return dedupeFindings(findings);
@@ -671,6 +673,84 @@ function workflowReusableSecretFindings(file: string, lines: AddedLine[]): RiskF
     });
   }
   return findings;
+}
+
+function workflowOidcTrustBoundaryFindings(file: string, lines: AddedLine[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+  const workflowPermission = workflowPermissionState(lines, -1);
+  const pullRequestTargetOidcLine = workflowHasPullRequestTarget(lines) ? firstEffectiveOidcPermissionLine(lines, workflowPermission) : undefined;
+
+  if (pullRequestTargetOidcLine) {
+    findings.push({
+      ruleId: "workflow.pull-request-target-oidc",
+      severity: "high",
+      title: "pull_request_target workflow can mint OIDC tokens",
+      detail: "The workflow combines the privileged pull_request_target event with id-token: write, allowing jobs to request cloud identity tokens from a fork-triggerable trust boundary.",
+      file,
+      line: pullRequestTargetOidcLine.line,
+      remediation: "Move OIDC deployment to push, workflow_dispatch, or a protected environment path that never executes fork-controlled code.",
+      tags: ["ci", "github-actions", "oidc", "trust-boundary"]
+    });
+  }
+
+  for (const job of workflowJobBlocks(lines)) {
+    const jobPermission = workflowPermissionState(job.lines, job.indent);
+    const oidcPermissionLine = jobPermission.specified ? jobPermission.idTokenWriteLine : workflowPermission.idTokenWriteLine;
+    if (!oidcPermissionLine) continue;
+
+    const directChildren = workflowDirectChildLines(job.lines, job.indent);
+    const environmentLine = directChildren.find((line) => readYamlScalar(line.content)?.key === "environment");
+    if (environmentLine) {
+      findings.push({
+        ruleId: "workflow.environment-oidc-token",
+        severity: "high",
+        title: "Environment job can mint OIDC tokens",
+        detail: `Job "${job.jobId}" targets a GitHub environment and grants id-token: write, so environment reviewers and OIDC cloud-role conditions both become part of the deployment trust boundary.`,
+        file,
+        line: oidcPermissionLine.line,
+        remediation: "Verify the environment protection rules, cloud OIDC subject/audience conditions, and branch restrictions before merging.",
+        tags: ["ci", "github-actions", "oidc", "environment", "deployment"]
+      });
+    }
+
+    const usesLine = directChildren.find((line) => readYamlScalar(line.content)?.key === "uses");
+    const usesValue = usesLine ? readYamlScalar(usesLine.content)?.value : undefined;
+    if (!usesLine || !usesValue || !isRemoteReusableWorkflowUse(usesValue)) continue;
+
+    findings.push({
+      ruleId: "workflow.reusable-oidc-token-boundary",
+      severity: "high",
+      title: "Remote reusable workflow can mint caller OIDC tokens",
+      detail: `Job "${job.jobId}" calls ${usesValue} with id-token: write, allowing the called workflow to request OIDC tokens in the caller's trust context.`,
+      file,
+      line: oidcPermissionLine.line,
+      remediation: "Grant id-token: write only to reviewed reusable workflows with explicit cloud role conditions and a trusted repository/ref owner.",
+      tags: ["ci", "github-actions", "oidc", "reusable-workflow", "trust-boundary"]
+    });
+
+    if (!reusableWorkflowUsesMutableRemoteRef(usesValue)) continue;
+    findings.push({
+      ruleId: "workflow.reusable-unpinned-oidc-call",
+      severity: "critical",
+      title: "Mutable reusable workflow can mint caller OIDC tokens",
+      detail: `Job "${job.jobId}" grants id-token: write to remote reusable workflow ${usesValue}, but the workflow ref is not pinned to a full commit SHA.`,
+      file,
+      line: usesLine.line,
+      remediation: "Pin remote reusable workflows that receive OIDC permissions to a reviewed full-length commit SHA.",
+      tags: ["ci", "github-actions", "supply-chain", "oidc", "trust-boundary"]
+    });
+  }
+
+  return findings;
+}
+
+function firstEffectiveOidcPermissionLine(lines: AddedLine[], workflowPermission: WorkflowPermissionState): AddedLine | undefined {
+  if (workflowPermission.idTokenWriteLine) return workflowPermission.idTokenWriteLine;
+  for (const job of workflowJobBlocks(lines)) {
+    const jobPermission = workflowPermissionState(job.lines, job.indent);
+    if (jobPermission.idTokenWriteLine) return jobPermission.idTokenWriteLine;
+  }
+  return undefined;
 }
 
 function workflowReusableSecretJobs(lines: AddedLine[]): WorkflowReusableJob[] {
@@ -741,6 +821,11 @@ function isReusableWorkflowUse(value: string): boolean {
   return normalized.startsWith("./.github/workflows/") || /^[^/\s]+\/[^/\s]+\/\.github\/workflows\/[^@\s]+(?:@[^@\s]+)?$/.test(normalized);
 }
 
+function isRemoteReusableWorkflowUse(value: string): boolean {
+  const normalized = unquoteYamlScalar(value);
+  return /^[^/\s]+\/[^/\s]+\/\.github\/workflows\/[^@\s]+(?:@[^@\s]+)?$/.test(normalized);
+}
+
 function reusableWorkflowUsesMutableRemoteRef(value: string): boolean {
   const normalized = unquoteYamlScalar(value);
   if (normalized.startsWith("./")) return false;
@@ -748,6 +833,58 @@ function reusableWorkflowUsesMutableRemoteRef(value: string): boolean {
   if (atIndex < 0) return true;
   const ref = normalized.slice(atIndex + 1);
   return !/^[a-f0-9]{40}$/i.test(ref);
+}
+
+interface WorkflowPermissionState {
+  specified: boolean;
+  idTokenWriteLine?: AddedLine;
+}
+
+function workflowPermissionState(lines: AddedLine[], parentIndent: number): WorkflowPermissionState {
+  const directChildren = parentIndent < 0 ? workflowRootChildLines(lines) : workflowDirectChildLines(lines, parentIndent);
+  const permissionsLine = directChildren.find((line) => readYamlScalar(line.content)?.key === "permissions");
+  if (!permissionsLine) return { specified: false };
+
+  const value = unquoteYamlScalar(readYamlScalar(permissionsLine.content)?.value ?? "").toLowerCase();
+  if (value === "write-all" || /\bid-token\s*:\s*write\b/i.test(value)) {
+    return { specified: true, idTokenWriteLine: permissionsLine };
+  }
+  if (value.length > 0) return { specified: true };
+
+  const idTokenLine = workflowBlockDirectChildLines(lines, permissionsLine).find((line) => {
+    const scalar = readYamlScalar(line.content);
+    return scalar?.key === "id-token" && unquoteYamlScalar(scalar.value).toLowerCase() === "write";
+  });
+  return {
+    specified: true,
+    ...(idTokenLine ? { idTokenWriteLine: idTokenLine } : {})
+  };
+}
+
+function workflowRootChildLines(lines: AddedLine[]): AddedLine[] {
+  return lines.filter((line) => isYamlContentLine(line.content) && indentation(line.content) === 0);
+}
+
+function workflowBlockDirectChildLines(lines: AddedLine[], parentLine: AddedLine): AddedLine[] {
+  const parentIndex = lines.indexOf(parentLine);
+  if (parentIndex < 0) return [];
+  const parentIndent = indentation(parentLine.content);
+  let childIndent: number | undefined;
+  const children: AddedLine[] = [];
+
+  for (const line of lines.slice(parentIndex + 1)) {
+    if (!isYamlContentLine(line.content)) continue;
+    const indent = indentation(line.content);
+    if (indent <= parentIndent) break;
+    childIndent ??= indent;
+    if (indent === childIndent) children.push(line);
+  }
+
+  return children;
+}
+
+function workflowHasPullRequestTarget(lines: AddedLine[]): boolean {
+  return lines.some((line) => /^\s*pull_request_target\s*:/i.test(line.content));
 }
 
 function readYamlScalar(content: string): { key: string; value: string } | undefined {
