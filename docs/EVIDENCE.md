@@ -20,4 +20,12 @@ The manifest includes:
 - Local git branch, head SHA, and base SHA when available.
 - The same summary scores used by the JSON report and dashboard.
 
+Verify a saved manifest against its artifacts:
+
+```bash
+patchdrill verify --evidence patchdrill-evidence.json
+```
+
+Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest.
+
 This keeps the default scanner local-only and deterministic while giving CI systems one small file that can prove which evidence artifacts belonged to a run.

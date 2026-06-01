@@ -104,6 +104,7 @@
 - Compact Markdown summaries for GitHub step summaries and pull request comments.
 - First-party Maven and Spring Boot Maven stack fixtures.
 - Audit evidence manifests with report, artifact, and command-output digests.
+- Evidence manifest verification against generated artifact hashes.
 
 ## Contribution Targets
 

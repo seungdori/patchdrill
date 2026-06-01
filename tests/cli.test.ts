@@ -28,6 +28,10 @@ describe("cli", () => {
       command: "scan",
       flags: { evidence: "patchdrill-evidence.json" }
     });
+    expect(parseArgs(["verify", "--evidence", "patchdrill-evidence.json"])).toMatchObject({
+      command: "verify",
+      flags: { evidence: "patchdrill-evidence.json" }
+    });
     expect(parseArgs(["scan", "--run", "--run-optional"])).toMatchObject({
       command: "scan",
       flags: { run: true, "run-optional": true }

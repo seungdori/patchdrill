@@ -1,9 +1,20 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import { renderEvidenceManifest } from "../src/evidence.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
+const tempDirs: string[] = [];
+
 describe("evidence manifest", () => {
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("renders artifact and command digests without embedding command output", () => {
     const report = exampleReport();
     const reportJson = `${JSON.stringify(report, null, 2)}\n`;
@@ -36,6 +47,57 @@ describe("evidence manifest", () => {
     expect(manifest.commands[0]?.stdout).toEqual({ sha256: sha256("ok\n"), bytes: 3 });
     expect(manifest.commands[0]?.stderr).toEqual({ sha256: sha256(""), bytes: 0 });
     expect(JSON.stringify(manifest)).not.toContain("ok\\n");
+  });
+
+  it("verifies recorded artifact and report digests", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
+    tempDirs.push(root);
+    const report = exampleReport();
+    const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+    const markdown = "# Report\n";
+    writeFileSync(join(root, "patchdrill-report.json"), reportJson, "utf8");
+    writeFileSync(join(root, "patchdrill-report.md"), markdown, "utf8");
+    writeFileSync(
+      join(root, "patchdrill-evidence.json"),
+      renderEvidenceManifest(
+        report,
+        [
+          { kind: "json", path: "patchdrill-report.json", contents: reportJson },
+          { kind: "markdown", path: "patchdrill-report.md", contents: markdown }
+        ],
+        root,
+        reportJson
+      ),
+      "utf8"
+    );
+
+    const result = verifyEvidenceManifest("patchdrill-evidence.json", root);
+
+    expect(result.ok).toBe(true);
+    expect(result.checkedArtifactCount).toBe(2);
+    expect(result.checkedReportArtifact).toBe(true);
+    expect(formatEvidenceVerification(result)).toContain("PatchDrill Evidence PASS - verified 2 artifacts");
+  });
+
+  it("fails verification when an artifact changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
+    tempDirs.push(root);
+    const report = exampleReport();
+    const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+    writeFileSync(join(root, "patchdrill-report.json"), reportJson, "utf8");
+    writeFileSync(
+      join(root, "patchdrill-evidence.json"),
+      renderEvidenceManifest(report, [{ kind: "json", path: "patchdrill-report.json", contents: reportJson }], root, reportJson),
+      "utf8"
+    );
+    writeFileSync(join(root, "patchdrill-report.json"), `${reportJson}\nchanged\n`, "utf8");
+
+    const result = verifyEvidenceManifest("patchdrill-evidence.json", root);
+
+    expect(result.ok).toBe(false);
+    expect(result.failures).toContain("Artifact sha256 mismatch: patchdrill-report.json");
+    expect(result.failures).toContain("Artifact byte length mismatch: patchdrill-report.json");
+    expect(result.failures).toContain("Report digest does not match the JSON report artifact.");
   });
 });
 

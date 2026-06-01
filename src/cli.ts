@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDemoReport } from "./demo.js";
+import { formatEvidenceVerification, verifyEvidenceManifest } from "./evidence.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
@@ -53,6 +54,10 @@ async function main(): Promise<void> {
   }
   if (command === "schema") {
     schemaCommand(parsed);
+    return;
+  }
+  if (command === "verify") {
+    verifyCommand(parsed);
     return;
   }
 
@@ -188,10 +193,10 @@ function explainCommand(): void {
 2. Discover repo ecosystems from manifests.
 3. Infer the commands that should prove the patch.
 4. Score risk from changed areas, dependency files, infra, secrets, size, and command results.
-5. Emit Markdown, JSON, SARIF, and static HTML evidence for PR review or CI artifacts.
+5. Emit Markdown, JSON, SARIF, static HTML, and verifiable evidence artifacts for PR review or CI storage.
 
 Typical use:
-  patchdrill scan --base origin/main --run --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
+  patchdrill scan --base origin/main --run --evidence patchdrill-evidence.json --markdown patchdrill-report.md --json patchdrill-report.json --sarif patchdrill.sarif --html patchdrill-dashboard.html --fail-on high --max-risk 69
 `);
 }
 
@@ -214,6 +219,20 @@ function schemaCommand(parsed: ParsedArgs): void {
   }
 
   console.log(schema.trimEnd());
+}
+
+function verifyCommand(parsed: ParsedArgs): void {
+  const evidencePath = flagString(parsed, "evidence") ?? parsed.positionals[0];
+  if (!evidencePath) {
+    throw new Error("verify requires --evidence <patchdrill-evidence.json>.");
+  }
+  const result = verifyEvidenceManifest(evidencePath, process.cwd());
+  if (!parsed.flags.quiet) {
+    console.log(formatEvidenceVerification(result));
+  }
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
 }
 
 function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
@@ -264,7 +283,7 @@ export function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "init", "explain", "schema", "help"].includes(arg)) {
+    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "init", "explain", "schema", "verify", "help"].includes(arg)) {
       command = arg;
       continue;
     }
@@ -396,14 +415,15 @@ Usage:
   patchdrill demo [--output <directory>]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
-  patchdrill schema [policy|report] [--output <path>]
+  patchdrill schema [policy|report|evidence] [--output <path>]
+  patchdrill verify --evidence <patchdrill-evidence.json>
 
 Options:
   --base <ref>        Compare against a base ref, for example origin/main
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
-  --evidence <path>   Write an audit evidence manifest with report, artifact, and command hashes
+  --evidence <path>   Write an audit evidence manifest during scan, or select one for verify
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
   --github-annotations

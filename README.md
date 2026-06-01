@@ -22,7 +22,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - No LLM required. The core is deterministic, offline, and reviewable.
 - Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
-- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and an audit manifest with report, artifact, and command-output hashes.
+- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
@@ -135,6 +135,12 @@ Create a static dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+Verify an evidence manifest against its generated artifacts:
+
+```bash
+patchdrill verify --evidence patchdrill-evidence.json
+```
+
 See committed demo outputs in [examples/demo](examples/demo).
 
 Add repeated JSON reports in oldest-to-newest order to show run trends:
@@ -200,6 +206,7 @@ patchdrill demo [--output <directory>]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill schema [policy|report|evidence] [--output <path>]
+patchdrill verify --evidence <patchdrill-evidence.json>
 ```
 
 Options:
@@ -210,7 +217,7 @@ Options:
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
-| `--evidence <path>` | Write an audit evidence manifest with report, artifact, and command-output hashes. |
+| `--evidence <path>` | Write an audit evidence manifest during `scan`, or select one for `verify`. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
