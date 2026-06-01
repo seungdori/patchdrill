@@ -12,4 +12,20 @@ describe("package metadata", () => {
     expect(pkg.scripts?.prepare).toBe("npm run build");
     expect(pkg.scripts?.prepack).toBe("npm run check");
   });
+
+  it("keeps default generated report artifacts out of git", () => {
+    const gitignore = readFileSync(".gitignore", "utf8");
+
+    for (const path of [
+      ".patchdrill/",
+      "patchdrill-evidence.json",
+      "patchdrill-summary.md",
+      "patchdrill-report.md",
+      "patchdrill-report.json",
+      "patchdrill.sarif",
+      "patchdrill-dashboard.html"
+    ]) {
+      expect(gitignore).toContain(path);
+    }
+  });
 });

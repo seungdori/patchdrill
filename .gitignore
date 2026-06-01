@@ -4,5 +4,9 @@ coverage/
 *.log
 .DS_Store
 .patchdrill/
+patchdrill-evidence.json
+patchdrill-summary.md
 patchdrill-report.md
 patchdrill-report.json
+patchdrill.sarif
+patchdrill-dashboard.html

@@ -97,3 +97,4 @@
 - Added package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - Added structured package script change summaries to JSON, Markdown, and HTML reports.
 - Expanded `patchdrill explain` with a clearer AI-reviewer boundary, deterministic guarantees, and first-run commands.
+- Ignored all default generated PatchDrill report artifacts to prevent accidental report commits after local scans.

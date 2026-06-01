@@ -113,6 +113,7 @@
 - Package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - Structured package script change summaries in JSON, Markdown, and HTML reports.
 - Clearer `patchdrill explain` first-run guidance for teams comparing deterministic evidence with AI PR reviewers.
+- Repository hygiene for default generated report artifacts after local scans.
 
 ## Contribution Targets
 
