@@ -25,6 +25,7 @@ Done for the public repository:
 - Public GitHub repository with CodeQL, OpenSSF Scorecard, Dependabot, issue forms, pull request template, and repository topics.
 - Self-contained GitHub Action that builds from the checked-out action source before running PatchDrill.
 - SARIF output, Markdown output, JSON output, static HTML dashboard output, and PR comment upsert mode.
+- Generated PR workflow runs inferred required commands with a per-command timeout.
 - README terminal demo asset showing the risk summary and portable report outputs.
 - First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
 - Example report and release provenance documentation.

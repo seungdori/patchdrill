@@ -109,6 +109,7 @@
 - Fail-state `risky-agent-pr` demo scenario for quick product evaluation.
 - Fork-safe PR comment handling that does not fail verification when comment permissions are unavailable.
 - Compact PR comment preview artifacts in demo output.
+- Generated PR workflows execute required verification commands with bounded per-command timeout.
 
 ## Contribution Targets
 

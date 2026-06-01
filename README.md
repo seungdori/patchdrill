@@ -376,6 +376,8 @@ jobs:
           html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
+          run: "true"
+          command-timeout-ms: "600000"
           annotations: "true"
           step-summary: "true"
           pr-comment: "true"
@@ -440,7 +442,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions are new ecosys
 
 ## Security
 
-PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
+PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. `patchdrill init` writes a CI workflow with `run: "true"` and a per-command timeout so pull requests produce command evidence by default. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -59,6 +59,8 @@ jobs:
           html: patchdrill-dashboard.html
           fail-on: high
           max-risk: "69"
+          run: "true"
+          command-timeout-ms: "600000"
           annotations: "true"
           step-summary: "true"
           pr-comment: "true"

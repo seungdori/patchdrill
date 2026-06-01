@@ -22,6 +22,8 @@ describe("init", () => {
     expect(workflow).toContain("seungdori/patchdrill@v0");
     expect(workflow).toContain("evidence: patchdrill-evidence.json");
     expect(workflow).toContain("summary: patchdrill-summary.md");
+    expect(workflow).toContain('run: "true"');
+    expect(workflow).toContain('command-timeout-ms: "600000"');
     expect(workflow).toContain('annotations: "true"');
     expect(workflow).toContain('step-summary: "true"');
     expect(workflow).toContain('pr-comment: "true"');
