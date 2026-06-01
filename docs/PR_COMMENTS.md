@@ -9,7 +9,7 @@ permissions:
   security-events: write
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
     with:
       fetch-depth: 0
   - uses: seungdori/patchdrill@v0

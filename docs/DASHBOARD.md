@@ -34,7 +34,7 @@ For CI, upload the HTML alongside the JSON and Markdown artifacts:
     base: origin/${{ github.base_ref }}
     json: patchdrill-report.json
     html: patchdrill-dashboard.html
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@v7
   if: always()
   with:
     name: patchdrill-report

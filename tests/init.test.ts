@@ -24,8 +24,8 @@ describe("init", () => {
     expect(workflow).toContain("steps.patchdrill.outputs.report-sarif");
     expect(workflow).toContain("steps.patchdrill.outputs.report-html");
     expect(workflow).toContain("html: patchdrill-dashboard.html");
-    expect(workflow).toContain("github/codeql-action/upload-sarif@v3");
-    expect(workflow).toContain("actions/upload-artifact@v4");
+    expect(workflow).toContain("github/codeql-action/upload-sarif@v4");
+    expect(workflow).toContain("actions/upload-artifact@v7");
   });
 
   it("writes the workflow to the standard GitHub Actions path", () => {

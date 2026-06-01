@@ -22,14 +22,14 @@ permissions:
   security-events: write
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
     with:
       fetch-depth: 0
-  - uses: actions/setup-node@v4
+  - uses: actions/setup-node@v6
     with:
       node-version: 22
   - run: npx patchdrill scan --base origin/${{ github.base_ref }} --sarif patchdrill.sarif --markdown patchdrill-report.md --json patchdrill-report.json --fail-on high --max-risk 69
-  - uses: github/codeql-action/upload-sarif@v3
+  - uses: github/codeql-action/upload-sarif@v4
     if: always()
     with:
       sarif_file: patchdrill.sarif

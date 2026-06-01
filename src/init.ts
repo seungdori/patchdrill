@@ -44,7 +44,7 @@ jobs:
   patchdrill:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: seungdori/patchdrill@v0
@@ -59,12 +59,12 @@ jobs:
           max-risk: "69"
           pr-comment: "true"
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: \${{ steps.patchdrill.outputs.report-sarif }}
       - name: Upload PatchDrill report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: patchdrill-report
