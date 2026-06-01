@@ -18,7 +18,7 @@ npx patchdrill scan --base origin/main --run \
 
 - Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, dotnet, ASP.NET Core, Swift, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - No LLM required. The core is deterministic, offline, and reviewable.
-- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
+- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain risk, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
 - Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, and a self-contained HTML dashboard.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
@@ -222,6 +222,7 @@ The current deterministic rules look for:
 - Prompt-injection instructions added to agent-visible files such as `AGENTS.md`, issue templates, and Markdown docs.
 - High-impact paths: auth, billing, sessions, migrations, security, crypto, permissions.
 - Infra and release behavior: Docker, Terraform, Kubernetes, GitHub Actions.
+- Workflow supply-chain risk: broad token writes, `pull_request_target`, inherited secrets, unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 - Dependency manifest and lockfile changes.
 - package.json, requirements.txt, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and updates.
 - Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.

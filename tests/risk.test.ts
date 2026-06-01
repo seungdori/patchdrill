@@ -155,6 +155,71 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags mutable GitHub Action references in workflow additions", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/ci.yml", status: "modified", additions: 1, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [{ file: ".github/workflows/ci.yml", line: 12, content: "      - uses: actions/checkout@v4" }]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.unpinned-action",
+        severity: "medium",
+        file: ".github/workflows/ci.yml",
+        line: 12
+      })
+    );
+  });
+
+  it("does not flag local, docker, or SHA-pinned workflow actions as unpinned", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/ci.yml", status: "modified", additions: 3, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [
+          { file: ".github/workflows/ci.yml", line: 12, content: "      - uses: ./github/actions/setup" },
+          { file: ".github/workflows/ci.yml", line: 16, content: "      - uses: docker://alpine:3.19" },
+          { file: ".github/workflows/ci.yml", line: 20, content: "      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac" }
+        ]
+      }
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("workflow.unpinned-action");
+  });
+
+  it("flags remote script pipes and untrusted PR context in workflows", () => {
+    const assessment = assessRisk(
+      [{ path: ".github/workflows/ci.yml", status: "modified", additions: 2, deletions: 0, binary: false }],
+      [],
+      {
+        addedLines: [
+          { file: ".github/workflows/ci.yml", line: 22, content: "        curl https://example.com/install.sh | bash" },
+          { file: ".github/workflows/ci.yml", line: 23, content: "        echo \"${{ github.event.pull_request.title }}\"" }
+        ]
+      }
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.remote-script-pipe",
+        severity: "high",
+        file: ".github/workflows/ci.yml",
+        line: 22
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "workflow.untrusted-pr-context",
+        severity: "high",
+        file: ".github/workflows/ci.yml",
+        line: 23
+      })
+    );
+  });
+
   it("flags Python requirements files as dependency manifests", () => {
     const assessment = assessRisk(
       [{ path: "requirements-dev.txt", status: "modified", additions: 2, deletions: 1, binary: false }],

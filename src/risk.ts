@@ -113,34 +113,77 @@ const AGENT_TOOL_ABUSE_PATTERNS: RegExp[] = [
   /\b(delete|wipe|destroy)\s+(all\s+)?(files|database|cloud\s+resources|system)\b/i
 ];
 
-const WORKFLOW_PRIVILEGE_PATTERNS: Array<{ ruleId: string; severity: Severity; title: string; pattern: RegExp; remediation: string }> = [
+const WORKFLOW_ADDED_LINE_RULES: Array<{
+  ruleId: string;
+  severity: Severity;
+  title: string;
+  detail: string;
+  matches: (content: string) => boolean;
+  remediation: string;
+  tags: string[];
+}> = [
   {
     ruleId: "workflow.pull-request-target",
     severity: "high",
     title: "pull_request_target trigger added",
-    pattern: /^\s*pull_request_target\s*:/i,
-    remediation: "Use pull_request unless the workflow is intentionally designed for untrusted fork safety."
+    detail: "A newly added workflow line changes GitHub Actions trust boundaries.",
+    matches: (content) => /^\s*pull_request_target\s*:/i.test(content),
+    remediation: "Use pull_request unless the workflow is intentionally designed for untrusted fork safety.",
+    tags: ["ci", "github-actions", "trust-boundary"]
   },
   {
     ruleId: "workflow.write-all",
     severity: "high",
     title: "Broad GitHub token write permissions added",
-    pattern: /^\s*permissions\s*:\s*write-all\s*$/i,
-    remediation: "Use least-privilege per-scope permissions instead of write-all."
+    detail: "A newly added workflow line changes GitHub token privilege.",
+    matches: (content) => /^\s*permissions\s*:\s*write-all\s*$/i.test(content),
+    remediation: "Use least-privilege per-scope permissions instead of write-all.",
+    tags: ["ci", "github-actions", "supply-chain"]
   },
   {
     ruleId: "workflow.write-scope",
     severity: "medium",
     title: "GitHub token write scope added",
-    pattern: /^\s*(actions|checks|contents|deployments|id-token|issues|packages|pull-requests|security-events)\s*:\s*write\s*$/i,
-    remediation: "Confirm the workflow needs this exact write permission and cannot use read-only access."
+    detail: "A newly added workflow line grants GitHub token write access.",
+    matches: (content) => /^\s*(actions|checks|contents|deployments|id-token|issues|packages|pull-requests|security-events)\s*:\s*write\s*$/i.test(content),
+    remediation: "Confirm the workflow needs this exact write permission and cannot use read-only access.",
+    tags: ["ci", "github-actions", "supply-chain"]
   },
   {
     ruleId: "workflow.inherited-secrets",
     severity: "high",
     title: "Workflow secret inheritance added",
-    pattern: /^\s*secrets\s*:\s*inherit\s*$/i,
-    remediation: "Avoid inherited secrets in reusable workflows unless trust boundaries and callers are tightly controlled."
+    detail: "A newly added workflow line expands secret exposure across workflow boundaries.",
+    matches: (content) => /^\s*secrets\s*:\s*inherit\s*$/i.test(content),
+    remediation: "Avoid inherited secrets in reusable workflows unless trust boundaries and callers are tightly controlled.",
+    tags: ["ci", "github-actions", "secrets"]
+  },
+  {
+    ruleId: "workflow.unpinned-action",
+    severity: "medium",
+    title: "Unpinned GitHub Action reference added",
+    detail: "A newly added workflow action uses a mutable or missing ref instead of a full commit SHA.",
+    matches: workflowUsesUnpinnedAction,
+    remediation: "Pin third-party and reusable actions to reviewed full-length commit SHAs, then update intentionally.",
+    tags: ["ci", "github-actions", "supply-chain"]
+  },
+  {
+    ruleId: "workflow.remote-script-pipe",
+    severity: "high",
+    title: "Remote script pipe added to workflow",
+    detail: "A newly added workflow line pipes a remote download directly into an interpreter.",
+    matches: (content) => /\b(curl|wget)\b.+\|\s*(sudo\s+)?(sh|bash|zsh|python|node)\b/i.test(content),
+    remediation: "Download artifacts with checksum verification or use a pinned, reviewed action instead of piping remote code to a shell.",
+    tags: ["ci", "github-actions", "supply-chain"]
+  },
+  {
+    ruleId: "workflow.untrusted-pr-context",
+    severity: "high",
+    title: "Untrusted pull request context added to workflow",
+    detail: "A newly added workflow line interpolates attacker-controlled pull request metadata.",
+    matches: (content) => /\${{\s*github\.event\.pull_request\.(title|body|head\.ref|head\.label|head\.repo\.full_name)\s*}}/i.test(content),
+    remediation: "Pass untrusted PR metadata through environment variables and quote it carefully, or avoid using it in shell commands.",
+    tags: ["ci", "github-actions", "injection"]
   }
 ];
 
@@ -331,20 +374,19 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
 
     if (line.file.startsWith(".github/workflows/")) {
-      for (const workflowPattern of WORKFLOW_PRIVILEGE_PATTERNS) {
-        if (!workflowPattern.pattern.test(line.content)) continue;
-        risk += severityWeights[workflowPattern.severity];
+      for (const workflowRule of WORKFLOW_ADDED_LINE_RULES) {
+        if (!workflowRule.matches(line.content)) continue;
+        risk += severityWeights[workflowRule.severity];
         findings.push({
-          ruleId: workflowPattern.ruleId,
-          severity: workflowPattern.severity,
-          title: workflowPattern.title,
-          detail: "A newly added workflow line changes GitHub Actions trust or token privilege.",
+          ruleId: workflowRule.ruleId,
+          severity: workflowRule.severity,
+          title: workflowRule.title,
+          detail: workflowRule.detail,
           file: line.file,
           line: line.line,
-          remediation: workflowPattern.remediation,
-          tags: ["ci", "github-actions", "supply-chain"]
+          remediation: workflowRule.remediation,
+          tags: workflowRule.tags
         });
-        break;
       }
     }
   }
@@ -516,6 +558,17 @@ function isRequirementsFile(path: string): boolean {
 
 function isBinaryBunLockfile(path: string): boolean {
   return path.split("/").at(-1) === "bun.lockb";
+}
+
+function workflowUsesUnpinnedAction(content: string): boolean {
+  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  if (!match?.[1]) return false;
+  const action = match[1];
+  if (action.startsWith("./") || action.startsWith("docker://")) return false;
+  const refSeparator = action.lastIndexOf("@");
+  if (refSeparator < 0) return true;
+  const ref = action.slice(refSeparator + 1);
+  return !/^[a-f0-9]{40}$/i.test(ref);
 }
 
 function clamp(value: number, min: number, max: number): number {

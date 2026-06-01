@@ -69,11 +69,13 @@
 - Android Gradle detection with debug unit test, assemble, and lint planning.
 - ASP.NET Core detection with .NET build and publish planning.
 - FastAPI app entrypoint detection with import-smoke planning.
+- GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
+- Workflow context-aware hardening for `pull_request_target` checkout patterns.
 - FastAPI route-level changed-test targeting.
 - .NET solution and test-project targeting.
 - Android variant-aware task narrowing.

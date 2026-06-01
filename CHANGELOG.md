@@ -61,3 +61,4 @@
 - Added Android Gradle detection with debug unit test, assemble, and lint verification plans.
 - Added ASP.NET Core detection with .NET build and publish verification plans.
 - Added FastAPI app entrypoint detection with import-smoke verification plans.
+- Added GitHub Actions supply-chain findings for unpinned actions, remote script pipes, and untrusted PR metadata interpolation.
