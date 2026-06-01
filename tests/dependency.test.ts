@@ -1289,6 +1289,75 @@ PLATFORMS
       }
     ]);
   });
+
+  it("reports composer.json dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-composer-json-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeComposerJson(root, {
+      require: {
+        php: "^8.3",
+        "monolog/monolog": "^3.5",
+        "old/vendor": "^1.0"
+      },
+      "require-dev": {
+        "phpunit/phpunit": "^10.5"
+      }
+    });
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeComposerJson(root, {
+      require: {
+        php: "^8.3",
+        "monolog/monolog": "^3.6",
+        "symfony/console": "^7.0"
+      },
+      "require-dev": {
+        "phpunit/phpunit": "^11.0"
+      }
+    });
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "composer.json", status: "modified", additions: 5, deletions: 5, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "composer.json",
+        packageName: "monolog/monolog",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^3.5",
+        after: "^3.6"
+      },
+      {
+        file: "composer.json",
+        packageName: "old/vendor",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "^1.0"
+      },
+      {
+        file: "composer.json",
+        packageName: "symfony/console",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "^7.0"
+      },
+      {
+        file: "composer.json",
+        packageName: "phpunit/phpunit",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "^10.5",
+        after: "^11.0"
+      }
+    ]);
+  });
 });
 
 function writePackage(root: string, contents: unknown): void {
@@ -1345,6 +1414,10 @@ function writeGemfileLock(root: string, contents: string): void {
 
 function writeComposerLock(root: string, contents: unknown): void {
   writeFileSync(join(root, "composer.lock"), JSON.stringify(contents, null, 2));
+}
+
+function writeComposerJson(root: string, contents: unknown): void {
+  writeFileSync(join(root, "composer.json"), JSON.stringify(contents, null, 2));
 }
 
 function git(cwd: string, args: string[]): string {

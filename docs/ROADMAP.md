@@ -40,6 +40,7 @@
 - `bun.lock` dependency diff summaries.
 - `Gemfile.lock` dependency diff summaries.
 - `composer.lock` dependency diff summaries.
+- `composer.json` dependency diff summaries.
 - CODEOWNERS owner hints for changed files.
 - Baseline comparison against previous JSON reports.
 - `--max-risk-delta` gating for baseline regressions.

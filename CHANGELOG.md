@@ -45,6 +45,7 @@
 - Added optional per-command timeout handling for verification runs.
 - Added native Turborepo and Nx task-runner planning for affected Node workspaces.
 - Added migration guidance when legacy binary `bun.lockb` lockfiles change.
+- Added `composer.json` dependency diff summaries.
 - Added built-in `regulated` and `agentic` policy packs for `patchdrill init`.
 - Added Cargo workspace task planning for affected crates and downstream dependents.
 - Added Go workspace task planning for affected modules and downstream dependents.

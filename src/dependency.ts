@@ -55,6 +55,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.json"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseComposerJson(pair.before);
+    const after = parseComposerJson(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffPackageJson(file.path, before ?? {}, after ?? {}));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parsePackageLock(pair.before);
@@ -249,6 +256,20 @@ function parsePackageJson(value: string | undefined): PackageJson | undefined {
   try {
     const parsed = JSON.parse(value) as PackageJson;
     return parsed && typeof parsed === "object" ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function parseComposerJson(value: string | undefined): PackageJson | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as { require?: unknown; "require-dev"?: unknown };
+    if (!parsed || typeof parsed !== "object") return undefined;
+    return {
+      dependencies: readComposerJsonSection(parsed.require),
+      devDependencies: readComposerJsonSection(parsed["require-dev"])
+    };
   } catch {
     return undefined;
   }
@@ -835,6 +856,17 @@ function readComposerSection(result: Map<string, LockPackage>, section: "package
     const path = `${section}.${item.name}`;
     result.set(path, { name: item.name, path, version: item.version });
   }
+}
+
+function readComposerJsonSection(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  const dependencies: Record<string, string> = {};
+  for (const [name, constraint] of Object.entries(value)) {
+    if (typeof constraint !== "string") continue;
+    if (name.toLowerCase() === "php") continue;
+    dependencies[name] = constraint;
+  }
+  return dependencies;
 }
 
 interface LockDependencyNode {

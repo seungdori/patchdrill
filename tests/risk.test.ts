@@ -684,6 +684,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags composer.json as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "composer.json", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "composer.json"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

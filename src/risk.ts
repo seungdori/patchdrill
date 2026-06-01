@@ -648,6 +648,7 @@ function isDependencyManifest(path: string): boolean {
   const fileName = path.split("/").at(-1) ?? path;
   return (
     fileName === "pyproject.toml" ||
+    fileName === "composer.json" ||
     /^requirements([-.].*)?\.txt$/i.test(fileName) ||
     /^.*[-.]requirements\.txt$/i.test(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||
