@@ -150,6 +150,8 @@ Use the GitHub Action with PR comments:
     pr-comment: "true"
 ```
 
+The Action emits GitHub Checks annotations by default. See [docs/ANNOTATIONS.md](docs/ANNOTATIONS.md).
+
 Use policy-as-code:
 
 ```bash
@@ -208,6 +210,7 @@ Options:
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
+| `--github-annotations` | Emit GitHub Actions log annotations for findings. |
 | `--markdown <path>` | Write a Markdown report. |
 | `--json <path>` | Write a JSON report. |
 | `--sarif <path>` | Write a SARIF report for GitHub code scanning. |

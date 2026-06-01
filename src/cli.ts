@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { createDemoReport } from "./demo.js";
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
-import { renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
+import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
@@ -111,6 +111,10 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
       console.log("");
       console.log(renderMarkdown(report));
     }
+  }
+  if (parsed.flags["github-annotations"]) {
+    const annotations = renderGitHubAnnotations(report).trimEnd();
+    if (annotations) console.log(annotations);
   }
 
   if (shouldFail(report, gateOptions)) {
@@ -395,6 +399,8 @@ Options:
   --baseline <path>   Compare against a previous PatchDrill JSON report
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
+  --github-annotations
+                      Emit GitHub Actions log annotations for findings
   --markdown <path>   Write a Markdown report
   --json <path>       Write a JSON report
   --sarif <path>      Write a SARIF report for GitHub code scanning

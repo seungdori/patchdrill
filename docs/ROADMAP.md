@@ -99,6 +99,7 @@
 - uv-managed Python fixture and optional Ruff, mypy, and Pyright static-analysis planning.
 - `--run-optional` CLI and GitHub Action opt-in for executing optional verification commands.
 - `patchdrill demo` plus committed synchronized first-run sample Markdown, JSON, SARIF, and HTML artifacts.
+- GitHub Actions annotation output and documentation for findings.
 
 ## Contribution Targets
 

@@ -10,6 +10,9 @@ describe("composite action", () => {
     expect(action).toContain("default: patchdrill-dashboard.html");
     expect(action).toContain("dashboard-history:");
     expect(action).toContain("PATCHDRILL_DASHBOARD_HISTORY");
+    expect(action).toContain("annotations:");
+    expect(action).toContain("PATCHDRILL_ANNOTATIONS");
+    expect(action).toContain("args+=(--github-annotations)");
     expect(action).toContain("run-optional:");
     expect(action).toContain("PATCHDRILL_RUN_OPTIONAL");
     expect(action).toContain("args+=(--run-optional)");
@@ -38,6 +41,7 @@ describe("composite action", () => {
     };
 
     expect(action.inputs?.["dashboard-history"]?.default).toBe("");
+    expect(action.inputs?.annotations?.default).toBe("true");
     const historyStep = action.runs?.steps?.find((step) => step.name === "Render dashboard history");
     expect(historyStep?.if).toBe("inputs.dashboard-history != ''");
     expect(historyStep?.run).toContain('args+=(--json "$PATCHDRILL_JSON" --output "$PATCHDRILL_HTML")');

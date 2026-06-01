@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderHtml, renderMarkdown, shouldFail } from "../src/report.js";
+import { renderGitHubAnnotations, renderHtml, renderMarkdown, shouldFail } from "../src/report.js";
 import type { PatchReport } from "../src/types.js";
 
 describe("report", () => {
@@ -171,6 +171,35 @@ describe("report", () => {
     expect(html).toContain("2 latest");
     expect(html).toContain("2026-06-01T00:00:00.000Z");
     expect(html).toContain("feature");
+  });
+
+  it("renders escaped GitHub Actions annotations for findings", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 72, failedCommandCount: 0 });
+    report.findings = [
+      {
+        ruleId: "escape",
+        severity: "high",
+        title: "Unsafe: title, 100%",
+        detail: "Line one\nLine two 100%",
+        file: "src/<auth>,session.ts",
+        line: 7,
+        remediation: "Review: owner, tests"
+      },
+      {
+        ruleId: "info",
+        severity: "info",
+        title: "Global note",
+        detail: "No file."
+      }
+    ];
+
+    expect(renderGitHubAnnotations(report)).toBe(
+      [
+        "::error file=src/<auth>%2Csession.ts,line=7,title=Unsafe%3A title%2C 100%25::Line one%0ALine two 100%25 Remediation: Review: owner, tests",
+        "::notice title=Global note::No file.",
+        ""
+      ].join("\n")
+    );
   });
 });
 

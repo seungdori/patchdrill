@@ -24,6 +24,10 @@ describe("cli", () => {
       command: "scan",
       flags: { run: true, "run-optional": true }
     });
+    expect(parseArgs(["scan", "--github-annotations"])).toMatchObject({
+      command: "scan",
+      flags: { "github-annotations": true }
+    });
     expect(parseArgs(["demo", "--output", "patchdrill-demo"])).toEqual({
       command: "demo",
       flags: { output: "patchdrill-demo" },

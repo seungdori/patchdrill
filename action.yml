@@ -62,6 +62,10 @@ inputs:
     description: Newline-separated previous PatchDrill JSON report paths to include in the static HTML dashboard trend.
     required: false
     default: ""
+  annotations:
+    description: Emit GitHub Actions annotations for PatchDrill findings.
+    required: false
+    default: "true"
   step-summary:
     description: Append the Markdown report to the GitHub Actions step summary.
     required: false
@@ -121,6 +125,7 @@ runs:
         PATCHDRILL_JSON: ${{ inputs.json }}
         PATCHDRILL_SARIF: ${{ inputs.sarif }}
         PATCHDRILL_HTML: ${{ inputs.html }}
+        PATCHDRILL_ANNOTATIONS: ${{ inputs.annotations }}
       run: |
         args=(
           scan
@@ -138,6 +143,9 @@ runs:
         fi
         if [ "$PATCHDRILL_RUN_OPTIONAL" = "true" ]; then
           args+=(--run-optional)
+        fi
+        if [ "$PATCHDRILL_ANNOTATIONS" = "true" ]; then
+          args+=(--github-annotations)
         fi
         if [ -n "$PATCHDRILL_CONFIG" ]; then
           args+=(--config "$PATCHDRILL_CONFIG")
