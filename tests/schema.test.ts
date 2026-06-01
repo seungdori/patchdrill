@@ -41,7 +41,7 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("buck");
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("swift");
-    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi"]);
+    expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
   });
 
@@ -111,6 +111,11 @@ describe("schemas", () => {
           ecosystem: "python",
           framework: "fastapi",
           manifestPath: "pyproject.toml"
+        },
+        {
+          ecosystem: "java",
+          framework: "spring-boot",
+          manifestPath: "build.gradle"
         }
       ],
       affectedPackages: [

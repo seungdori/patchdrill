@@ -65,14 +65,15 @@
 - Bazel and Buck2 workspace detection with graph-wide verification planning.
 - Swift Package Manager verification planning.
 - Django framework detection with `manage.py test` and `manage.py check` planning.
+- Spring Boot framework detection with Gradle `bootJar` packaging plans.
 
 ## Contribution Targets
 
 PatchDrill needs real-world fixtures from:
 
 - FastAPI route-aware verification planning.
-- Spring Boot and Gradle.
 - .NET services.
+- Android Gradle projects.
 - Bazel/Buck changed-target narrowing beyond graph-wide defaults.
 - Mobile apps.
 - Xcode scheme-aware iOS and macOS app test planning.

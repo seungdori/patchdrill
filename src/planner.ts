@@ -48,14 +48,7 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       if (workspacePlanCount === 0) addGoPlans(plans);
     }
     if (signal.ecosystem === "java" && touchesJava(paths, root)) {
-      pushUnique(plans, {
-        id: "java-tests",
-        label: "Java tests",
-        command: existsSync(join(root, "mvnw")) ? "./mvnw test" : existsSync(join(root, "gradlew")) ? "./gradlew test" : "mvn test",
-        reason: "Java/Kotlin source or build metadata changed.",
-        ecosystem: "java",
-        required: true
-      });
+      addJavaPlans(plans, root, signal);
     }
     if (signal.ecosystem === "ruby" && touches(paths, [".rb", "Gemfile", "Gemfile.lock"])) {
       pushUnique(plans, {
@@ -197,6 +190,56 @@ function addDjangoPlans(plans: CommandPlan[]): void {
     ecosystem: "python",
     required: true
   });
+}
+
+function addJavaPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {
+  const buildTool = javaBuildTool(root, signal);
+  pushUnique(plans, {
+    id: "java-tests",
+    label: "Java tests",
+    command: javaTestCommand(root, buildTool),
+    reason: "Java/Kotlin source or build metadata changed.",
+    ecosystem: "java",
+    required: true
+  });
+  if (signal.framework === "spring-boot") {
+    pushUnique(plans, {
+      id: "spring-boot-package",
+      label: "Spring Boot package",
+      command: springBootPackageCommand(root, buildTool),
+      reason: "Spring Boot applications should still produce an executable application artifact after source or build changes.",
+      ecosystem: "java",
+      required: false
+    });
+  }
+}
+
+type JavaBuildTool = "maven" | "gradle";
+
+function javaBuildTool(root: string, signal: ProjectSignal): JavaBuildTool {
+  if (signal.manifestPath === "pom.xml" || existsSync(join(root, "pom.xml")) || existsSync(join(root, "mvnw"))) return "maven";
+  if (signal.manifestPath.includes("gradle") || existsSync(join(root, "build.gradle")) || existsSync(join(root, "build.gradle.kts")) || existsSync(join(root, "gradlew"))) {
+    return "gradle";
+  }
+  return "maven";
+}
+
+function javaTestCommand(root: string, buildTool: JavaBuildTool): string {
+  if (buildTool === "gradle") return `${gradleCommand(root)} test`;
+  return `${mavenCommand(root)} test`;
+}
+
+function springBootPackageCommand(root: string, buildTool: JavaBuildTool): string {
+  if (buildTool === "gradle") return `${gradleCommand(root)} bootJar`;
+  return `${mavenCommand(root)} package -DskipTests`;
+}
+
+function gradleCommand(root: string): string {
+  return existsSync(join(root, "gradlew")) ? "./gradlew" : "gradle";
+}
+
+function mavenCommand(root: string): string {
+  return existsSync(join(root, "mvnw")) ? "./mvnw" : "mvn";
 }
 
 function addPantsPlans(plans: CommandPlan[], root: string, changedSince: string): void {
@@ -729,7 +772,11 @@ function isDjangoRelevantPath(path: string): boolean {
 }
 
 function touchesJava(paths: string[], root: string): boolean {
-  return touches(paths, [".java", ".kt", ".kts", "pom.xml", "build.gradle", "build.gradle.kts"]) || existsSync(join(root, "mvnw"));
+  return (
+    touches(paths, [".java", ".kt", ".kts", "pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle.properties"]) ||
+    paths.some((path) => path === "gradlew" || path === "mvnw" || path.startsWith("gradle/")) ||
+    existsSync(join(root, "mvnw"))
+  );
 }
 
 function touchesPants(paths: string[]): boolean {

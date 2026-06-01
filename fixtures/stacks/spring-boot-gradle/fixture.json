@@ -1,0 +1,29 @@
+{
+  "name": "spring-boot-gradle",
+  "expectedEcosystems": ["java"],
+  "expectedCommands": ["./gradlew test", "./gradlew bootJar"],
+  "baseFiles": [
+    {
+      "path": "settings.gradle",
+      "lines": ["pluginManagement { repositories { gradlePluginPortal() } }", "rootProject.name = 'api'"]
+    },
+    {
+      "path": "build.gradle",
+      "lines": ["plugins {", "    id 'java'", "    id 'org.springframework.boot' version '3.3.0'", "}", "dependencies {", "    implementation 'org.springframework.boot:spring-boot-starter-web'", "}"]
+    },
+    {
+      "path": "gradlew",
+      "lines": ["#!/bin/sh", "echo gradle wrapper"]
+    },
+    {
+      "path": "src/main/java/com/acme/ApiApplication.java",
+      "lines": ["package com.acme;", "public class ApiApplication { public boolean ready() { return true; } }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "src/main/java/com/acme/ApiApplication.java",
+      "lines": ["package com.acme;", "public class ApiApplication { public boolean ready() { return false; } }"]
+    }
+  ]
+}

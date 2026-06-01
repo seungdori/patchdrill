@@ -44,10 +44,13 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       workspacePackages: discoverGoWorkspacePackages(root)
     });
   }
-  if (exists(root, "pom.xml") || exists(root, "build.gradle") || exists(root, "build.gradle.kts")) {
+  const javaManifestPath = firstExisting(root, ["pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]);
+  if (javaManifestPath) {
+    const framework = detectJavaFramework(root);
     add({
       ecosystem: "java",
-      manifestPath: firstExisting(root, ["pom.xml", "build.gradle", "build.gradle.kts"]) ?? "java"
+      manifestPath: javaManifestPath,
+      ...(framework ? { framework } : {})
     });
   }
   if (exists(root, "Gemfile")) add({ ecosystem: "ruby", manifestPath: "Gemfile" });
@@ -144,6 +147,22 @@ function pythonManifestMentionsPackage(root: string, path: string, packageName: 
   } catch {
     return false;
   }
+}
+
+function detectJavaFramework(root: string): ProjectSignal["framework"] | undefined {
+  if (javaManifestMentions(root, ["org.springframework.boot", "spring-boot-starter"])) return "spring-boot";
+  return undefined;
+}
+
+function javaManifestMentions(root: string, needles: string[]): boolean {
+  return ["pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts", "gradle/libs.versions.toml"].some((path) => {
+    try {
+      const content = readFileSync(join(root, path), "utf8").toLowerCase();
+      return needles.some((needle) => content.includes(needle.toLowerCase()));
+    } catch {
+      return false;
+    }
+  });
 }
 
 function detectNodeTaskRunner(root: string, manifest: ReturnType<typeof readPackageJson>): "turbo" | "nx" | undefined {

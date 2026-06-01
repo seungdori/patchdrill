@@ -51,6 +51,16 @@ describe("types", () => {
 
     expect(signal.framework).toBe("django");
   });
+
+  it("includes Spring Boot framework metadata", () => {
+    const signal: ProjectSignal = {
+      ecosystem: "java",
+      framework: "spring-boot",
+      manifestPath: "build.gradle"
+    };
+
+    expect(signal.framework).toBe("spring-boot");
+  });
 });
 
 function acceptScanOptions(options: ScanOptions): ScanOptions {

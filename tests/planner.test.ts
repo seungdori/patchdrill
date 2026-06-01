@@ -101,6 +101,27 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["django-tests", "python-compile"]);
   });
 
+  it("uses Gradle for Gradle projects without wrappers", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/main/java/com/acme/Api.java", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "java", manifestPath: "build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle test"]);
+  });
+
+  it("adds Spring Boot packaging verification", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "src/main/java/com/acme/Api.java", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "java", framework: "spring-boot", manifestPath: "build.gradle" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["gradle test", "gradle bootJar"]);
+    expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["java-tests"]);
+  });
+
   it("targets changed Node workspace packages", () => {
     const files: ChangedFile[] = [
       { path: "packages/api/src/index.ts", status: "modified", additions: 4, deletions: 1, binary: false }

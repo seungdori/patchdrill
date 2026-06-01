@@ -57,3 +57,4 @@
 - Added Bazel and Buck2 workspace detection with graph-wide test and build plans.
 - Added Swift Package Manager detection with `swift test` and `swift build` plans.
 - Added Python framework metadata for Django/FastAPI and Django-specific `manage.py` verification plans.
+- Added Spring Boot framework detection, Gradle fallback commands, and `bootJar` packaging plans.

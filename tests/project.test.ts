@@ -98,6 +98,18 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects Spring Boot Gradle projects", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "build.gradle"), "plugins { id 'org.springframework.boot' version '3.3.0' }\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "java",
+      framework: "spring-boot",
+      manifestPath: "build.gradle"
+    });
+  });
+
   it("does not treat Pants BUILD files as Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);
