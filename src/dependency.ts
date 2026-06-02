@@ -61,6 +61,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pom.xml"))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseMavenPomDependencies(pair.before);
+    const after = parseMavenPomDependencies(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parseComposerJson(pair.before);
@@ -509,6 +516,19 @@ function parseDotnetDependencyManifest(value: string | undefined): Map<string, M
   return packages.size > 0 ? packages : undefined;
 }
 
+function parseMavenPomDependencies(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const withoutBuild = value.replace(/<build\b[\s\S]*?<\/build>/gi, "");
+  const dependencyManagement = [...withoutBuild.matchAll(/<dependencyManagement\b[^>]*>([\s\S]*?)<\/dependencyManagement>/gi)];
+  for (const match of dependencyManagement) {
+    if (match[1]) readMavenDependencyBlocks(packages, match[1], "dependencyManagement.dependencies");
+  }
+  const directDependencies = withoutBuild.replace(/<dependencyManagement\b[\s\S]*?<\/dependencyManagement>/gi, "");
+  readMavenDependencyBlocks(packages, directDependencies, "dependencies");
+  return packages.size > 0 ? packages : undefined;
+}
+
 function diffLockPackages(file: string, before: Map<string, LockPackage>, after: Map<string, LockPackage>): DependencyChange[] {
   const changes: DependencyChange[] = [];
   const paths = new Set([...before.keys(), ...after.keys()]);
@@ -950,6 +970,41 @@ function cargoEffectiveDependencyType(
   rawValue: string
 ): DependencyChange["dependencyType"] {
   return dependencyType === "dependencies" && /\boptional\s*=\s*true\b/i.test(rawValue) ? "optionalDependencies" : dependencyType;
+}
+
+function readMavenDependencyBlocks(packages: Map<string, ManifestDependency>, content: string, packagePath: string): void {
+  for (const dependencyBlock of content.matchAll(/<dependencies\b[^>]*>([\s\S]*?)<\/dependencies>/gi)) {
+    if (!dependencyBlock[1]) continue;
+    for (const dependency of dependencyBlock[1].matchAll(/<dependency\b[^>]*>([\s\S]*?)<\/dependency>/gi)) {
+      if (!dependency[1]) continue;
+      addMavenDependency(packages, dependency[1], packagePath);
+    }
+  }
+}
+
+function addMavenDependency(packages: Map<string, ManifestDependency>, content: string, packagePath: string): void {
+  const groupId = readXmlElement(content, "groupId");
+  const artifactId = readXmlElement(content, "artifactId");
+  if (!groupId || !artifactId) return;
+  const version = readXmlElement(content, "version") ?? "*";
+  const scope = readXmlElement(content, "scope") ?? "";
+  const optional = readXmlElement(content, "optional") ?? "";
+  const dependencyType = mavenDependencyType(scope, optional);
+  const name = `${groupId}:${artifactId}`;
+  const key = `${dependencyType}:${packagePath}:${name.toLowerCase()}`;
+  packages.set(key, {
+    name,
+    key,
+    spec: version,
+    packagePath,
+    dependencyType
+  });
+}
+
+function mavenDependencyType(scope: string, optional: string): DependencyChange["dependencyType"] {
+  if (optional.trim().toLowerCase() === "true") return "optionalDependencies";
+  if (scope.trim().toLowerCase() === "test") return "devDependencies";
+  return "dependencies";
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {

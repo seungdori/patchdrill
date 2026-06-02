@@ -652,6 +652,7 @@ function isDependencyManifest(path: string): boolean {
     fileName === "Gemfile" ||
     fileName === "go.mod" ||
     fileName === "Cargo.toml" ||
+    fileName === "pom.xml" ||
     /^requirements([-.].*)?\.txt$/i.test(fileName) ||
     /^.*[-.]requirements\.txt$/i.test(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||

@@ -35,6 +35,7 @@
 - `go.sum` dependency diff summaries.
 - `Cargo.toml` dependency diff summaries.
 - `Cargo.lock` dependency diff summaries.
+- Maven `pom.xml` dependency diff summaries.
 - `requirements.txt` dependency diff summaries.
 - `poetry.lock` dependency diff summaries.
 - `uv.lock` dependency diff summaries.

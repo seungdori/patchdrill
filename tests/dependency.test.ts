@@ -437,6 +437,183 @@ pytest = "^8.1.0"
     ]);
   });
 
+  it("reports Maven pom.xml dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-maven-pom-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePomXml(
+      root,
+      `
+<project>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.15.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>32.1.0-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>org.legacy</groupId>
+      <artifactId>oldlib</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.9.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.acme</groupId>
+      <artifactId>optional-lib</artifactId>
+      <version>1.0.0</version>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <dependencies>
+          <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>plugin-only</artifactId>
+            <version>1.0.0</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePomXml(
+      root,
+      `
+<project>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.16.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>33.0.0-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.acme</groupId>
+      <artifactId>optional-lib</artifactId>
+      <version>1.1.0</version>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <dependencies>
+          <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>plugin-only</artifactId>
+            <version>2.0.0</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "pom.xml", status: "modified", additions: 20, deletions: 20, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "pom.xml",
+        packageName: "com.fasterxml.jackson.core:jackson-databind",
+        packagePath: "dependencyManagement.dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "2.15.0",
+        after: "2.16.0"
+      },
+      {
+        file: "pom.xml",
+        packageName: "com.google.guava:guava",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "32.1.0-jre",
+        after: "33.0.0-jre"
+      },
+      {
+        file: "pom.xml",
+        packageName: "org.legacy:oldlib",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "1.0.0"
+      },
+      {
+        file: "pom.xml",
+        packageName: "org.slf4j:slf4j-api",
+        packagePath: "dependencies",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "2.0.9"
+      },
+      {
+        file: "pom.xml",
+        packageName: "org.junit.jupiter:junit-jupiter",
+        packagePath: "dependencies",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "5.9.0",
+        after: "5.10.0"
+      },
+      {
+        file: "pom.xml",
+        packageName: "com.acme:optional-lib",
+        packagePath: "dependencies",
+        dependencyType: "optionalDependencies",
+        changeType: "updated",
+        before: "1.0.0",
+        after: "1.1.0"
+      }
+    ]);
+  });
+
   it("reports npm package-lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-lock-"));
     tempDirs.push(root);
@@ -1694,6 +1871,10 @@ function writeCargoLock(root: string, contents: string): void {
 
 function writeCargoToml(root: string, contents: string): void {
   writeFileSync(join(root, "Cargo.toml"), contents.trimStart());
+}
+
+function writePomXml(root: string, contents: string): void {
+  writeFileSync(join(root, "pom.xml"), contents.trimStart());
 }
 
 function writePoetryLock(root: string, contents: string): void {

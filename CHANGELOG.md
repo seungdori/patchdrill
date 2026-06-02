@@ -30,6 +30,7 @@
 - Added `yarn.lock` dependency diff summaries.
 - Added `go.mod` and `go.sum` dependency diff summaries.
 - Added `Cargo.toml` and `Cargo.lock` dependency diff summaries.
+- Added Maven `pom.xml` dependency diff summaries.
 - Added `requirements.txt` dependency diff summaries.
 - Added `poetry.lock` dependency diff summaries.
 - Added `uv.lock` dependency diff summaries.

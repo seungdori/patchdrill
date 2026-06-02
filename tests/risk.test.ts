@@ -744,6 +744,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags pom.xml as a dependency manifest", () => {
+    const assessment = assessRisk(
+      [{ path: "pom.xml", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "pom.xml"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],
