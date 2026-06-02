@@ -52,6 +52,12 @@ describe("scan", () => {
     expect(report.projectSignals).toContainEqual(expect.objectContaining({ ecosystem: "node" }));
     expect(report.commandPlan.map((command) => command.id)).toContain("node-test");
     expect(report.findings.map((finding) => finding.title)).toContain("High-impact product area changed");
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "verification.required-not-run",
+        title: "Required verification was planned but not run"
+      })
+    );
   });
 
   it("reports risky package script changes from a real git diff", async () => {

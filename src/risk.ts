@@ -1,5 +1,5 @@
 import { matchesPolicyRule } from "./policy.js";
-import type { AddedLine, ChangedFile, CommandResult, PackageScriptChange, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
+import type { AddedLine, ChangedFile, CommandPlan, CommandResult, PackageScriptChange, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
 
 export interface RiskAssessment {
   riskScore: number;
@@ -10,6 +10,7 @@ export interface RiskAssessment {
 
 export interface RiskOptions {
   addedLines?: AddedLine[];
+  commandPlan?: CommandPlan[];
   workflowFiles?: Array<{ file: string; content: string }>;
   packageScriptChanges?: PackageScriptChange[];
   policy?: PatchPolicy;
@@ -451,6 +452,11 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     findings.push(finding);
   }
 
+  for (const finding of missingRequiredVerificationFindings(changedFiles, options.commandPlan ?? [], commandResults)) {
+    risk += severityWeights[finding.severity];
+    findings.push(finding);
+  }
+
   for (const rule of options.policy?.rules ?? []) {
     for (const file of changedFiles) {
       if (!matchesPolicyRule(file.path, rule)) continue;
@@ -739,6 +745,25 @@ function packageScriptFindings(scriptChanges: PackageScriptChange[]): RiskFindin
     }
   }
   return dedupeFindings(findings);
+}
+
+function missingRequiredVerificationFindings(changedFiles: ChangedFile[], commandPlan: CommandPlan[], commandResults: CommandResult[]): RiskFinding[] {
+  if (changedFiles.length === 0) return [];
+  const completedIds = new Set(commandResults.map((result) => result.id));
+  const missing = commandPlan.filter((command) => command.required && !completedIds.has(command.id));
+  if (missing.length === 0) return [];
+  const examples = missing.slice(0, 3).map((command) => command.command);
+  const suffix = missing.length > examples.length ? ", ..." : "";
+  return [
+    {
+      ruleId: "verification.required-not-run",
+      severity: "medium",
+      title: "Required verification was planned but not run",
+      detail: `${missing.length} required verification command${missing.length === 1 ? " was" : "s were"} not executed: ${examples.join(", ")}${suffix}.`,
+      remediation: "Run PatchDrill with --run, or attach equivalent command evidence before merge.",
+      tags: ["testing", "evidence", "verification"]
+    }
+  ];
 }
 
 function isLifecyclePackageScript(scriptName: string): boolean {

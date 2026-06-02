@@ -13,7 +13,7 @@ PatchDrill is split into deterministic modules:
 | `src/package-scripts.ts` | Extracts package.json script additions, removals, and updates so risk scoring can distinguish dependency intent from executable package automation changes. |
 | `src/evidence.ts` | Renders and verifies audit evidence manifests with report, artifact, and command-output digests. |
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, and platform metadata into a verification command plan. |
-| `src/risk.ts` | Scores the patch and emits explainable findings, including whole-workflow GitHub Actions trust-boundary checks. |
+| `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
 | `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |
 | `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
@@ -35,7 +35,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
                            opt-in command runner
                                       |
                                       v
-                    risk assessment -> baseline comparison
+     command plan + command results -> risk assessment -> baseline comparison
                                       |
                                       v
                    Markdown / JSON / SARIF / HTML / evidence

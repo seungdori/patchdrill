@@ -20,6 +20,8 @@ The manifest includes:
 - Local git branch, head SHA, and base SHA when available.
 - The same summary scores used by the JSON report and dashboard.
 
+If a scan infers or configures required verification commands but no matching command results are present, the report includes a `verification.required-not-run` finding. This keeps local scans non-mutating by default while making missing evidence visible in the same report and evidence bundle.
+
 Verify a saved manifest against its artifacts:
 
 ```bash

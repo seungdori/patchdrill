@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assessRisk } from "../src/risk.js";
-import type { ChangedFile } from "../src/types.js";
+import type { ChangedFile, CommandPlan } from "../src/types.js";
 
 describe("assessRisk", () => {
   it("explains the base changed-file risk", () => {
@@ -48,6 +48,43 @@ describe("assessRisk", () => {
 
     expect(assessment.status).toBe("fail");
     expect(assessment.riskScore).toBeGreaterThanOrEqual(40);
+  });
+
+  it("flags required verification commands that were planned but not run", () => {
+    const commandPlan: CommandPlan[] = [
+      {
+        id: "node-test",
+        label: "Node test",
+        command: "npm test",
+        reason: "Node source changed.",
+        ecosystem: "node",
+        required: true
+      },
+      {
+        id: "node-lint",
+        label: "Node lint",
+        command: "npm run lint",
+        reason: "Linting is useful before merge.",
+        ecosystem: "node",
+        required: false
+      }
+    ];
+    const changedFiles: ChangedFile[] = [{ path: "README.md", status: "modified", additions: 1, deletions: 1, binary: false }];
+
+    const missing = assessRisk(changedFiles, [], { commandPlan });
+    const completed = assessRisk(changedFiles, [{ id: "node-test", command: "npm test", exitCode: 0, durationMs: 100, stdout: "ok", stderr: "" }], {
+      commandPlan
+    });
+
+    expect(missing.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "verification.required-not-run",
+        severity: "medium",
+        title: "Required verification was planned but not run"
+      })
+    );
+    expect(missing.riskScore).toBeGreaterThan(completed.riskScore);
+    expect(completed.findings.map((finding) => finding.ruleId)).not.toContain("verification.required-not-run");
   });
 
   it("does not treat security documentation as product security code", () => {

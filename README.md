@@ -20,7 +20,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 
 - Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, Ruby, Rails, RSpec, PHP, Composer, Laravel, dotnet, ASP.NET Core, Swift, Xcode, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - No LLM required. The core is deterministic, offline, and reviewable.
-- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, and missing test changes.
+- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but not run.
 - Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
 - Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
@@ -313,6 +313,7 @@ The current deterministic rules look for:
 - Legacy binary `bun.lockb` changes with guidance to migrate toward the text `bun.lock` format.
 - Source changes without nearby, mirrored, or framework-convention matching test changes.
 - Large line deltas and binary files.
+- Required verification commands that were inferred or configured but not run.
 - Failed verification commands.
 - Custom policy rules from `.patchdrill.yml`.
 
@@ -453,7 +454,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions are new ecosys
 
 ## Security
 
-PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. `patchdrill init` writes a CI workflow with `run: "true"` and a per-command timeout so pull requests produce command evidence by default. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
+PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. When required checks are planned but not executed, PatchDrill reports that as missing verification evidence instead of silently treating the patch as proven. `patchdrill init` writes a CI workflow with `run: "true"` and a per-command timeout so pull requests produce command evidence by default. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
 
 ## License
 

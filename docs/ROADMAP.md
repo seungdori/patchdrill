@@ -122,6 +122,7 @@
 - Package automation script risk findings for lifecycle hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - Structured package script change summaries in JSON, Markdown, and HTML reports.
 - Clearer `patchdrill explain` first-run guidance for teams comparing deterministic evidence with AI PR reviewers.
+- Missing-evidence risk findings when required verification commands were planned but not run.
 - Repository hygiene for default generated report artifacts after local scans.
 - Mutable `docker://` GitHub Action image findings with digest-pinned allowlisting.
 
