@@ -37,6 +37,9 @@
         "reportSchemaVersion": {
           "type": "string",
           "const": "1"
+        },
+        "version": {
+          "type": "string"
         }
       }
     },

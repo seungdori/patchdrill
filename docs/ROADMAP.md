@@ -120,6 +120,9 @@
 - First-party Maven and Spring Boot Maven stack fixtures.
 - Audit evidence manifests with report, artifact, and command-output digests.
 - Evidence manifest verification against generated artifact hashes.
+- Evidence manifest verification against JSON report summary and count metadata.
+- Evidence manifest verification against JSON report command metadata and command-output digests.
+- Evidence manifests record the PatchDrill tool version.
 - Evidence manifest regeneration for finalized artifacts and CI verification before upload.
 - Fail-state `risky-agent-pr` demo scenario for quick product evaluation.
 - Fork-safe PR comment handling that does not fail verification when comment permissions are unavailable.

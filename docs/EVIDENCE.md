@@ -19,6 +19,7 @@ The manifest includes:
 - The PatchDrill report SHA-256 and byte length.
 - SHA-256 digests for generated Markdown, JSON, SARIF, HTML, and compact-summary artifacts.
 - Command result metadata with stdout and stderr digests, not raw command output.
+- The PatchDrill version and report schema version that produced the bundle.
 - Local git branch, head SHA, and base SHA when available.
 - The same summary scores used by the JSON report and dashboard.
 
@@ -30,7 +31,7 @@ Verify a saved manifest against its artifacts:
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest.
+Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest and verifies that the manifest summary, report counts, command result metadata, and command-output digests still match the JSON report.
 
 Regenerate a manifest after post-processing final artifacts, such as re-rendering a dashboard with trend history:
 

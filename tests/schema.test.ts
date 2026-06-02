@@ -269,7 +269,8 @@ describe("schemas", () => {
       generatedAt: "2026-06-01T00:00:00.000Z",
       tool: {
         name: "patchdrill",
-        reportSchemaVersion: "1"
+        reportSchemaVersion: "1",
+        version: "0.1.0"
       },
       root: "/repo",
       base: "origin/main",

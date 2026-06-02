@@ -13,7 +13,7 @@ PatchDrill does not replace reviewer judgment. It gives reviewers the same deter
 | JSON report | Bots and dashboards | Preserves the complete report contract for policy gates and custom tooling. |
 | SARIF report | GitHub code scanning | Turns findings into code scanning alerts with stable fingerprints. |
 | HTML dashboard | Humans and CI artifacts | Gives a self-contained visual report, including optional trend history from prior JSON reports. |
-| Evidence manifest | CI and audit trails | Records report, artifact, and command-output digests so the bundle can be verified later. |
+| Evidence manifest | CI and audit trails | Records the PatchDrill version, report metadata, artifact digests, command metadata, and command-output digests so the bundle can be verified later. |
 
 ## Review Flow
 
@@ -51,5 +51,6 @@ AI PR reviewers are useful for judgment, explanation, and design feedback. They 
 - Which required commands ran and whether they failed.
 - Which risk rules increased the score.
 - Which artifacts belonged to the same scan.
+- Which PatchDrill version, report metadata, and command-output digests produced the evidence bundle.
 
 The intended workflow is not "trust PatchDrill instead of reviewers." It is "make the proof explicit before reviewers spend attention."

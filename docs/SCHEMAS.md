@@ -36,4 +36,4 @@ Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume
 
 ## Evidence Schema
 
-Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr.
+Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the PatchDrill tool version, report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr. `patchdrill verify` cross-checks those command digests against the JSON report artifact when it is present.
