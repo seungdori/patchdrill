@@ -107,3 +107,4 @@
 - Ignored all default generated PatchDrill report artifacts to prevent accidental report commits after local scans.
 - Added mutable `docker://` GitHub Action image findings while allowing sha256 digest-pinned references.
 - Added missing-evidence risk findings when required verification commands are planned but not run.
+- Added dependency proof-gap findings for manifest-only dependency changes and lockfile-only resolution drift.

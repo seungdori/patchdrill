@@ -703,6 +703,12 @@ backend_packages = ["pants.backend.python"]
       changeType: "added",
       after: "^2.0.0"
     });
+    expect(report.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "dependency.manifest-without-lockfile",
+        file: "package.json"
+      })
+    );
   });
 });
 

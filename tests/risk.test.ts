@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assessRisk } from "../src/risk.js";
-import type { ChangedFile, CommandPlan } from "../src/types.js";
+import type { ChangedFile, CommandPlan, DependencyChange } from "../src/types.js";
 
 describe("assessRisk", () => {
   it("explains the base changed-file risk", () => {
@@ -85,6 +85,122 @@ describe("assessRisk", () => {
     );
     expect(missing.riskScore).toBeGreaterThan(completed.riskScore);
     expect(completed.findings.map((finding) => finding.ruleId)).not.toContain("verification.required-not-run");
+  });
+
+  it("flags dependency manifest changes without matching lockfile evidence", () => {
+    const dependencyChanges: DependencyChange[] = [
+      {
+        file: "package.json",
+        packageName: "react",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^18.2.0",
+        after: "^19.0.0"
+      },
+      {
+        file: "package.json",
+        packageName: "zod",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "^4.0.0"
+      }
+    ];
+
+    const assessment = assessRisk([{ path: "package.json", status: "modified", additions: 4, deletions: 2, binary: false }], [], {
+      dependencyChanges
+    });
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "dependency.manifest-without-lockfile",
+        severity: "medium",
+        file: "package.json",
+        detail: expect.stringContaining("react ^18.2.0 -> ^19.0.0")
+      })
+    );
+  });
+
+  it("accepts dependency manifest changes when matching lockfile evidence is present", () => {
+    const dependencyChanges: DependencyChange[] = [
+      {
+        file: "package.json",
+        packageName: "react",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^18.2.0",
+        after: "^19.0.0"
+      },
+      {
+        file: "package-lock.json",
+        packageName: "react",
+        packagePath: "node_modules/react",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "18.2.0",
+        after: "19.0.0"
+      }
+    ];
+
+    const assessment = assessRisk(
+      [
+        { path: "package.json", status: "modified", additions: 4, deletions: 2, binary: false },
+        { path: "package-lock.json", status: "modified", additions: 8, deletions: 4, binary: false }
+      ],
+      [],
+      { dependencyChanges }
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("dependency.manifest-without-lockfile");
+  });
+
+  it("accepts manifest dependency changes when the matching lockfile file changed even if package-level lock diff is unavailable", () => {
+    const dependencyChanges: DependencyChange[] = [
+      {
+        file: "package.json",
+        packageName: "react",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^18.2.0",
+        after: "^19.0.0"
+      }
+    ];
+
+    const assessment = assessRisk(
+      [
+        { path: "package.json", status: "modified", additions: 4, deletions: 2, binary: false },
+        { path: "package-lock.json", status: "modified", additions: 8, deletions: 4, binary: false }
+      ],
+      [],
+      { dependencyChanges }
+    );
+
+    expect(assessment.findings.map((finding) => finding.ruleId)).not.toContain("dependency.manifest-without-lockfile");
+  });
+
+  it("flags lockfile dependency changes without matching manifest dependency changes", () => {
+    const dependencyChanges: DependencyChange[] = [
+      {
+        file: "poetry.lock",
+        packageName: "fastapi",
+        dependencyType: "lockfile",
+        changeType: "updated",
+        before: "0.110.0",
+        after: "0.111.0"
+      }
+    ];
+
+    const assessment = assessRisk([{ path: "poetry.lock", status: "modified", additions: 8, deletions: 4, binary: false }], [], {
+      dependencyChanges
+    });
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "dependency.lockfile-without-manifest",
+        severity: "low",
+        file: "poetry.lock",
+        detail: expect.stringContaining("fastapi 0.110.0 -> 0.111.0")
+      })
+    );
   });
 
   it("does not treat security documentation as product security code", () => {

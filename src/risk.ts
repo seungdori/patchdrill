@@ -1,5 +1,5 @@
 import { matchesPolicyRule } from "./policy.js";
-import type { AddedLine, ChangedFile, CommandPlan, CommandResult, PackageScriptChange, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
+import type { AddedLine, ChangedFile, CommandPlan, CommandResult, DependencyChange, PackageScriptChange, PatchPolicy, PatchStatus, RiskFinding, Severity } from "./types.js";
 
 export interface RiskAssessment {
   riskScore: number;
@@ -11,6 +11,7 @@ export interface RiskAssessment {
 export interface RiskOptions {
   addedLines?: AddedLine[];
   commandPlan?: CommandPlan[];
+  dependencyChanges?: DependencyChange[];
   workflowFiles?: Array<{ file: string; content: string }>;
   packageScriptChanges?: PackageScriptChange[];
   policy?: PatchPolicy;
@@ -223,6 +224,50 @@ const WORKFLOW_ADDED_LINE_RULES: Array<{
     matches: (content) => /\${{\s*github\.event\.pull_request\.(title|body|head\.ref|head\.label|head\.repo\.full_name)\s*}}/i.test(content),
     remediation: "Pass untrusted PR metadata through environment variables and quote it carefully, or avoid using it in shell commands.",
     tags: ["ci", "github-actions", "injection"]
+  }
+];
+
+const DEPENDENCY_PROOF_RULES: Array<{
+  ecosystem: string;
+  manifest: (path: string) => boolean;
+  lockfile: (path: string) => boolean;
+  expectedLockfiles: string;
+}> = [
+  {
+    ecosystem: "Node",
+    manifest: (path) => baseName(path) === "package.json",
+    lockfile: (path) => ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb"].includes(baseName(path)),
+    expectedLockfiles: "package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock"
+  },
+  {
+    ecosystem: "Python",
+    manifest: (path) => baseName(path) === "pyproject.toml" || isRequirementsFileName(baseName(path)),
+    lockfile: (path) => ["poetry.lock", "uv.lock", "Pipfile.lock"].includes(baseName(path)),
+    expectedLockfiles: "poetry.lock, uv.lock, or Pipfile.lock"
+  },
+  {
+    ecosystem: "Rust",
+    manifest: (path) => baseName(path) === "Cargo.toml",
+    lockfile: (path) => baseName(path) === "Cargo.lock",
+    expectedLockfiles: "Cargo.lock"
+  },
+  {
+    ecosystem: "Go",
+    manifest: (path) => baseName(path) === "go.mod",
+    lockfile: (path) => baseName(path) === "go.sum",
+    expectedLockfiles: "go.sum"
+  },
+  {
+    ecosystem: "Ruby",
+    manifest: (path) => baseName(path) === "Gemfile",
+    lockfile: (path) => baseName(path) === "Gemfile.lock",
+    expectedLockfiles: "Gemfile.lock"
+  },
+  {
+    ecosystem: "PHP",
+    manifest: (path) => baseName(path) === "composer.json",
+    lockfile: (path) => baseName(path) === "composer.lock",
+    expectedLockfiles: "composer.lock"
   }
 ];
 
@@ -452,6 +497,11 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     findings.push(finding);
   }
 
+  for (const finding of dependencyProofFindings(changedFiles, options.dependencyChanges ?? [])) {
+    risk += severityWeights[finding.severity];
+    findings.push(finding);
+  }
+
   for (const finding of missingRequiredVerificationFindings(changedFiles, options.commandPlan ?? [], commandResults)) {
     risk += severityWeights[finding.severity];
     findings.push(finding);
@@ -651,7 +701,7 @@ function joinPath(...parts: string[]): string {
 }
 
 function isDependencyManifest(path: string): boolean {
-  const fileName = path.split("/").at(-1) ?? path;
+  const fileName = baseName(path);
   return (
     fileName === "pyproject.toml" ||
     fileName === "composer.json" ||
@@ -662,15 +712,14 @@ function isDependencyManifest(path: string): boolean {
     fileName === "build.gradle" ||
     fileName === "build.gradle.kts" ||
     fileName === "libs.versions.toml" ||
-    /^requirements([-.].*)?\.txt$/i.test(fileName) ||
-    /^.*[-.]requirements\.txt$/i.test(fileName) ||
+    isRequirementsFileName(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||
     fileName === "Directory.Packages.props"
   );
 }
 
 function isBinaryBunLockfile(path: string): boolean {
-  return path.split("/").at(-1) === "bun.lockb";
+  return baseName(path) === "bun.lockb";
 }
 
 function workflowUsesUnpinnedAction(content: string): boolean {
@@ -747,6 +796,68 @@ function packageScriptFindings(scriptChanges: PackageScriptChange[]): RiskFindin
   return dedupeFindings(findings);
 }
 
+function dependencyProofFindings(changedFiles: ChangedFile[], dependencyChanges: DependencyChange[]): RiskFinding[] {
+  const findings: RiskFinding[] = [];
+
+  for (const rule of DEPENDENCY_PROOF_RULES) {
+    const manifestChanges = dependencyChanges.filter((change) => change.dependencyType !== "lockfile" && rule.manifest(change.file));
+    const lockfileChanges = dependencyChanges.filter((change) => change.dependencyType === "lockfile" && rule.lockfile(change.file));
+    const lockfileFileChanged = changedFiles.some((file) => rule.lockfile(file.path));
+    if (manifestChanges.length > 0 && !lockfileFileChanged) {
+      for (const [file, changes] of changesByFile(manifestChanges)) {
+        findings.push({
+          ruleId: "dependency.manifest-without-lockfile",
+          severity: "medium",
+          title: `${rule.ecosystem} dependency manifest changed without lockfile evidence`,
+          detail: `${file} changed ${changes.length} direct dependenc${changes.length === 1 ? "y" : "ies"} (${dependencyChangeExamples(
+            changes
+          )}), but no ${rule.expectedLockfiles} change was detected in this patch.`,
+          file,
+          remediation: "Update the matching lockfile, or attach equivalent install/resolution evidence if this repository intentionally does not commit lockfiles.",
+          tags: ["dependencies", "supply-chain", "evidence"]
+        });
+      }
+    }
+
+    if (lockfileChanges.length > 0 && manifestChanges.length === 0) {
+      for (const [file, changes] of changesByFile(lockfileChanges)) {
+        findings.push({
+          ruleId: "dependency.lockfile-without-manifest",
+          severity: "low",
+          title: `${rule.ecosystem} lockfile changed without manifest dependency change`,
+          detail: `${file} changed ${changes.length} resolved dependenc${changes.length === 1 ? "y" : "ies"} (${dependencyChangeExamples(
+            changes
+          )}), but no matching direct dependency manifest change was detected.`,
+          file,
+          remediation: "Confirm this is an intentional transitive resolution refresh and not an unreviewed supply-chain drift.",
+          tags: ["dependencies", "supply-chain", "evidence"]
+        });
+      }
+    }
+  }
+
+  return dedupeFindings(findings);
+}
+
+function changesByFile(changes: DependencyChange[]): Map<string, DependencyChange[]> {
+  const grouped = new Map<string, DependencyChange[]>();
+  for (const change of changes) {
+    const values = grouped.get(change.file) ?? [];
+    values.push(change);
+    grouped.set(change.file, values);
+  }
+  return grouped;
+}
+
+function dependencyChangeExamples(changes: DependencyChange[]): string {
+  const examples = changes.slice(0, 4).map((change) => {
+    const before = change.before ? ` ${change.before}` : "";
+    const after = change.after ? ` -> ${change.after}` : "";
+    return `${change.packageName}${before}${after}`;
+  });
+  return `${examples.join(", ")}${changes.length > examples.length ? ", ..." : ""}`;
+}
+
 function missingRequiredVerificationFindings(changedFiles: ChangedFile[], commandPlan: CommandPlan[], commandResults: CommandResult[]): RiskFinding[] {
   if (changedFiles.length === 0) return [];
   const completedIds = new Set(commandResults.map((result) => result.id));
@@ -782,6 +893,14 @@ function isDisabledVerificationCommand(command: string): boolean {
 
 function packageScriptPipesRemoteCode(command: string): boolean {
   return /\b(curl|wget)\b.+\|\s*(sudo\s+)?(sh|bash|zsh|python|node)\b/i.test(command);
+}
+
+function baseName(path: string): string {
+  return path.split("/").at(-1) ?? path;
+}
+
+function isRequirementsFileName(fileName: string): boolean {
+  return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
 }
 
 function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{ file: string; content: string }>): RiskFinding[] {

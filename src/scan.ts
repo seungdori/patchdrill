@@ -44,6 +44,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   const assessment = assessRisk(changedFiles, commandResults, {
     addedLines,
     commandPlan,
+    dependencyChanges,
     workflowFiles,
     packageScriptChanges,
     policy: loadedPolicy.policy
