@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
+import { addCommandPlan } from "./command-plan.js";
 import type { ChangedFile, CommandPlan, ProjectSignal, WorkspacePackage } from "./types.js";
 
 export interface PlannerOptions {
@@ -2467,8 +2468,7 @@ function touches(paths: string[], tokens: string[]): boolean {
 }
 
 function pushUnique(plans: CommandPlan[], plan: CommandPlan): void {
-  if (plans.some((existing) => existing.id === plan.id)) return;
-  plans.push(plan);
+  addCommandPlan(plans, plan);
 }
 
 function quoteShell(value: string): string {

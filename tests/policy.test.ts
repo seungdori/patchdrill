@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { filterIgnoredFiles, loadPolicy, matchesAnyPath, mergePolicyCommands } from "../src/policy.js";
-import type { ChangedFile } from "../src/types.js";
+import type { ChangedFile, CommandPlan, PatchPolicy } from "../src/types.js";
 
 const tempDirs: string[] = [];
 
@@ -92,4 +92,76 @@ rules:
 
     expect(() => loadPolicy(root)).toThrow(/rules\[0\]\.title/);
   });
+
+  it("promotes inferred optional commands when policy requires the same command", () => {
+    const existing: CommandPlan[] = [
+      {
+        id: "node-lint",
+        label: "Node lint",
+        command: "npm run lint",
+        reason: "Linting is useful before merge.",
+        ecosystem: "node",
+        required: false
+      }
+    ];
+    const policy = policyWithCommands({
+      requiredCommands: [
+        {
+          id: "policy-required-lint",
+          label: "Policy lint",
+          command: "npm run lint",
+          reason: "Team policy requires lint before merge.",
+          ecosystem: "general",
+          required: true
+        }
+      ]
+    });
+
+    expect(mergePolicyCommands(existing, policy)).toEqual([
+      {
+        id: "policy-required-lint",
+        label: "Policy lint",
+        command: "npm run lint",
+        reason: "Team policy requires lint before merge.",
+        ecosystem: "general",
+        required: true
+      }
+    ]);
+  });
+
+  it("keeps existing required commands required when policy repeats them as optional", () => {
+    const existing: CommandPlan[] = [
+      {
+        id: "node-test",
+        label: "Node test",
+        command: "npm test",
+        reason: "Node source changed.",
+        ecosystem: "node",
+        required: true
+      }
+    ];
+    const policy = policyWithCommands({
+      optionalCommands: [
+        {
+          id: "policy-optional-test",
+          label: "Optional policy test",
+          command: "npm test",
+          reason: "Policy suggests this check.",
+          ecosystem: "general",
+          required: false
+        }
+      ]
+    });
+
+    expect(mergePolicyCommands(existing, policy)).toEqual(existing);
+  });
 });
+
+function policyWithCommands(commands: Partial<Pick<PatchPolicy, "requiredCommands" | "optionalCommands">>): PatchPolicy {
+  return {
+    ignoredPaths: [],
+    rules: [],
+    requiredCommands: commands.requiredCommands ?? [],
+    optionalCommands: commands.optionalCommands ?? []
+  };
+}

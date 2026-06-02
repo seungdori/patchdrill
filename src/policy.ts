@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { mergeCommandPlanLists } from "./command-plan.js";
 import type { CommandPlan, PatchPolicy, PolicyRule, Severity } from "./types.js";
 
 export interface LoadedPolicy {
@@ -42,12 +43,7 @@ export function matchesAnyPath(path: string, patterns: string[]): boolean {
 }
 
 export function mergePolicyCommands(existing: CommandPlan[], policy: PatchPolicy): CommandPlan[] {
-  const merged = [...existing];
-  for (const command of [...policy.requiredCommands, ...policy.optionalCommands]) {
-    if (merged.some((item) => item.id === command.id || item.command === command.command)) continue;
-    merged.push(command);
-  }
-  return merged;
+  return mergeCommandPlanLists(existing, policy.requiredCommands, policy.optionalCommands);
 }
 
 function resolvePolicyPath(root: string, configPath?: string): string | undefined {

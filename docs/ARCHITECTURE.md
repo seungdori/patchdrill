@@ -6,6 +6,7 @@ PatchDrill is split into deterministic modules:
 | --- | --- |
 | `src/baseline.ts` | Compares current reports with previous JSON baselines and computes risk deltas. |
 | `src/codeowners.ts` | Reads GitHub CODEOWNERS files and annotates changed files with owners. |
+| `src/command-plan.ts` | Normalizes verification command plans, deduplicates matching commands, and preserves required-command strength when policy and detectors overlap. |
 | `src/git.ts` | Reads changed files from git ranges, staged changes, unstaged changes, and untracked files. |
 | `src/policy.ts` | Loads `.patchdrill.yml/json`, filters ignored paths, and merges repo-specific commands/rules. |
 | `src/project.ts` | Discovers ecosystem signals, nested project roots, package managers, task runners, solution filters, Xcode containers, and workspace dependency graphs from manifests. |
@@ -50,6 +51,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
 ## Extension Seams
 
 - Dependency formats register a matcher, parser, diff function, and empty snapshot in `src/dependency.ts`, so adding a manifest or lockfile format does not grow the scan orchestrator.
+- Verification command adapters add plans through `src/command-plan.ts`, so duplicate detector and policy commands are normalized before running or scoring evidence gaps.
 - Project and workspace detection lives in `src/project.ts`; command planning consumes those signals through the handler registry in `src/planner.ts`.
 - Risk scoring stays explainable: every score increase in `src/risk.ts` must produce a human-readable finding and a stable rule ID documented in [RULE_CATALOG.md](RULE_CATALOG.md).
 

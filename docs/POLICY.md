@@ -74,6 +74,8 @@ rules:
 | `optionalCommands` | Commands shown in the report and run only when both `--run` and `--run-optional` are set. |
 | `rules` | Path-based findings with custom severity, weight, remediation, and tags. |
 
+Policy commands are merged with inferred commands by command string and ID. If a policy `requiredCommands` entry matches an inferred optional command, PatchDrill promotes the merged command to required so repo policy cannot be weakened by a generic detector.
+
 ## Glob Support
 
 PatchDrill supports `*`, `**`, and `?` path globs.
