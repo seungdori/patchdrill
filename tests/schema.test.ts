@@ -1,10 +1,12 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
+import { inspectDoctor } from "../src/doctor.js";
+import { checkReleaseReadiness, createReleaseReadinessReport } from "../src/release-readiness.js";
 import { isSchemaName, readSchema, schemaNames } from "../src/schema.js";
 
 describe("schemas", () => {
-  it("exposes policy, report, and evidence schemas using JSON Schema draft 2020-12", () => {
-    expect(schemaNames).toEqual(["policy", "report", "evidence"]);
+  it("exposes public schemas using JSON Schema draft 2020-12", () => {
+    expect(schemaNames).toEqual(["policy", "report", "evidence", "doctor", "release-check"]);
 
     for (const name of schemaNames) {
       const schema = JSON.parse(readSchema(name)) as { $schema?: string; $defs?: Record<string, unknown> };
@@ -17,6 +19,8 @@ describe("schemas", () => {
     expect(isSchemaName("policy")).toBe(true);
     expect(isSchemaName("report")).toBe(true);
     expect(isSchemaName("evidence")).toBe(true);
+    expect(isSchemaName("doctor")).toBe(true);
+    expect(isSchemaName("release-check")).toBe(true);
     expect(isSchemaName("sarif")).toBe(false);
   });
 
@@ -68,7 +72,31 @@ describe("schemas", () => {
     expect(evidenceSchema.$defs.artifact?.properties?.kind?.enum).toEqual(["summary-markdown", "markdown", "json", "sarif", "html"]);
   });
 
-  it("validates representative policy and report payloads", () => {
+  it("documents readiness automation contract surfaces", () => {
+    const doctorSchema = JSON.parse(readSchema("doctor")) as {
+      required: string[];
+      $defs: {
+        doctorCheck?: { properties?: { status?: { $ref?: string } } };
+        doctorStatus?: { enum?: string[] };
+      };
+    };
+    const releaseSchema = JSON.parse(readSchema("release-check")) as {
+      required: string[];
+      $defs: {
+        releaseCheck?: { properties?: { status?: { $ref?: string } } };
+        releaseStatus?: { enum?: string[] };
+      };
+    };
+
+    expect(doctorSchema.required).toEqual(["schemaVersion", "root", "summary", "projectSignals", "checks", "suggestedCommands"]);
+    expect(doctorSchema.$defs.doctorStatus?.enum).toEqual(["pass", "warn", "info"]);
+    expect(doctorSchema.$defs.doctorCheck?.properties?.status?.$ref).toBe("#/$defs/doctorStatus");
+    expect(releaseSchema.required).toEqual(["schemaVersion", "ok", "summary", "checks"]);
+    expect(releaseSchema.$defs.releaseStatus?.enum).toEqual(["pass", "warn", "fail"]);
+    expect(releaseSchema.$defs.releaseCheck?.properties?.status?.$ref).toBe("#/$defs/releaseStatus");
+  });
+
+  it("validates representative policy, report, evidence, and readiness payloads", () => {
     const policy = {
       $schema: "https://patchdrill.dev/schemas/patchdrill-policy.schema.json",
       ignoredPaths: ["dist/**"],
@@ -322,10 +350,75 @@ describe("schemas", () => {
         }
       ]
     };
+    const doctor = {
+      schemaVersion: "1",
+      root: "/repo",
+      summary: {
+        status: "pass",
+        ok: true,
+        passCount: 2,
+        warnCount: 0,
+        infoCount: 1,
+        projectSignalCount: 1
+      },
+      projectSignals: [
+        {
+          ecosystem: "node",
+          manifestPath: "package.json",
+          packageManager: "npm",
+          scripts: { test: "vitest run" }
+        }
+      ],
+      checks: [
+        {
+          status: "pass",
+          title: "Project detection",
+          detail: "1 project signal detected."
+        },
+        {
+          status: "info",
+          title: "CODEOWNERS",
+          detail: "No CODEOWNERS file was found.",
+          remediation: "Add CODEOWNERS if owner hints should appear."
+        }
+      ],
+      suggestedCommands: ["patchdrill scan --base origin/main"]
+    };
+    const releaseCheck = {
+      schemaVersion: "1",
+      ok: true,
+      summary: {
+        status: "pass",
+        ok: true,
+        passCount: 2,
+        warnCount: 1,
+        failCount: 0
+      },
+      checks: [
+        {
+          status: "pass",
+          title: "Package name",
+          detail: "name is patchdrill."
+        },
+        {
+          status: "warn",
+          title: "npm Trusted Publisher",
+          detail: "Trusted Publisher configuration must be verified in npm account settings.",
+          remediation: "Configure npm trusted publishing."
+        }
+      ]
+    };
 
     expectValid("policy", policy);
     expectValid("report", report);
     expectValid("evidence", evidence);
+    expectValid("doctor", doctor);
+    expectValid("release-check", releaseCheck);
+  });
+
+  it("validates live readiness outputs against their shipped schemas", () => {
+    expectValid("doctor", inspectDoctor(process.cwd()));
+    expectValid("release-check", createReleaseReadinessReport(checkReleaseReadiness(process.cwd())));
   });
 
   it("rejects policy alias conflicts in schema validation", () => {
@@ -347,7 +440,7 @@ describe("schemas", () => {
   });
 });
 
-function expectValid(name: "policy" | "report" | "evidence", value: unknown): void {
+function expectValid(name: (typeof schemaNames)[number], value: unknown): void {
   const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   const validate = ajv.compile(JSON.parse(readSchema(name)));
   if (!validate(value)) {
@@ -355,7 +448,7 @@ function expectValid(name: "policy" | "report" | "evidence", value: unknown): vo
   }
 }
 
-function expectInvalid(name: "policy" | "report" | "evidence", value: unknown): void {
+function expectInvalid(name: (typeof schemaNames)[number], value: unknown): void {
   const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
   const validate = ajv.compile(JSON.parse(readSchema(name)));
   expect(validate(value)).toBe(false);

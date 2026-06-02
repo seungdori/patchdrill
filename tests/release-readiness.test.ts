@@ -24,6 +24,8 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] npm provenance publish");
     expect(rendered).toContain("[PASS] Package file allowlist");
     expect(rendered).toContain("[PASS] Package discoverability keywords");
+    expect(rendered).toContain("[PASS] Doctor output schema");
+    expect(rendered).toContain("[PASS] Release-check output schema");
     expect(rendered).toContain("[PASS] CI readiness dogfood");
     expect(rendered).toContain("[PASS] Release readiness dogfood");
     expect(rendered).toContain("[PASS] Case studies");

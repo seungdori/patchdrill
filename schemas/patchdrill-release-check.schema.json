@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patchdrill.dev/schemas/patchdrill-release-check.schema.json",
+  "title": "PatchDrill Release Check Report",
+  "description": "Machine-readable local release-readiness diagnostics emitted by PatchDrill release-check --format json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "ok", "summary", "checks"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "summary": {
+      "$ref": "#/$defs/releaseReadinessSummary"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/releaseCheck"
+      }
+    }
+  },
+  "$defs": {
+    "releaseStatus": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail"]
+    },
+    "releaseReadinessSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "ok", "passCount", "warnCount", "failCount"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail"]
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "passCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "releaseCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "title", "detail"],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/releaseStatus"
+        },
+        "title": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

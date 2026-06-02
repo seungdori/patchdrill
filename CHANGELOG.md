@@ -12,7 +12,7 @@
 - Added Node workspace affected-package targeting and release workflow for npm provenance.
 - Added package.json dependency diff summaries to Markdown and JSON reports.
 - Added pull request comment upsert mode to the GitHub Action and generated workflow.
-- Added JSON Schemas for policy and report contracts with `patchdrill schema`.
+- Added JSON Schemas for policy, report, evidence, doctor, and release-check contracts with `patchdrill schema`.
 - Added downstream workspace dependency graph expansion for Node monorepos.
 - Added npm `package-lock.json` dependency diff summaries.
 - Added CODEOWNERS owner hints for changed files.
@@ -114,6 +114,7 @@
 - Added `patchdrill doctor` for first-run repository readiness diagnosis.
 - Added `patchdrill release-check` for local npm and GitHub Action release readiness checks.
 - Added JSON output for `patchdrill doctor --format json` and `patchdrill release-check --format json`.
+- Added JSON Schemas for `patchdrill doctor --format json` and `patchdrill release-check --format json`.
 - Added readiness summaries to doctor/release JSON and dogfooded release-check in CI and release workflows.
 - Added local Markdown link verification to release readiness and documentation tests.
 - Added package file allowlist and launch keyword checks to release readiness.

@@ -15,6 +15,8 @@ Configure the npm package as a trusted publisher for this repository and the `Re
 patchdrill doctor
 patchdrill release-check
 patchdrill release-check --format json
+patchdrill schema doctor
+patchdrill schema release-check
 npm run check
 npm pack --dry-run
 node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill/release.json --sarif .patchdrill/release.sarif
@@ -27,6 +29,6 @@ node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill
 
 Use `workflow_dispatch` to run release checks without publishing. Publishing is limited to GitHub Release events.
 
-`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, release workflow provenance settings, README install paths, repository release files, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
+`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, release workflow provenance settings, README install paths, repository release files, shipped readiness JSON Schemas, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
 
 CI and the release workflow both run `patchdrill release-check --format json` after `npm run check` so launch-readiness regressions fail before package publishing.

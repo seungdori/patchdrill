@@ -256,6 +256,8 @@ Export JSON Schemas for editors and bots:
 ```bash
 patchdrill schema policy > patchdrill-policy.schema.json
 patchdrill schema report > patchdrill-report.schema.json
+patchdrill schema doctor > patchdrill-doctor.schema.json
+patchdrill schema release-check > patchdrill-release-check.schema.json
 ```
 
 Compare against a previous report:
@@ -293,7 +295,7 @@ patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact op
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
 patchdrill release-check [--format text|json]
-patchdrill schema [policy|report|evidence] [--output <path>]
+patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
 patchdrill verify --evidence <patchdrill-evidence.json>
 ```
 

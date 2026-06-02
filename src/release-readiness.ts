@@ -19,6 +19,13 @@ export interface ReleaseReadinessSummary {
   failCount: number;
 }
 
+export interface ReleaseReadinessReport {
+  schemaVersion: "1";
+  ok: boolean;
+  summary: ReleaseReadinessSummary;
+  checks: ReleaseCheck[];
+}
+
 export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const pkg = readPackageJson(root);
   const releaseWorkflow = readOptional(root, ".github/workflows/release.yml");
@@ -38,6 +45,8 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(pkg?.scripts?.prepack === "npm run check", "Prepack script", "prepack runs the full local verification suite.", "Set scripts.prepack to npm run check."),
     checkPackageFiles(packageFiles),
     checkKeywords(keywords),
+    checkSchemaContract(root, "Doctor output schema", "patchdrill-doctor.schema.json", "doctor"),
+    checkSchemaContract(root, "Release-check output schema", "patchdrill-release-check.schema.json", "release-check"),
     checkBoolean(existsSync(join(root, "package-lock.json")), "npm lockfile", "package-lock.json is present for reproducible action installs.", "Commit package-lock.json."),
     checkBoolean(Boolean(action?.includes("runs:\n  using: composite")), "Composite action", "action.yml declares a composite action.", "Keep action.yml as a composite action."),
     checkBoolean(Boolean(action?.includes("node \"$GITHUB_ACTION_PATH/dist/cli.js\"")), "Action local build path", "action.yml runs the checked-out dist/cli.js.", "Run the built CLI from the checked-out action source."),
@@ -83,6 +92,16 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
 
 export function releaseReadinessHasFailures(checks: ReleaseCheck[]): boolean {
   return summarizeReleaseReadiness(checks).failCount > 0;
+}
+
+export function createReleaseReadinessReport(checks: ReleaseCheck[]): ReleaseReadinessReport {
+  const summary = summarizeReleaseReadiness(checks);
+  return {
+    schemaVersion: "1",
+    ok: summary.ok,
+    summary,
+    checks
+  };
 }
 
 export function renderReleaseReadiness(checks: ReleaseCheck[]): string {
@@ -180,6 +199,25 @@ function checkKeywords(keywords: string[]): ReleaseCheck {
         ? `package.json keywords include launch-critical discovery terms: ${required.join(", ")}.`
         : `package.json keywords is missing ${missing.join(", ")}.`,
     ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} to package.json keywords.` } : {})
+  };
+}
+
+function checkSchemaContract(root: string, title: string, fileName: string, schemaName: string): ReleaseCheck {
+  const schemaPath = join(root, "schemas", fileName);
+  const schemaSource = readOptional(root, "src/schema.ts") ?? "";
+  const schemaDocs = readOptional(root, "docs/SCHEMAS.md") ?? "";
+  const missing: string[] = [];
+  if (!existsSync(schemaPath)) missing.push(`schemas/${fileName}`);
+  if (!schemaSource.includes(`"${schemaName}"`)) missing.push(`src/schema.ts entry ${schemaName}`);
+  if (!schemaDocs.includes(fileName)) missing.push(`docs/SCHEMAS.md reference ${fileName}`);
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title,
+    detail:
+      missing.length === 0
+        ? `${schemaName} is shipped, exposed by patchdrill schema, and documented for automation consumers.`
+        : `${schemaName} schema contract is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} before release.` } : {})
   };
 }
 

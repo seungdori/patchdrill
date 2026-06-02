@@ -7,7 +7,7 @@ import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManif
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
 import { inspectDoctor, renderDoctor } from "./doctor.js";
-import { checkReleaseReadiness, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
+import { checkReleaseReadiness, createReleaseReadinessReport, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -316,7 +316,7 @@ export function releaseCheckCommand(parsed: ParsedArgs = { command: "release-che
   const checks = checkReleaseReadiness(root);
   const summary = summarizeReleaseReadiness(checks);
   if (readOutputFormat(parsed) === "json") {
-    console.log(JSON.stringify({ ok: summary.ok, summary, checks }, null, 2));
+    console.log(JSON.stringify(createReleaseReadinessReport(checks), null, 2));
   } else {
     console.log(renderReleaseReadiness(checks).trimEnd());
   }
@@ -560,7 +560,7 @@ Usage:
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
   patchdrill release-check [--format text|json]
-  patchdrill schema [policy|report|evidence] [--output <path>]
+  patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
   patchdrill verify --evidence <patchdrill-evidence.json>
 
 Options:

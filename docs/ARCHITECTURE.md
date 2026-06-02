@@ -24,7 +24,7 @@ PatchDrill is split into deterministic modules:
 | `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |
 | `src/report-html.ts` | Renders the self-contained Proof Pack HTML dashboard and run-trend view. |
 | `src/report-sarif.ts` | Renders SARIF 2.1.0 output and stable finding fingerprints for GitHub code scanning. |
-| `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
+| `src/schema.ts` | Exposes embedded JSON Schemas for policy, report, evidence, doctor, and release-check contracts. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
 | `src/stack-coverage.ts` | Defines the public fixture-backed stack coverage matrix used by launch docs and tests. |
 | `src/cli.ts` | Parses arguments and handles user output. |

@@ -1,11 +1,13 @@
 # JSON Schemas
 
-PatchDrill ships JSON Schema draft 2020-12 contracts for policy files, machine-readable reports, and audit evidence manifests.
+PatchDrill ships JSON Schema draft 2020-12 contracts for policy files, machine-readable reports, audit evidence manifests, and readiness automation output.
 
 ```bash
 patchdrill schema policy > patchdrill-policy.schema.json
 patchdrill schema report > patchdrill-report.schema.json
 patchdrill schema evidence > patchdrill-evidence.schema.json
+patchdrill schema doctor > patchdrill-doctor.schema.json
+patchdrill schema release-check > patchdrill-release-check.schema.json
 ```
 
 Write a schema to a file:
@@ -37,3 +39,11 @@ Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume
 ## Evidence Schema
 
 Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the PatchDrill tool version, report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr. `patchdrill verify` cross-checks those command digests and the JSON report's internal summary counts against the JSON report artifact when it is present.
+
+## Doctor Schema
+
+Use `schemas/patchdrill-doctor.schema.json` for onboarding bots and repository bootstrap checks that consume `patchdrill doctor --format json`. The report includes `schemaVersion: "1"`, readiness summary counts, detected project signals, diagnostic checks, and suggested next commands without mutating the repository.
+
+## Release-Check Schema
+
+Use `schemas/patchdrill-release-check.schema.json` for release automation that consumes `patchdrill release-check --format json`. The report includes `schemaVersion: "1"`, a top-level `ok` flag, summary counts, and local release-readiness checks for package metadata, action wiring, provenance workflow settings, launch docs, shipped schema contracts, and Markdown links.

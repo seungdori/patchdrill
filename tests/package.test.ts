@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("package metadata", () => {
@@ -15,6 +15,15 @@ describe("package metadata", () => {
       expect.arrayContaining(["dist", "schemas", "docs", "examples", "fixtures", ".patchdrill.yml", "README.md", "LICENSE", "action.yml", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md"])
     );
     expect(pkg.keywords).toEqual(expect.arrayContaining(["ai-coding", "code-review", "sarif", "github-actions", "supply-chain"]));
+    for (const schema of [
+      "schemas/patchdrill-policy.schema.json",
+      "schemas/patchdrill-report.schema.json",
+      "schemas/patchdrill-evidence.schema.json",
+      "schemas/patchdrill-doctor.schema.json",
+      "schemas/patchdrill-release-check.schema.json"
+    ]) {
+      expect(existsSync(schema)).toBe(true);
+    }
   });
 
   it("keeps default generated report artifacts out of git", () => {

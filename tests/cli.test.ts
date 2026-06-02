@@ -84,6 +84,16 @@ describe("cli", () => {
       flags: { format: "json" },
       positionals: []
     });
+    expect(parseArgs(["schema", "doctor"])).toEqual({
+      command: "schema",
+      flags: {},
+      positionals: ["doctor"]
+    });
+    expect(parseArgs(["schema", "release-check"])).toEqual({
+      command: "schema",
+      flags: {},
+      positionals: ["release-check"]
+    });
     expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
       command: "dashboard",
       flags: {
@@ -169,12 +179,14 @@ describe("cli", () => {
     doctorCommand(parseArgs(["doctor", "--format", "json"]));
     releaseCheckCommand(parseArgs(["release-check", "--format", "json"]));
 
-    const doctorPayload = JSON.parse(String(log.mock.calls[0]?.[0])) as { summary: { ok: boolean; projectSignalCount: number }; projectSignals: unknown[]; checks: unknown[] };
-    const releasePayload = JSON.parse(String(log.mock.calls[1]?.[0])) as { ok: boolean; summary: { ok: boolean; failCount: number }; checks: unknown[] };
+    const doctorPayload = JSON.parse(String(log.mock.calls[0]?.[0])) as { schemaVersion: string; summary: { ok: boolean; projectSignalCount: number }; projectSignals: unknown[]; checks: unknown[] };
+    const releasePayload = JSON.parse(String(log.mock.calls[1]?.[0])) as { schemaVersion: string; ok: boolean; summary: { ok: boolean; failCount: number }; checks: unknown[] };
+    expect(doctorPayload.schemaVersion).toBe("1");
     expect(typeof doctorPayload.summary.ok).toBe("boolean");
     expect(doctorPayload.summary.projectSignalCount).toBe(doctorPayload.projectSignals.length);
     expect(doctorPayload.projectSignals.length).toBeGreaterThan(0);
     expect(doctorPayload.checks.length).toBeGreaterThan(0);
+    expect(releasePayload.schemaVersion).toBe("1");
     expect(releasePayload.ok).toBe(true);
     expect(releasePayload.summary).toMatchObject({ ok: true, failCount: 0 });
     expect(releasePayload.checks.length).toBeGreaterThan(0);

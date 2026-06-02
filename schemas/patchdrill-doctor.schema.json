@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patchdrill.dev/schemas/patchdrill-doctor.schema.json",
+  "title": "PatchDrill Doctor Report",
+  "description": "Machine-readable repository readiness diagnostics emitted by PatchDrill doctor --format json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "root", "summary", "projectSignals", "checks", "suggestedCommands"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "root": {
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/doctorSummary"
+    },
+    "projectSignals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectSignal"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/doctorCheck"
+      }
+    },
+    "suggestedCommands": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "doctorStatus": {
+      "type": "string",
+      "enum": ["pass", "warn", "info"]
+    },
+    "doctorSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "ok", "passCount", "warnCount", "infoCount", "projectSignalCount"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "warn"]
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "passCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "infoCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projectSignalCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "doctorCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "title", "detail"],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/doctorStatus"
+        },
+        "title": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "remediation": {
+          "type": "string"
+        }
+      }
+    },
+    "ecosystem": {
+      "type": "string",
+      "enum": ["node", "python", "rust", "go", "java", "android", "ruby", "php", "dotnet", "swift", "xcode", "terraform", "docker", "kubernetes", "bazel", "buck", "pants", "github-actions", "unknown"]
+    },
+    "workspacePackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "scripts"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "projectSignal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem", "manifestPath"],
+      "properties": {
+        "ecosystem": {
+          "$ref": "#/$defs/ecosystem"
+        },
+        "manifestPath": {
+          "type": "string"
+        },
+        "framework": {
+          "type": "string",
+          "enum": ["django", "fastapi", "spring-boot", "rails", "laravel", "aspnet-core"]
+        },
+        "entrypoint": {
+          "type": "string"
+        },
+        "packageManager": {
+          "type": "string"
+        },
+        "taskRunner": {
+          "type": "string",
+          "enum": ["turbo", "nx"]
+        },
+        "scripts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "workspacePackages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workspacePackage"
+          }
+        }
+      }
+    }
+  }
+}

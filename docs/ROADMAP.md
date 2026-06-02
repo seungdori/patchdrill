@@ -29,7 +29,7 @@
 - npm trusted publishing and provenance release workflow.
 - package.json dependency diff summaries.
 - Pull request comment upsert mode for the GitHub Action.
-- JSON Schemas for policy and report contracts.
+- JSON Schemas for policy, report, evidence, doctor, and release-check contracts.
 - Workspace dependency graph expansion for downstream package testing.
 - npm `package-lock.json` dependency diff summaries.
 - `pnpm-lock.yaml` dependency diff summaries.

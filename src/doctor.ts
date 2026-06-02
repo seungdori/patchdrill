@@ -24,6 +24,7 @@ export interface DoctorSummary {
 }
 
 export interface DoctorReport {
+  schemaVersion: "1";
   root: string;
   summary: DoctorSummary;
   projectSignals: ProjectSignal[];
@@ -101,6 +102,7 @@ export function inspectDoctor(root: string): DoctorReport {
   const summary = summarizeDoctor(projectSignals, checks);
 
   return {
+    schemaVersion: "1",
     root,
     summary,
     projectSignals,

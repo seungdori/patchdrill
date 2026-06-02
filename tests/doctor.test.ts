@@ -27,6 +27,7 @@ describe("doctor", () => {
     const report = inspectDoctor(root);
     const rendered = renderDoctor(report);
 
+    expect(report.schemaVersion).toBe("1");
     expect(report.summary).toMatchObject({ status: "pass", ok: true, projectSignalCount: 1 });
     expect(report.projectSignals.map((signal) => signal.ecosystem)).toEqual(["node"]);
     expect(rendered).toContain("PatchDrill Doctor");

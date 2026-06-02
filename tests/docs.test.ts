@@ -40,6 +40,20 @@ describe("documentation examples", () => {
     expect(missing).toEqual([]);
   });
 
+  it("documents every public JSON Schema file", () => {
+    const schemaDocs = readFileSync("docs/SCHEMAS.md", "utf8");
+
+    for (const schema of [
+      "patchdrill-policy.schema.json",
+      "patchdrill-report.schema.json",
+      "patchdrill-evidence.schema.json",
+      "patchdrill-doctor.schema.json",
+      "patchdrill-release-check.schema.json"
+    ]) {
+      expect(schemaDocs).toContain(schema);
+    }
+  });
+
   it("keeps public Markdown local links valid", () => {
     expect(checkMarkdownLinks(process.cwd()).failures).toEqual([]);
   });
