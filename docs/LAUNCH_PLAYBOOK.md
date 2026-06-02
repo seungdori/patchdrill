@@ -55,7 +55,14 @@ Still needed for launch distribution:
 git checkout -b demo/auth-change
 echo "// pretend auth change" >> src/auth/session.ts
 patchdrill scan
-patchdrill scan --run --markdown patchdrill-report.md
+patchdrill scan --run \
+  --evidence patchdrill-evidence.json \
+  --summary-markdown patchdrill-summary.md \
+  --markdown patchdrill-report.md \
+  --json patchdrill-report.json \
+  --sarif patchdrill.sarif \
+  --html patchdrill-dashboard.html
+patchdrill verify --evidence patchdrill-evidence.json
 ```
 
 Show:
@@ -82,7 +89,7 @@ node dist/cli.js verify --evidence .patchdrill/release-evidence.json
 npm pack --dry-run
 ```
 
-`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, and command-backed evidence verification in CI/action/release workflows. npm Trusted Publisher configuration still has to be checked in npm account settings.
+`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, command-backed evidence verification in CI/action/release workflows, and the pull request template's Proof Pack verification checklist. npm Trusted Publisher configuration still has to be checked in npm account settings.
 
 ## Star Hooks
 

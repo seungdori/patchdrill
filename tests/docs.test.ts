@@ -52,6 +52,35 @@ describe("documentation examples", () => {
     }
   });
 
+  it("keeps the public pull request checklist evidence-backed", () => {
+    const template = readFileSync(".github/pull_request_template.md", "utf8");
+
+    expect(template).toContain("node dist/cli.js scan");
+    expect(template).toContain("--evidence patchdrill-evidence.json");
+    expect(template).toContain("--summary-markdown patchdrill-summary.md");
+    expect(template).toContain("--html patchdrill-dashboard.html");
+    expect(template).toContain("node dist/cli.js verify --evidence patchdrill-evidence.json");
+    expect(template).toContain("Report/schema compatibility impact");
+  });
+
+  it("keeps public Proof Pack workflow examples complete", () => {
+    const dashboardDocs = readFileSync("docs/DASHBOARD.md", "utf8");
+    const sarifDocs = readFileSync("docs/SARIF.md", "utf8");
+    const prCommentDocs = readFileSync("docs/PR_COMMENTS.md", "utf8");
+
+    for (const docs of [dashboardDocs, sarifDocs]) {
+      expect(docs).toContain("--evidence patchdrill-evidence.json");
+      expect(docs).toContain("--summary-markdown patchdrill-summary.md");
+      expect(docs).toContain("--html patchdrill-dashboard.html");
+      expect(docs).toContain("patchdrill verify --evidence patchdrill-evidence.json");
+    }
+    expect(prCommentDocs).toContain("id: patchdrill");
+    expect(prCommentDocs).toContain("evidence: patchdrill-evidence.json");
+    expect(prCommentDocs).toContain("html: patchdrill-dashboard.html");
+    expect(prCommentDocs).toContain('run: "true"');
+    expect(prCommentDocs).toContain("actions/upload-artifact@v7");
+  });
+
   it("keeps public Markdown local links valid", () => {
     expect(checkMarkdownLinks(process.cwd()).failures).toEqual([]);
   });

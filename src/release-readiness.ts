@@ -33,6 +33,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const action = readOptional(root, "action.yml");
   const readme = readOptional(root, "README.md");
   const ci = readOptional(root, ".github/workflows/ci.yml");
+  const pullRequestTemplate = readOptional(root, ".github/pull_request_template.md");
   const markdownLinks = checkMarkdownLinks(root);
   const packageFiles = readStringArray(pkg?.files);
   const keywords = readStringArray(pkg?.keywords);
@@ -78,6 +79,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "release.yml runs required verification, generates a release Proof Pack smoke bundle, and verifies it before npm packaging.",
       "Generate a release Proof Pack with scan --run --evidence and verify it before npm pack --dry-run."
     ),
+    checkPullRequestTemplate(pullRequestTemplate),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
@@ -222,6 +224,41 @@ function checkKeywords(keywords: string[]): ReleaseCheck {
 
 function checkSchemaContracts(root: string, readme: string | undefined, schemaDocs: string | undefined): ReleaseCheck[] {
   return schemaNames.map((name) => checkSchemaContract(root, name, readme, schemaDocs));
+}
+
+function checkPullRequestTemplate(contents: string | undefined): ReleaseCheck {
+  const required = [
+    "npm run check",
+    "node dist/cli.js scan",
+    "--evidence patchdrill-evidence.json",
+    "--summary-markdown patchdrill-summary.md",
+    "--markdown patchdrill-report.md",
+    "--json patchdrill-report.json",
+    "--sarif patchdrill.sarif",
+    "--html patchdrill-dashboard.html",
+    "--run",
+    "node dist/cli.js verify --evidence patchdrill-evidence.json",
+    "npm pack --dry-run",
+    "Report/schema compatibility impact"
+  ];
+  const missing = required.filter((needle) => !contents?.includes(needle));
+  if (!containsInOrder(contents, ["node dist/cli.js scan", "--run", "node dist/cli.js verify --evidence patchdrill-evidence.json", "npm pack --dry-run"])) {
+    missing.push("verification command order");
+  }
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title: "Pull request Proof Pack template",
+    detail:
+      missing.length === 0
+        ? "pull_request_template.md asks contributors to run check, generate and verify a full evidence-backed Proof Pack, package dry-run, and document compatibility risk notes."
+        : `pull_request_template.md is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0
+      ? {
+          remediation:
+            "Update .github/pull_request_template.md with scan --run --evidence, summary, Markdown, JSON, SARIF, HTML, verify, package dry-run, and compatibility notes."
+        }
+      : {})
+  };
 }
 
 function checkSchemaContract(root: string, name: SchemaName, readme: string | undefined, schemaDocs: string | undefined): ReleaseCheck {

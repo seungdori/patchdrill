@@ -30,6 +30,6 @@ npm pack --dry-run
 
 Use `workflow_dispatch` to run release checks without publishing. Publishing is limited to GitHub Release events.
 
-`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, command-backed evidence verification in CI/action/release workflows, release workflow provenance settings, README install paths, repository release files, parseable shipped JSON Schemas with matching README/SCHEMAS documentation, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
+`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, command-backed evidence verification in CI/action/release workflows, release workflow provenance settings, README install paths, repository release files, the pull request template's Proof Pack verification checklist, parseable shipped JSON Schemas with matching README/SCHEMAS documentation, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
 
 CI and the release workflow both run `patchdrill release-check --format json` after `npm run check` so launch-readiness regressions fail before package publishing.

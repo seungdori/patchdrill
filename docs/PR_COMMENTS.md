@@ -13,14 +13,29 @@ steps:
     with:
       fetch-depth: 0
   - uses: seungdori/patchdrill@v0
+    id: patchdrill
     with:
       base: origin/${{ github.base_ref }}
+      evidence: patchdrill-evidence.json
       summary: patchdrill-summary.md
       markdown: patchdrill-report.md
       json: patchdrill-report.json
       sarif: patchdrill.sarif
+      html: patchdrill-dashboard.html
+      run: "true"
       pr-comment: "true"
       comment-marker: "<!-- patchdrill-report -->"
+  - uses: actions/upload-artifact@v7
+    if: always()
+    with:
+      name: patchdrill-report
+      path: |
+        ${{ steps.patchdrill.outputs.report-evidence }}
+        ${{ steps.patchdrill.outputs.report-markdown }}
+        ${{ steps.patchdrill.outputs.report-html }}
+        ${{ steps.patchdrill.outputs.report-json }}
+        ${{ steps.patchdrill.outputs.report-sarif }}
+        ${{ steps.patchdrill.outputs.report-summary }}
 ```
 
 PatchDrill finds an existing bot comment containing the marker and updates it. If no marker is present, it creates a new comment. The comment uses the compact summary by default, while the full Markdown, JSON, SARIF, and HTML reports remain available as workflow artifacts.

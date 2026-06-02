@@ -6,10 +6,13 @@ Generate the dashboard during a scan:
 
 ```bash
 patchdrill scan --base origin/main --run \
+  --evidence patchdrill-evidence.json \
+  --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
   --html patchdrill-dashboard.html
+patchdrill verify --evidence patchdrill-evidence.json
 ```
 
 Re-render a dashboard from a saved JSON report:
@@ -44,17 +47,22 @@ For CI, upload the HTML alongside the JSON, Markdown, and evidence artifacts:
     base: origin/${{ github.base_ref }}
     evidence: patchdrill-evidence.json
     summary: patchdrill-summary.md
+    markdown: patchdrill-report.md
     json: patchdrill-report.json
+    sarif: patchdrill.sarif
     html: patchdrill-dashboard.html
+    run: "true"
 - uses: actions/upload-artifact@v7
   if: always()
   with:
     name: patchdrill-report
     path: |
       ${{ steps.patchdrill.outputs.report-evidence }}
-      ${{ steps.patchdrill.outputs.report-json }}
-      ${{ steps.patchdrill.outputs.report-summary }}
+      ${{ steps.patchdrill.outputs.report-markdown }}
       ${{ steps.patchdrill.outputs.report-html }}
+      ${{ steps.patchdrill.outputs.report-json }}
+      ${{ steps.patchdrill.outputs.report-sarif }}
+      ${{ steps.patchdrill.outputs.report-summary }}
 ```
 
 If your workflow downloads one or more previous JSON report artifacts before running PatchDrill, pass them through `dashboard-history`. PatchDrill appends the current JSON report automatically and re-renders the HTML dashboard with the trend table:
@@ -64,8 +72,13 @@ If your workflow downloads one or more previous JSON report artifacts before run
   id: patchdrill
   with:
     base: origin/${{ github.base_ref }}
+    evidence: patchdrill-evidence.json
+    summary: patchdrill-summary.md
+    markdown: patchdrill-report.md
     json: patchdrill-report.json
+    sarif: patchdrill.sarif
     html: patchdrill-dashboard.html
+    run: "true"
     dashboard-history: |
       reports/patchdrill-previous.json
       reports/patchdrill-last-green.json
