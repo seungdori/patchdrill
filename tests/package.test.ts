@@ -6,9 +6,13 @@ describe("package metadata", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
       bin?: Record<string, string>;
       scripts?: Record<string, string>;
+      files?: string[];
+      keywords?: string[];
     };
 
     expect(pkg.bin?.patchdrill).toBe("./dist/cli.js");
+    expect(pkg.scripts?.["test:fast"]).toContain("--exclude tests/scan.test.ts");
+    expect(pkg.scripts?.["test:integration"]).toContain("tests/scan.test.ts");
     expect(pkg.scripts?.prepare).toBe("npm run build");
     expect(pkg.scripts?.prepack).toBe("npm run check");
     expect(pkg.files).toEqual(

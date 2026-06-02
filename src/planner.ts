@@ -264,6 +264,12 @@ const NODE_TASKS: NodeTask[] = [
   { id: "e2e", label: "e2e", aliases: ["test:e2e", "e2e", "playwright", "cypress", "cy:run"], required: false }
 ];
 
+// Exposed so doctor's PASS/WARN script detection mirrors exactly what scan plans,
+// rather than diverging via its own heuristics.
+export function nodeTaskAliases(id: string): string[] {
+  return NODE_TASKS.find((task) => task.id === id)?.aliases ?? [];
+}
+
 function addDotnetPlans(plans: CommandPlan[], root: string, paths: string[], signal: ProjectSignal): void {
   const solutionFilterPlanCount = addDotnetSolutionFilterPlans(plans, root, paths);
   if (solutionFilterPlanCount > 0) return;
@@ -487,7 +493,14 @@ function discoverDotnetProjects(root: string): DotnetProject[] {
 }
 
 function dotnetChangedProjects(projects: DotnetProject[], paths: string[]): DotnetProject[] {
-  return projects.filter((project) => paths.some((path) => path === project.path || path.startsWith(`${project.directory === "." ? "" : `${project.directory}/`}`)));
+  return projects.filter((project) =>
+    paths.some((path) =>
+      path === project.path ||
+      // A root project (directory ".") must only claim root-level files, not the
+      // whole tree — an empty startsWith() prefix matches every path.
+      (project.directory === "." ? !path.includes("/") : path.startsWith(`${project.directory}/`))
+    )
+  );
 }
 
 function includeDownstreamDotnetProjects(changedProjects: DotnetProject[], projects: DotnetProject[]): DotnetProject[] {
@@ -495,9 +508,9 @@ function includeDownstreamDotnetProjects(changedProjects: DotnetProject[], proje
   const queue = [...changedProjects];
   for (const project of changedProjects) affected.set(project.path, project);
 
-  for (let index = 0; index < queue.length; index += 1) {
-    const changedProject = queue[index];
-    if (!changedProject) continue;
+  // for-of over an array visits elements pushed during iteration, so this drains
+  // the BFS queue including newly enqueued downstream projects.
+  for (const changedProject of queue) {
     for (const candidate of projects) {
       if (affected.has(candidate.path)) continue;
       if (!candidate.references.includes(changedProject.path)) continue;
@@ -543,8 +556,9 @@ function isDotnetAspNetCoreProject(content: string): boolean {
 }
 
 function firstXmlValue(content: string, tagName: string): string | undefined {
-  const match = new RegExp(`<${tagName}>\\s*([^<]+?)\\s*</${tagName}>`, "i").exec(content);
-  return match?.[1]?.trim() || undefined;
+  const value = new RegExp(`<${tagName}>\\s*([^<]+?)\\s*</${tagName}>`, "i").exec(content)?.[1]?.trim();
+  if (!value) return undefined;
+  return value;
 }
 
 function readText(root: string, path: string): string {
@@ -561,7 +575,7 @@ function signalRootPath(root: string, signal?: ProjectSignal): string {
 }
 
 function signalProjectRoot(signal?: ProjectSignal): string {
-  if (!signal?.manifestPath || !signal.manifestPath.includes("/")) return ".";
+  if (!signal?.manifestPath.includes("/")) return ".";
   return parentPath(signal.manifestPath) || ".";
 }
 
@@ -2104,7 +2118,21 @@ function affectedPackagesForSignal(paths: string[], signal: ProjectSignal, rootW
 
 function directlyAffectedPackagesForSignal(paths: string[], signal: ProjectSignal): WorkspacePackage[] {
   const workspacePackages = signal.workspacePackages ?? [];
-  return workspacePackages.filter((workspacePackage) => paths.some((path) => path === workspacePackage.path || path.startsWith(`${workspacePackage.path}/`)));
+  const affected = new Set<string>();
+  for (const path of paths) {
+    // Attribute each changed path to its single most-specific (longest matching)
+    // package so a file confined to a nested child package does not also mark the
+    // enclosing parent as directly changed. Downstream dependents are added
+    // separately via declared dependencies in includeDownstreamDependents.
+    let best: WorkspacePackage | undefined;
+    for (const workspacePackage of workspacePackages) {
+      if (path === workspacePackage.path || path.startsWith(`${workspacePackage.path}/`)) {
+        if (!best || workspacePackage.path.length > best.path.length) best = workspacePackage;
+      }
+    }
+    if (best) affected.add(best.path);
+  }
+  return workspacePackages.filter((workspacePackage) => affected.has(workspacePackage.path));
 }
 
 function includeDownstreamDependents(directlyAffected: WorkspacePackage[], workspacePackages: WorkspacePackage[]): WorkspacePackage[] {
@@ -2112,9 +2140,7 @@ function includeDownstreamDependents(directlyAffected: WorkspacePackage[], works
   const queue = [...directlyAffected];
   for (const workspacePackage of directlyAffected) affected.set(workspacePackage.path, workspacePackage);
 
-  for (let index = 0; index < queue.length; index += 1) {
-    const changedPackage = queue[index];
-    if (!changedPackage) continue;
+  for (const changedPackage of queue) {
     for (const candidate of workspacePackages) {
       if (affected.has(candidate.path)) continue;
       if (!candidate.dependencies?.includes(changedPackage.name)) continue;
@@ -2199,10 +2225,6 @@ function touchesRootWorkspaceMetadata(paths: string[]): boolean {
   );
 }
 
-function touchesCargoRootMetadata(paths: string[]): boolean {
-  return paths.some((path) => path === "Cargo.toml" || path === "Cargo.lock");
-}
-
 function touchesCargoMetadata(paths: string[], signal: ProjectSignal): boolean {
   return pathsForSignal(paths, signal).some((path) => path === "Cargo.toml" || path === "Cargo.lock");
 }
@@ -2258,29 +2280,27 @@ function cargoCommand(signal: ProjectSignal, cargoSubcommand: "test" | "clippy",
 }
 
 function touchesNode(paths: string[]): boolean {
-  return paths.some((path) =>
-    [
-      ".js",
-      ".jsx",
-      ".ts",
-      ".tsx",
-      ".mjs",
-      ".cjs",
-      "package.json",
-      "package-lock.json",
-      "pnpm-lock.yaml",
-      "yarn.lock",
-      "bun.lock",
-      "bun.lockb",
-      "pnpm-workspace.yaml",
-      "turbo.json",
-      "nx.json",
-      "tsconfig.json",
-      "vite.config.ts",
-      "next.config.js",
-      "next.config.mjs"
-    ].some((token) => path.endsWith(token) || path === token)
-  );
+  return touches(paths, [
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".mjs",
+    ".cjs",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "bun.lockb",
+    "pnpm-workspace.yaml",
+    "turbo.json",
+    "nx.json",
+    "tsconfig.json",
+    "vite.config.ts",
+    "next.config.js",
+    "next.config.mjs"
+  ]);
 }
 
 function touchesPython(paths: string[], root: string, signal?: ProjectSignal): boolean {
@@ -2438,7 +2458,7 @@ function isKubernetesPath(path: string): boolean {
 
 function nearestManifestRoot(root: string, path: string, manifestNames: string[]): string | undefined {
   let current = parentPath(path);
-  while (true) {
+  for (;;) {
     if (manifestNames.some((manifestName) => existsSync(join(root, current, manifestName)))) return current || ".";
     const next = parentPath(current);
     if (next === current) return undefined;
@@ -2493,7 +2513,15 @@ function isSourceLikePath(path: string): boolean {
 }
 
 function touches(paths: string[], tokens: string[]): boolean {
-  return paths.some((path) => tokens.some((token) => path.endsWith(token) || path === token));
+  return paths.some((path) => tokens.some((token) => matchesToken(path, token)));
+}
+
+function matchesToken(path: string, token: string): boolean {
+  // Extension tokens (".ts") match by suffix; filename tokens ("package.json")
+  // must match the whole path or a complete path segment, so "mypackage.json"
+  // or "x.go.mod" no longer falsely activate an ecosystem.
+  if (token.startsWith(".")) return path.endsWith(token);
+  return path === token || path.endsWith(`/${token}`);
 }
 
 function pushUnique(plans: CommandPlan[], plan: CommandPlan): void {

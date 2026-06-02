@@ -123,3 +123,27 @@
 - Strengthened the release Proof Pack smoke so it runs required PatchDrill commands before verifying evidence.
 - Added launch case studies and a fixture-backed stack coverage matrix.
 - Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.
+- Added structured verification status to JSON reports so automation consumers do not have to join command plans and results manually.
+- Hardened evidence verification to reject JSON reports whose structured verification status is missing or drifts from command plans and command results.
+- Hardened `patchdrill evidence --json` so it rejects saved JSON reports that fail the report contract before writing a manifest.
+- Hardened `patchdrill dashboard --json` so stale saved reports must pass the report contract before rendering.
+- Required `scan --evidence` to include `--json` so evidence verification can always check the report contract.
+- Hardened release readiness so CI, Action, and release Proof Pack evidence checks must include JSON report artifacts.
+- Added separate fast and integration test scripts while keeping `npm test` and `npm run check` as the full confidence gates.
+- Added an ESLint flat config with type-aware correctness rules, a `typecheck` step that also covers tests, coverage tooling, `.editorconfig`, and `.gitattributes`; `npm run check` now runs build, typecheck, lint, and tests.
+- Fixed an OpenAI-key detector false positive that flagged ordinary kebab-case slugs and CSS class names (e.g. `sk-button-primary`) as critical secrets.
+- Fixed root-level .NET project detection so a repo-root `.csproj` no longer claims every changed path and triggers spurious builds and tests.
+- Fixed renamed-file churn reporting so `git mv` plus edits report real additions and deletions instead of zero.
+- Hardened evidence verification to reject a manifest that records no JSON report artifact, closing a tamper bypass.
+- Hardened Markdown rendering against fenced-code-block breakout and inline-HTML injection from untrusted command output and finding text.
+- Rejected unknown CLI flags and missing flag values, and required `--max-risk-delta` to be paired with `--baseline`.
+- Made the risk score reconstructable from the displayed findings, excluded declaration files from the missing-test signal, and caught the reversed `rm -fr` form.
+- Counted timed-out verification commands once so the verification summary buckets partition the runs.
+- Anchored CODEOWNERS directory patterns and ecosystem/manifest matching by path segment to remove false positives and false negatives.
+- Replaced prefix-only workspace glob matching with real glob matching, and made single-result project detection deterministic regardless of filesystem order.
+- Stopped treating Cargo `*.metadata.*` tables, basename look-alike manifests, and dropped Gradle `enforcedPlatform`/version-catalog entries as phantom dependency changes; captured Gemfile git/source refs.
+- Aligned `patchdrill doctor` script detection with the planner's exact task aliases.
+- Rejected negative and empty policy rule values that could lower or broaden the risk gate, and added `minimum: 0` to the policy schema weight.
+- Allowed reproducible report timestamps via `SOURCE_DATE_EPOCH` for byte-identical Proof Packs.
+- Corrected demo Proof Pack rule IDs to match the engine and rule catalog.
+- Added a Node version matrix (20, 22, 24), workflow concurrency cancellation, and per-job timeouts to CI.

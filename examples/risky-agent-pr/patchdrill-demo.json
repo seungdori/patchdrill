@@ -240,7 +240,7 @@
       ]
     },
     {
-      "ruleId": "secret.added",
+      "ruleId": "secret.generic-assignment",
       "severity": "critical",
       "title": "Secret-looking value added",
       "detail": "A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body.",
@@ -253,7 +253,7 @@
       ]
     },
     {
-      "ruleId": "agent.instructions-changed",
+      "ruleId": "agent.control-file",
       "severity": "high",
       "title": "Agent instructions changed",
       "detail": "Repository-level coding-agent instructions changed in the same patch as release and billing code.",
@@ -303,7 +303,7 @@
       ]
     },
     {
-      "ruleId": "test.missing-source-match",
+      "ruleId": "test.source-without-test-change",
       "severity": "medium",
       "title": "Source changed without matching test changes",
       "detail": "Billing source files changed, but no matching checkout or webhook test files changed.",
@@ -314,7 +314,7 @@
       ]
     },
     {
-      "ruleId": "dependency.lockfile-update",
+      "ruleId": "file.lockfile",
       "severity": "low",
       "title": "Dependency lockfile changed",
       "detail": "@acme/payments changed from 4.2.0 to 4.3.0.",
@@ -400,5 +400,84 @@
       "stdout": "vite v6.0.0 building for production...\nbuilt in 4.2s\n",
       "stderr": ""
     }
-  ]
+  ],
+  "verification": {
+    "summary": {
+      "plannedRequired": 4,
+      "plannedOptional": 1,
+      "run": 3,
+      "passed": 2,
+      "failed": 1,
+      "timedOut": 0,
+      "missingRequired": 1,
+      "skippedOptional": 1,
+      "unplannedResults": 0
+    },
+    "commands": [
+      {
+        "id": "node-web-lint",
+        "label": "Lint affected web package",
+        "command": "npm run lint --workspace @acme/web",
+        "reason": "Billing and release-adjacent source files changed.",
+        "ecosystem": "node",
+        "required": true,
+        "planned": true,
+        "status": "passed",
+        "packageName": "@acme/web",
+        "packagePath": "apps/web",
+        "exitCode": 0,
+        "durationMs": 6240
+      },
+      {
+        "id": "node-web-test",
+        "label": "Test affected web package",
+        "command": "npm test --workspace @acme/web",
+        "reason": "Billing checkout and webhook behavior changed.",
+        "ecosystem": "node",
+        "required": true,
+        "planned": true,
+        "status": "failed",
+        "packageName": "@acme/web",
+        "packagePath": "apps/web",
+        "exitCode": 1,
+        "durationMs": 11982
+      },
+      {
+        "id": "node-web-build",
+        "label": "Build affected web package",
+        "command": "npm run build --workspace @acme/web",
+        "reason": "Production web package changed.",
+        "ecosystem": "node",
+        "required": true,
+        "planned": true,
+        "status": "passed",
+        "packageName": "@acme/web",
+        "packagePath": "apps/web",
+        "exitCode": 0,
+        "durationMs": 18321
+      },
+      {
+        "id": "policy-release-review",
+        "label": "Release workflow review",
+        "command": "gh workflow view release.yml --yaml",
+        "reason": "Repository policy requires human-readable workflow evidence when privileged release jobs change.",
+        "ecosystem": "github-actions",
+        "required": true,
+        "planned": true,
+        "status": "not-run"
+      },
+      {
+        "id": "node-web-e2e",
+        "label": "Billing browser e2e",
+        "command": "npm run test:e2e -- --grep billing",
+        "reason": "Optional browser coverage is available for checkout flows.",
+        "ecosystem": "node",
+        "required": false,
+        "planned": true,
+        "status": "skipped-optional",
+        "packageName": "@acme/web",
+        "packagePath": "apps/web"
+      }
+    ]
+  }
 }

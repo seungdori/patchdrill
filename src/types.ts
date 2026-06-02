@@ -109,6 +109,41 @@ export interface CommandResult {
   timedOut?: boolean;
 }
 
+export type VerificationStatus = "passed" | "failed" | "timed-out" | "not-run" | "skipped-optional";
+
+export interface VerificationSummary {
+  plannedRequired: number;
+  plannedOptional: number;
+  run: number;
+  passed: number;
+  failed: number;
+  timedOut: number;
+  missingRequired: number;
+  skippedOptional: number;
+  unplannedResults: number;
+}
+
+export interface VerificationCommand {
+  id: string;
+  label: string;
+  command: string;
+  reason: string;
+  ecosystem: CommandPlan["ecosystem"];
+  required: boolean;
+  planned: boolean;
+  status: VerificationStatus;
+  packageName?: string;
+  packagePath?: string;
+  exitCode?: number;
+  durationMs?: number;
+  timedOut?: boolean;
+}
+
+export interface PatchVerification {
+  summary: VerificationSummary;
+  commands: VerificationCommand[];
+}
+
 export interface RiskFinding {
   ruleId?: string;
   severity: Severity;
@@ -191,6 +226,7 @@ export interface PatchReport {
   findings: RiskFinding[];
   commandPlan: CommandPlan[];
   commandResults: CommandResult[];
+  verification: PatchVerification;
 }
 
 export interface ScanOptions {
@@ -210,4 +246,6 @@ export interface ScanOptions {
   htmlPath?: string;
   maxOutputChars?: number;
   commandTimeoutMs?: number;
+  /** Override the report timestamp for reproducible output; falls back to SOURCE_DATE_EPOCH then wall clock. */
+  generatedAt?: string;
 }

@@ -16,6 +16,7 @@ describe("composite action", () => {
     expect(action).toContain("evidence:");
     expect(action).toContain("PATCHDRILL_EVIDENCE");
     expect(action).toContain('--evidence "$PATCHDRILL_EVIDENCE"');
+    expect(action).toContain('--json "$PATCHDRILL_JSON"');
     expect(action).toContain("Refresh evidence manifest");
     expect(action).toContain('args=(evidence --json "$PATCHDRILL_JSON" --evidence "$PATCHDRILL_EVIDENCE")');
     expect(action).toContain("Verify evidence manifest");
@@ -54,7 +55,7 @@ describe("composite action", () => {
     const action = parse(readFileSync("action.yml", "utf8")) as {
       inputs?: Record<string, { description?: string; default?: string }>;
       outputs?: Record<string, { description?: string; value?: string }>;
-      runs?: { steps?: Array<{ name?: string; if?: string; run?: string; env?: Record<string, string>; with?: Record<string, string> }> };
+      runs?: { steps?: { name?: string; if?: string; run?: string; env?: Record<string, string>; with?: Record<string, string> }[] };
     };
 
     expect(action.inputs?.["dashboard-history"]?.default).toBe("");
@@ -97,9 +98,11 @@ describe("composite action", () => {
 
     expect(ci).toContain("node dist/cli.js release-check --format json");
     expect(ci).toContain("node dist/cli.js verify --evidence patchdrill-evidence.json");
+    expect(ci).toContain("--json patchdrill-report.json");
     expect(release).toContain("node dist/cli.js release-check --format json");
     expect(release).toContain("Verify release Proof Pack smoke");
     expect(release).toContain("--evidence .patchdrill/release-evidence.json");
+    expect(release).toContain("--json .patchdrill/release.json");
     expect(release).toContain("--run");
     expect(release).toContain("node dist/cli.js verify --evidence .patchdrill/release-evidence.json");
     expect(ci.indexOf("npm run check")).toBeLessThan(ci.indexOf("release-check --format json"));

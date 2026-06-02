@@ -446,7 +446,7 @@
           </div>
           <p>A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body.</p>
           <p class="muted">Remediation: Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as &lt;redacted&gt;.</p>
-          <p class="muted">Rule: <code>secret.added</code></p>
+          <p class="muted">Rule: <code>secret.generic-assignment</code></p>
           <p class="muted">Tags: secret, credentials</p>
         </article><article class="finding">
           <div class="finding-head">
@@ -458,7 +458,7 @@
           </div>
           <p>Repository-level coding-agent instructions changed in the same patch as release and billing code.</p>
           <p class="muted">Remediation: Review instruction changes separately and require maintainer approval before agent-visible rules change.</p>
-          <p class="muted">Rule: <code>agent.instructions-changed</code></p>
+          <p class="muted">Rule: <code>agent.control-file</code></p>
           <p class="muted">Tags: agentic-coding, review</p>
         </article><article class="finding">
           <div class="finding-head">
@@ -506,7 +506,7 @@
           </div>
           <p>Billing source files changed, but no matching checkout or webhook test files changed.</p>
           <p class="muted">Remediation: Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates.</p>
-          <p class="muted">Rule: <code>test.missing-source-match</code></p>
+          <p class="muted">Rule: <code>test.source-without-test-change</code></p>
           <p class="muted">Tags: tests</p>
         </article><article class="finding">
           <div class="finding-head">
@@ -518,7 +518,7 @@
           </div>
           <p>@acme/payments changed from 4.2.0 to 4.3.0.</p>
           <p class="muted">Remediation: Review release notes and verify transitive dependency impact.</p>
-          <p class="muted">Rule: <code>dependency.lockfile-update</code></p>
+          <p class="muted">Rule: <code>file.lockfile</code></p>
           <p class="muted">Tags: dependencies</p>
         </article>
       </div>

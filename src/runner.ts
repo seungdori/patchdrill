@@ -44,10 +44,10 @@ function runShellCommand(id: string, command: string, options: RunOptions): Prom
       : undefined;
     timeout?.unref();
 
-    child.stdout?.on("data", (chunk: Buffer) => {
+    child.stdout.on("data", (chunk: Buffer) => {
       stdout = appendBounded(stdout, chunk.toString("utf8"), options.maxOutputChars);
     });
-    child.stderr?.on("data", (chunk: Buffer) => {
+    child.stderr.on("data", (chunk: Buffer) => {
       stderr = appendBounded(stderr, chunk.toString("utf8"), options.maxOutputChars);
     });
     child.on("close", (exitCode) => {
@@ -82,9 +82,22 @@ function appendBounded(current: string, next: string, maxChars: number): string 
   const limit = Math.max(0, maxChars);
   const combined = current + next;
   if (combined.length <= limit) return combined;
-  const marker = `[PatchDrill truncated output to last ${limit} characters]\n`;
+  // The marker reports how many real characters were actually retained, but its
+  // own length subtracts from that budget. Iterate to a fixed point so the stated
+  // count matches reality (converges in a couple of steps as the digit count settles).
+  let kept = limit;
+  for (let index = 0; index < 5; index += 1) {
+    const candidate = Math.max(0, limit - truncationMarker(kept).length);
+    if (candidate === kept) break;
+    kept = candidate;
+  }
+  const marker = truncationMarker(kept);
   if (limit <= marker.length) return marker.slice(0, limit);
-  return `${marker}${combined.slice(-(limit - marker.length))}`;
+  return `${marker}${combined.slice(combined.length - kept)}`;
+}
+
+function truncationMarker(kept: number): string {
+  return `[PatchDrill truncated output to last ${kept} characters]\n`;
 }
 
 function killChild(pid: number | undefined, signal: NodeJS.Signals): void {

@@ -2,9 +2,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, demoCommand, doctorCommand, evidenceCommand, parseArgs, releaseCheckCommand, renderConsoleSummary, renderExplainText } from "../src/cli.js";
+import { dashboardCommand, demoCommand, doctorCommand, evidenceCommand, parseArgs, releaseCheckCommand, renderConsoleSummary, renderExplainText, scanCommand } from "../src/cli.js";
 import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
+import { withVerification } from "../src/verification.js";
 
 const tempDirs: string[] = [];
 
@@ -145,6 +146,40 @@ describe("cli", () => {
     expect(html).toContain("Latest CLI finding");
   });
 
+  it("rejects saved JSON reports that fail the report contract before rendering dashboards", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const jsonPath = join(root, "report.json");
+    const htmlPath = join(root, "dashboard.html");
+    const report: Partial<PatchReport> = { ...exampleReport() };
+    delete report.verification;
+    writeFileSync(jsonPath, JSON.stringify(report), "utf8");
+
+    expect(() => dashboardCommand(parseArgs(["dashboard", "--json", jsonPath, "--output", htmlPath]))).toThrow(
+      `JSON report contract failed for ${jsonPath}: JSON report verification is missing.`
+    );
+  });
+
+  it("rejects malformed saved JSON reports before rendering dashboards", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const jsonPath = join(root, "report.json");
+    const htmlPath = join(root, "dashboard.html");
+    writeFileSync(jsonPath, "{ not json", "utf8");
+
+    expect(() => dashboardCommand(parseArgs(["dashboard", "--json", jsonPath, "--output", htmlPath]))).toThrow(`Could not parse JSON report at ${jsonPath}:`);
+  });
+
+  it("rejects non-object saved JSON reports before rendering dashboards", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const jsonPath = join(root, "report.json");
+    const htmlPath = join(root, "dashboard.html");
+    writeFileSync(jsonPath, "[]", "utf8");
+
+    expect(() => dashboardCommand(parseArgs(["dashboard", "--json", jsonPath, "--output", htmlPath]))).toThrow(`JSON report at ${jsonPath} must be an object; got array.`);
+  });
+
   it("writes a compact summary in demo output", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
     tempDirs.push(root);
@@ -165,6 +200,12 @@ describe("cli", () => {
     expect(text).toContain("Required commands: 1, optional commands: 0");
     expect(text).toContain("Verification evidence: 0 run, 0 passed, 0 failed, 0 timed out, 1 missing required, 0 optional skipped");
     expect(text).toContain("Run with --run to execute required verification commands.");
+  });
+
+  it("requires JSON output when scan writes an evidence manifest", async () => {
+    await expect(scanCommand(parseArgs(["scan", "--evidence", "patchdrill-evidence.json"]))).rejects.toThrow(
+      "--evidence requires --json so the evidence manifest can verify the JSON report contract."
+    );
   });
 
   it("explains the product boundary against AI PR reviewers", () => {
@@ -230,12 +271,46 @@ describe("cli", () => {
     expect(manifest.artifacts.map((artifact) => artifact.kind)).toEqual(["summary-markdown", "json", "html"]);
     expect(verifyEvidenceManifest(evidencePath).ok).toBe(true);
   });
+
+  it("rejects saved JSON reports that fail the report contract before writing evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const reportPath = join(root, "patchdrill-report.json");
+    const evidencePath = join(root, "patchdrill-evidence.json");
+    const report: Partial<PatchReport> = { ...exampleReport() };
+    delete report.verification;
+    writeFileSync(reportPath, `${JSON.stringify(report)}\n`, "utf8");
+
+    expect(() => evidenceCommand(parseArgs(["evidence", "--json", reportPath, "--evidence", evidencePath]))).toThrow(
+      `JSON report contract failed for ${reportPath}: JSON report verification is missing.`
+    );
+  });
+
+  it("rejects malformed saved JSON reports before writing evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const reportPath = join(root, "patchdrill-report.json");
+    const evidencePath = join(root, "patchdrill-evidence.json");
+    writeFileSync(reportPath, "{ not json", "utf8");
+
+    expect(() => evidenceCommand(parseArgs(["evidence", "--json", reportPath, "--evidence", evidencePath]))).toThrow(`Could not parse JSON report at ${reportPath}:`);
+  });
+
+  it("rejects non-object saved JSON reports before writing evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-cli-"));
+    tempDirs.push(root);
+    const reportPath = join(root, "patchdrill-report.json");
+    const evidencePath = join(root, "patchdrill-evidence.json");
+    writeFileSync(reportPath, "[]", "utf8");
+
+    expect(() => evidenceCommand(parseArgs(["evidence", "--json", reportPath, "--evidence", evidencePath]))).toThrow(`JSON report at ${reportPath} must be an object; got array.`);
+  });
 });
 
 function exampleReport(overrides: { generatedAt?: string; riskScore?: number; failedCommandCount?: number; title?: string } = {}): PatchReport {
   const riskScore = overrides.riskScore ?? 25;
   const failedCommandCount = overrides.failedCommandCount ?? 0;
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: overrides.generatedAt ?? "2026-06-01T00:00:00.000Z",
     root: "/repo",
@@ -261,5 +336,5 @@ function exampleReport(overrides: { generatedAt?: string; riskScore?: number; fa
       failedCommandCount > 0
         ? [{ id: "test", command: "npm test", exitCode: 1, durationMs: 1000, stdout: "", stderr: "failed" }]
         : []
-  };
+  });
 }

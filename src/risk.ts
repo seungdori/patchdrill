@@ -12,7 +12,7 @@ export interface RiskOptions {
   addedLines?: AddedLine[];
   commandPlan?: CommandPlan[];
   dependencyChanges?: DependencyChange[];
-  workflowFiles?: Array<{ file: string; content: string }>;
+  workflowFiles?: { file: string; content: string }[];
   packageScriptChanges?: PackageScriptChange[];
   policy?: PatchPolicy;
 }
@@ -68,7 +68,7 @@ const MCP_CONFIG_PATTERNS = [
   /(^|\/)claude_desktop_config\.json$/i
 ];
 
-const ADDED_SECRET_PATTERNS: Array<{ ruleId: string; title: string; pattern: RegExp; remediation: string }> = [
+const ADDED_SECRET_PATTERNS: { ruleId: string; title: string; pattern: RegExp; remediation: string }[] = [
   {
     ruleId: "secret.private-key",
     title: "Private key material added",
@@ -89,8 +89,13 @@ const ADDED_SECRET_PATTERNS: Array<{ ruleId: string; title: string; pattern: Reg
   },
   {
     ruleId: "secret.openai-key",
+    // Modern OpenAI keys use a long base64url body (which can contain "-"/"_").
+    // Distinguish them from kebab-case slugs/CSS classes (e.g.
+    // "sk-button-primary-large-rounded") by requiring a long body that contains
+    // both an uppercase letter and a digit — real keys have both, lowercase
+    // hyphenated slugs do not.
     title: "OpenAI API key-looking value added",
-    pattern: /\bsk-(proj-)?[A-Za-z0-9_-]{20,}\b/,
+    pattern: /\bsk-(proj-)?(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{40,}\b/,
     remediation: "Revoke the key and inject it through runtime secret configuration."
   },
   {
@@ -111,7 +116,9 @@ const PROMPT_INJECTION_PATTERNS: RegExp[] = [
 ];
 
 const AGENT_TOOL_ABUSE_PATTERNS: RegExp[] = [
-  /\brm\s+-rf\s+(\/|\$HOME|~|\*)/i,
+  // Match any single rm flag cluster containing both recursive and force flags,
+  // in either order (-rf, -fr, -Rf, -rfv, ...), targeting a dangerous root.
+  /\brm\s+-(?=[a-z]*r)(?=[a-z]*f)[a-z]+\s+(\/|\$HOME|~|\*)/i,
   /\b(curl|wget)\b.+\|\s*(sh|bash)\b/i,
   /\bsudo\s+(rm|chmod|chown|dd|mkfs|shutdown|reboot)\b/i,
   /\bchmod\s+777\b/i,
@@ -144,7 +151,7 @@ const VERIFICATION_SCRIPT_NAMES = new Set([
   "verify"
 ]);
 
-const WORKFLOW_ADDED_LINE_RULES: Array<{
+const WORKFLOW_ADDED_LINE_RULES: {
   ruleId: string;
   severity: Severity;
   title: string;
@@ -152,7 +159,7 @@ const WORKFLOW_ADDED_LINE_RULES: Array<{
   matches: (content: string) => boolean;
   remediation: string;
   tags: string[];
-}> = [
+}[] = [
   {
     ruleId: "workflow.pull-request-target",
     severity: "high",
@@ -227,12 +234,12 @@ const WORKFLOW_ADDED_LINE_RULES: Array<{
   }
 ];
 
-const DEPENDENCY_PROOF_RULES: Array<{
+const DEPENDENCY_PROOF_RULES: {
   ecosystem: string;
   manifest: (path: string) => boolean;
   lockfile: (path: string) => boolean;
   expectedLockfiles: string;
-}> = [
+}[] = [
   {
     ecosystem: "Node",
     manifest: (path) => baseName(path) === "package.json",
@@ -282,8 +289,15 @@ const severityWeights: Record<Severity, number> = {
 class RiskAccumulator {
   private score = 0;
   private readonly values: RiskFinding[] = [];
+  private readonly seen = new Set<string>();
 
+  // Deduplicate on add so the score only ever counts findings the report
+  // actually displays — the EXPLAINABLE promise requires the score to be
+  // reconstructable from the visible findings.
   add(weight: number, finding: RiskFinding): void {
+    const key = findingKey(finding);
+    if (this.seen.has(key)) return;
+    this.seen.add(key);
     this.score += weight;
     this.values.push(finding);
   }
@@ -317,7 +331,9 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
   const totalAdditions = changedFiles.reduce((sum, file) => sum + file.additions, 0);
   const totalDeletions = changedFiles.reduce((sum, file) => sum + file.deletions, 0);
-  const changedSourceFiles = changedFiles.filter((file) => isSourceFile(file.path) && !isTestFile(file.path));
+  const changedSourceFiles = changedFiles.filter(
+    (file) => isSourceFile(file.path) && !isTestFile(file.path) && !isDeclarationFile(file.path)
+  );
   const changedTestPaths = new Set(changedFiles.filter((file) => isTestFile(file.path)).map((file) => file.path));
 
   for (const file of changedFiles) {
@@ -565,7 +581,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
   }
 
-  const dedupedFindings = dedupeFindings(accumulator.findings);
+  const dedupedFindings = accumulator.findings;
   const riskScore = clamp(accumulator.risk, 0, 100);
   const confidenceScore = 100 - riskScore;
   const status: PatchStatus = commandResults.some((result) => result.exitCode !== 0)
@@ -581,6 +597,10 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
 function isSourceFile(path: string): boolean {
   return /\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|java|kt|rb|php|cs|fs|swift|scala)$/.test(path);
+}
+
+function isDeclarationFile(path: string): boolean {
+  return /\.d\.[cm]?ts$/i.test(path);
 }
 
 function isDocumentationFile(path: string): boolean {
@@ -720,7 +740,7 @@ function isBinaryBunLockfile(path: string): boolean {
 }
 
 function workflowUsesUnpinnedAction(content: string): boolean {
-  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  const match = /^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i.exec(content);
   if (!match?.[1]) return false;
   const action = match[1];
   if (action.startsWith("./") || action.startsWith("docker://")) return false;
@@ -731,7 +751,7 @@ function workflowUsesUnpinnedAction(content: string): boolean {
 }
 
 function workflowUsesMutableDockerAction(content: string): boolean {
-  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  const match = /^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i.exec(content);
   if (!match?.[1]) return false;
   const action = match[1];
   if (!action.startsWith("docker://")) return false;
@@ -900,7 +920,7 @@ function isRequirementsFileName(fileName: string): boolean {
   return /^requirements([-.].*)?\.txt$/i.test(fileName) || /^.*[-.]requirements\.txt$/i.test(fileName);
 }
 
-function workflowContextFindings(addedLines: AddedLine[], workflowFiles: Array<{ file: string; content: string }>): RiskFinding[] {
+function workflowContextFindings(addedLines: AddedLine[], workflowFiles: { file: string; content: string }[]): RiskFinding[] {
   const findings: RiskFinding[] = [];
   const workflowLinesByFile = new Map<string, AddedLine[]>();
   for (const line of addedLines) {
@@ -1080,7 +1100,7 @@ function workflowCloudOidcCredentialLine(lines: AddedLine[]): AddedLine | undefi
 }
 
 function workflowUsesCloudOidcCredentialAction(content: string): boolean {
-  const match = content.match(/^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i);
+  const match = /^\s*(?:-\s*)?uses\s*:\s*['"]?([^'"\s#]+)['"]?\s*(?:#.*)?$/i.exec(content);
   if (!match?.[1]) return false;
   const action = match[1].split("@", 1)[0]?.toLowerCase();
   return Boolean(
@@ -1126,7 +1146,7 @@ function workflowReusableSecretJobs(lines: AddedLine[]): WorkflowReusableJob[] {
   });
 }
 
-function workflowJobBlocks(lines: AddedLine[]): Array<{ jobId: string; indent: number; lines: AddedLine[] }> {
+function workflowJobBlocks(lines: AddedLine[]): { jobId: string; indent: number; lines: AddedLine[] }[] {
   const jobsLineIndex = lines.findIndex((line) => readYamlScalar(line.content)?.key === "jobs");
   if (jobsLineIndex < 0) return [];
 
@@ -1136,7 +1156,7 @@ function workflowJobBlocks(lines: AddedLine[]): Array<{ jobId: string; indent: n
   const jobIndent = lines.slice(jobsLineIndex + 1).find((line) => isYamlContentLine(line.content) && indentation(line.content) > jobsIndent);
   if (!jobIndent) return [];
   const directJobIndent = indentation(jobIndent.content);
-  const blocks: Array<{ jobId: string; indent: number; lines: AddedLine[] }> = [];
+  const blocks: { jobId: string; indent: number; lines: AddedLine[] }[] = [];
   let current: { jobId: string; indent: number; lines: AddedLine[] } | undefined;
 
   for (const line of lines.slice(jobsLineIndex + 1)) {
@@ -1147,7 +1167,7 @@ function workflowJobBlocks(lines: AddedLine[]): Array<{ jobId: string; indent: n
     const indent = indentation(line.content);
     if (indent <= jobsIndent) break;
     const scalar = readYamlScalar(line.content);
-    if (indent === directJobIndent && scalar && scalar.value.length === 0) {
+    if (indent === directJobIndent && scalar?.value.length === 0) {
       if (current) blocks.push(current);
       current = { jobId: scalar.key, indent, lines: [line] };
       continue;
@@ -1270,10 +1290,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function findingKey(finding: RiskFinding): string {
+  return `${finding.severity}:${finding.title}:${finding.file ?? ""}:${finding.line ?? ""}`;
+}
+
 function dedupeFindings(findings: RiskFinding[]): RiskFinding[] {
   const seen = new Set<string>();
   return findings.filter((finding) => {
-    const key = `${finding.severity}:${finding.title}:${finding.file ?? ""}:${finding.line ?? ""}`;
+    const key = findingKey(finding);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

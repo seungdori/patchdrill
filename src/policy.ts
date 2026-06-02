@@ -20,7 +20,7 @@ export function loadPolicy(root: string, configPath?: string): LoadedPolicy {
   if (!path) return { policy: emptyPolicy() };
 
   const raw = readFileSync(path, "utf8");
-  const parsed = path.endsWith(".json") ? JSON.parse(raw) : parseYaml(raw);
+  const parsed: unknown = path.endsWith(".json") ? JSON.parse(raw) : (parseYaml(raw) as unknown);
   return {
     path,
     policy: normalizePolicy(parsed)
@@ -104,15 +104,24 @@ function readRules(value: unknown): PolicyRule[] {
       throw new Error(`Invalid PatchDrill policy at ${field}: specify either path or paths, not both.`);
     }
     const path = item.path ?? item.paths;
+    if (path !== undefined && readStringArray(path, `${field}.path`).length === 0) {
+      // An explicitly empty path array would otherwise become a silent match-all
+      // rule; the published schema requires minItems 1, so reject it here too.
+      throw new Error(`Invalid PatchDrill policy at ${field}.path: expected a non-empty pattern.`);
+    }
+    const pathPattern = readPathPattern(path, `${field}.path`);
+    const detail = readString(item.detail);
+    const remediation = readString(item.remediation);
+    const weight = readWeight(item.weight, `${field}.weight`);
     const tags = readStringArray(item.tags, `${field}.tags`);
     rules.push({
       id,
       title,
       severity,
-      ...(readPathPattern(path, `${field}.path`) ? { path: readPathPattern(path, `${field}.path`) as string | string[] } : {}),
-      ...(readString(item.detail) ? { detail: readString(item.detail) as string } : {}),
-      ...(readString(item.remediation) ? { remediation: readString(item.remediation) as string } : {}),
-      ...(readWeight(item.weight, `${field}.weight`) !== undefined ? { weight: readWeight(item.weight, `${field}.weight`) as number } : {}),
+      ...(pathPattern ? { path: pathPattern } : {}),
+      ...(detail ? { detail } : {}),
+      ...(remediation ? { remediation } : {}),
+      ...(weight !== undefined ? { weight } : {}),
       ...(tags.length > 0 ? { tags } : {})
     });
   }
@@ -210,8 +219,10 @@ function readRequiredRisk(value: unknown, field: string): number {
 
 function readWeight(value: unknown, field: string): number | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new Error(`Invalid PatchDrill policy at ${field}: expected a number.`);
+  // Negative weights would let a critical-looking rule lower the risk score,
+  // breaking the invariant that every finding can only raise risk.
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new Error(`Invalid PatchDrill policy at ${field}: expected a non-negative number.`);
   }
   return value;
 }

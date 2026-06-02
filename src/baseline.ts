@@ -22,9 +22,9 @@ export function compareBaseline(root: string, baselinePath: string, current: Bas
 
   return {
     path: relative(root, resolved),
-    previousStatus: baseline.summary?.status,
+    ...(baseline.summary?.status !== undefined ? { previousStatus: baseline.summary.status } : {}),
     currentStatus: current.summary.status,
-    previousRiskScore: baseline.summary?.riskScore,
+    ...(baseline.summary?.riskScore !== undefined ? { previousRiskScore: baseline.summary.riskScore } : {}),
     currentRiskScore: current.summary.riskScore,
     riskDelta: current.summary.riskScore - (baseline.summary?.riskScore ?? 0),
     newFindingCount,
@@ -33,12 +33,20 @@ export function compareBaseline(root: string, baselinePath: string, current: Bas
   };
 }
 
-function readBaselineReport(path: string): Pick<PatchReport, "summary" | "findings"> {
+// A saved baseline report is untrusted JSON; type it loosely so the missing-field
+// guards above are honest rather than relying on an unsound `as PatchReport` cast.
+interface BaselineReport {
+  summary?: { status?: PatchStatus; riskScore?: number };
+  findings?: RiskFinding[];
+}
+
+function readBaselineReport(path: string): BaselineReport {
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as PatchReport;
+    return JSON.parse(readFileSync(path, "utf8")) as BaselineReport;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to read PatchDrill baseline report ${path}: ${message}`);
+    throw new Error(`Failed to read PatchDrill baseline report ${path}: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error
+    });
   }
 }
 

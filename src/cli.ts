@@ -8,6 +8,7 @@ import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
 import { inspectDoctor, renderDoctor } from "./doctor.js";
 import { checkReleaseReadiness, createReleaseReadinessReport, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
+import { reportContractFailures } from "./report-contract.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -79,7 +80,7 @@ async function main(): Promise<void> {
   throw new Error(`Unknown command "${command}". Run patchdrill --help.`);
 }
 
-async function scanCommand(parsed: ParsedArgs): Promise<void> {
+export async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliFailOnValue = flagString(parsed, "fail-on");
   const cliMaxRiskValue = flagString(parsed, "max-risk");
   const cliMaxRiskDeltaValue = flagString(parsed, "max-risk-delta");
@@ -104,6 +105,12 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const cliCommandTimeoutMs = cliCommandTimeoutMsValue ? readPositiveInteger(cliCommandTimeoutMsValue, "command timeout ms") : undefined;
   if (runOptional && !run) {
     throw new Error("--run-optional requires --run.");
+  }
+  if (evidencePath && !jsonPath) {
+    throw new Error("--evidence requires --json so the evidence manifest can verify the JSON report contract.");
+  }
+  if (cliMaxRiskDelta !== undefined && !baselinePath) {
+    throw new Error("--max-risk-delta requires --baseline so the risk delta gate has a previous report to compare against.");
   }
   const report = await scan({
     cwd: process.cwd(),
@@ -131,7 +138,7 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   };
   if (!flagBoolean(parsed, "quiet")) {
     console.log(renderConsoleSummary(report, gateOptions));
-    if (!parsed.flags.markdown) {
+    if (!markdownPath) {
       console.log("");
       console.log(renderMarkdown(report));
     }
@@ -153,7 +160,7 @@ export function dashboardCommand(parsed: ParsedArgs): void {
   }
 
   const output = flagString(parsed, "output") ?? "patchdrill-dashboard.html";
-  const reports = jsonPaths.map((path) => JSON.parse(readFileSync(path, "utf8")) as PatchReport);
+  const reports = jsonPaths.map((path) => readSavedReport(path).report);
   const report = reports[reports.length - 1];
   if (!report) throw new Error("dashboard requires at least one JSON report.");
   const resolved = resolve(process.cwd(), output);
@@ -214,8 +221,7 @@ export function evidenceCommand(parsed: ParsedArgs): void {
     throw new Error("evidence requires --evidence <patchdrill-evidence.json>.");
   }
 
-  const reportJson = readFileSync(reportPath, "utf8");
-  const report = JSON.parse(reportJson) as PatchReport;
+  const { report, contents: reportJson } = readSavedReport(reportPath);
   const artifacts: RenderedEvidenceArtifact[] = [
     ...optionalEvidenceArtifact("summary-markdown", flagString(parsed, "summary-markdown")),
     ...optionalEvidenceArtifact("markdown", flagString(parsed, "markdown")),
@@ -227,6 +233,35 @@ export function evidenceCommand(parsed: ParsedArgs): void {
   mkdirSync(dirname(resolved), { recursive: true });
   writeFileSync(resolved, renderEvidenceManifest(report, artifacts, report.root || process.cwd(), reportJson), "utf8");
   console.log(`Wrote ${evidencePath}`);
+}
+
+function readSavedReport(path: string): { report: PatchReport; contents: string } {
+  const contents = readFileSync(path, "utf8");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(contents);
+  } catch (error: unknown) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not parse JSON report at ${path}: ${detail}`, { cause: error });
+  }
+  if (!isRecord(parsed)) {
+    throw new Error(`JSON report at ${path} must be an object; got ${describeJsonValue(parsed)}.`);
+  }
+  const failures = reportContractFailures(parsed);
+  if (failures.length > 0) {
+    throw new Error(`JSON report contract failed for ${path}: ${failures.join("; ")}`);
+  }
+  return { report: parsed as unknown as PatchReport, contents };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function describeJsonValue(value: unknown): string {
+  if (Array.isArray(value)) return "array";
+  if (value === null) return "null";
+  return typeof value;
 }
 
 function initCommand(parsed: ParsedArgs): void {
@@ -363,14 +398,21 @@ export function parseArgs(args: string[]): ParsedArgs {
       const [rawKey, inlineValue] = arg.slice(2).split("=", 2);
       const key = rawKey ?? "";
       if (!key) continue;
+      if (!isKnownFlag(key)) {
+        throw new Error(`Unknown flag "--${key}". Run patchdrill --help.`);
+      }
       if (inlineValue !== undefined) {
         addFlag(flags, key, isBooleanFlag(key) ? readBooleanFlag(inlineValue, key) : inlineValue);
+      } else if (takesValue(key)) {
+        const next = args[index + 1];
+        if (next === undefined || next.startsWith("-")) {
+          throw new Error(`Flag "--${key}" requires a value. Run patchdrill --help.`);
+        }
+        addFlag(flags, key, next);
+        index += 1;
       } else {
         const next = args[index + 1];
-        if (next && !next.startsWith("-") && takesValue(key)) {
-          addFlag(flags, key, next);
-          index += 1;
-        } else if (next && !next.startsWith("-") && isBooleanFlag(key) && isBooleanLiteral(next)) {
+        if (next && !next.startsWith("-") && isBooleanFlag(key) && isBooleanLiteral(next)) {
           addFlag(flags, key, readBooleanFlag(next, key));
           index += 1;
         } else {
@@ -456,6 +498,10 @@ function takesValue(flag: string): boolean {
 
 function isBooleanFlag(flag: string): boolean {
   return ["help", "version", "quiet", "run", "run-optional", "github-annotations", "force", "policy", "list"].includes(flag);
+}
+
+function isKnownFlag(flag: string): boolean {
+  return takesValue(flag) || isBooleanFlag(flag);
 }
 
 function isBooleanLiteral(value: string): boolean {
@@ -566,12 +612,18 @@ Usage:
   patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
   patchdrill verify --evidence <patchdrill-evidence.json>
 
+First run:
+  patchdrill explain
+  patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+  patchdrill doctor
+  patchdrill scan --base origin/main
+
 Options:
   --base <ref>        Compare against a base ref, for example origin/main
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
-  --evidence <path>   Write a Proof Pack evidence manifest during scan/evidence, or select one for verify
+  --evidence <path>   Write a Proof Pack evidence manifest during scan/evidence, or select one for verify. scan --evidence requires --json
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
   --github-annotations

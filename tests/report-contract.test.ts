@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { reportContractFailures } from "../src/report-contract.js";
 import type { PatchReport } from "../src/types.js";
+import { reportVerification, withVerification } from "../src/verification.js";
 
 describe("report contract", () => {
   it("accepts summary counts that match report payload arrays", () => {
@@ -23,10 +24,57 @@ describe("report contract", () => {
       "JSON report summary.failedCommandCount does not match commandResults."
     ]);
   });
+
+  it("rejects verification status that drifts from command plans and results", () => {
+    const report = exampleReport();
+    report.verification = reportVerification(report);
+    report.verification.summary.failed = 0;
+
+    expect(reportContractFailures(report)).toEqual(["JSON report verification does not match commandPlan and commandResults."]);
+  });
+
+  it("rejects reports missing structured verification status", () => {
+    const report: Partial<PatchReport> = { ...exampleReport() };
+    delete report.verification;
+
+    expect(reportContractFailures(report)).toContain("JSON report verification is missing.");
+  });
+
+  it("accepts semantically matching verification objects regardless of property order", () => {
+    const report = exampleReport();
+    const verification = reportVerification(report);
+    report.verification = {
+      commands: verification.commands.map((command) => ({
+        status: command.status,
+        planned: command.planned,
+        required: command.required,
+        ecosystem: command.ecosystem,
+        reason: command.reason,
+        command: command.command,
+        label: command.label,
+        id: command.id,
+        ...(command.durationMs !== undefined ? { durationMs: command.durationMs } : {}),
+        ...(command.exitCode !== undefined ? { exitCode: command.exitCode } : {})
+      })),
+      summary: {
+        unplannedResults: verification.summary.unplannedResults,
+        skippedOptional: verification.summary.skippedOptional,
+        missingRequired: verification.summary.missingRequired,
+        timedOut: verification.summary.timedOut,
+        failed: verification.summary.failed,
+        passed: verification.summary.passed,
+        run: verification.summary.run,
+        plannedOptional: verification.summary.plannedOptional,
+        plannedRequired: verification.summary.plannedRequired
+      }
+    };
+
+    expect(reportContractFailures(report)).toEqual([]);
+  });
 });
 
 function exampleReport(): PatchReport {
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: "2026-06-01T00:00:00.000Z",
     root: "/repo",
@@ -49,5 +97,5 @@ function exampleReport(): PatchReport {
     findings: [],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "Source changed.", ecosystem: "node", required: true }],
     commandResults: [{ id: "test", command: "npm test", exitCode: 1, durationMs: 1200, stdout: "", stderr: "failed" }]
-  };
+  });
 }

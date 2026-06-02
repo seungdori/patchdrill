@@ -18,7 +18,7 @@ PatchDrill is split into deterministic modules:
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
-| `src/verification.ts` | Joins verification plans with command results into passed, failed, timed-out, not-run, skipped-optional, and unplanned execution states. |
+| `src/verification.ts` | Joins verification plans with command results into passed, failed, timed-out, not-run, skipped-optional, and unplanned execution states for human reports and JSON automation consumers. |
 | `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, public release docs, demo artifact synchronization, and local Markdown links. |
 | `src/report-contract.ts` | Verifies JSON report self-consistency, including summary counts derived from changed files, command plans, and command results. |
 | `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
@@ -61,7 +61,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
 
 - Dependency formats register a name, matcher, parser, diff function, and empty snapshot in `src/dependency.ts`, so adding a manifest or lockfile format does not grow the scan orchestrator and can be reflected in coverage docs.
 - Verification command adapters add plans through `src/command-plan.ts`, so duplicate detector and policy commands are normalized before running or scoring evidence gaps.
-- Report contract checks live in `src/report-contract.ts`, so evidence verification can reject a JSON report whose summary counts no longer match its payload.
+- Report contract checks live in `src/report-contract.ts`, so evidence verification can reject a JSON report whose summary counts or computed verification status no longer match its payload.
 - Project and workspace detection lives in `src/project.ts`; command planning consumes those signals through the handler registry in `src/planner.ts`.
 - Risk scoring stays explainable: every score increase in `src/risk.ts` must produce a human-readable finding and a stable rule ID documented in [RULE_CATALOG.md](RULE_CATALOG.md).
 

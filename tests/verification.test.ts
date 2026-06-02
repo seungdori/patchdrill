@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PatchReport } from "../src/types.js";
-import { formatVerificationStatus, verificationExecutions, verificationSummary } from "../src/verification.js";
+import { formatVerificationStatus, reportVerification, verificationExecutions, verificationSummary } from "../src/verification.js";
 
 describe("verification status", () => {
   it("summarizes plan-to-result execution states", () => {
@@ -21,12 +21,38 @@ describe("verification status", () => {
       plannedOptional: 1,
       run: 3,
       passed: 1,
-      failed: 2,
+      failed: 1,
       timedOut: 1,
       missingRequired: 1,
       skippedOptional: 1,
       unplannedResults: 1
     });
+    // passed + failed + timedOut must partition the runs (a timed-out command is
+    // not also counted as failed).
+    expect(summary.passed + summary.failed + summary.timedOut).toBe(summary.run);
+  });
+
+  it("renders report verification metadata without duplicating command output", () => {
+    const verification = reportVerification(exampleReport());
+
+    expect(verification.summary).toMatchObject({ run: 3, failed: 1, timedOut: 1, missingRequired: 1, skippedOptional: 1 });
+    expect(verification.commands.find((command) => command.id === "unit")).toEqual({
+      id: "unit",
+      label: "Unit",
+      command: "npm test",
+      reason: "Unit coverage.",
+      ecosystem: "node",
+      required: true,
+      planned: true,
+      status: "passed",
+      exitCode: 0,
+      durationMs: 100
+    });
+    for (const command of verification.commands) {
+      expect(command).not.toHaveProperty("result");
+      expect(command).not.toHaveProperty("stdout");
+      expect(command).not.toHaveProperty("stderr");
+    }
   });
 });
 

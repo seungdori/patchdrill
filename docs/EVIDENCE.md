@@ -14,6 +14,8 @@ patchdrill scan --base origin/main --run \
   --html patchdrill-dashboard.html
 ```
 
+`scan --evidence` requires `--json` because the verifier needs a JSON report artifact to cross-check the report digest and report contract.
+
 The manifest includes:
 
 - The PatchDrill report SHA-256 and byte length.
@@ -25,7 +27,7 @@ The manifest includes:
 
 If a scan infers or configures required verification commands but no matching command results are present, the report includes a `verification.required-not-run` finding. This keeps local scans non-mutating by default while making missing evidence visible in the same report and evidence bundle.
 
-Human-facing reports also render a plan-to-result verification matrix. Each planned command is labeled as passed, failed, timed out, not run, or skipped optional, so reviewers do not have to manually join `commandPlan` and `commandResults` to see which evidence is present.
+Human-facing reports also render a plan-to-result verification matrix. Each planned command is labeled as passed, failed, timed out, not run, or skipped optional, so reviewers do not have to manually join `commandPlan` and `commandResults` to see which evidence is present. JSON reports must include the same computed `verification` section for bots and dashboards, and `patchdrill verify --evidence` rejects a JSON report when that section is missing or drifts from the underlying command plan and command results.
 
 Verify a saved manifest against its artifacts:
 
@@ -33,7 +35,7 @@ Verify a saved manifest against its artifacts:
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest, verifies that the manifest summary, report counts, command result metadata, and command-output digests still match the JSON report, and rejects JSON reports whose summary counts no longer match their changed files, command plan, or command results.
+Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest, verifies that the manifest summary, report counts, command result metadata, command-output digests, and required structured verification status still match the JSON report, and rejects JSON reports whose summary counts no longer match their changed files, command plan, or command results.
 
 Regenerate a manifest after post-processing final artifacts, such as re-rendering a dashboard with trend history:
 
@@ -47,5 +49,7 @@ patchdrill evidence \
   --html patchdrill-dashboard.html
 patchdrill verify --evidence patchdrill-evidence.json
 ```
+
+`patchdrill evidence` validates the saved JSON report contract before writing the regenerated manifest.
 
 This keeps the default scanner local-only and deterministic while giving CI systems one small file that can prove which Proof Pack artifacts belonged to a run.

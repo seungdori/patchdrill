@@ -446,7 +446,7 @@
           </div>
           <p>A database migration can alter production session state.</p>
           <p class="muted">Remediation: Attach dry-run, rollback, and data-owner approval notes.</p>
-          <p class="muted">Rule: <code>file.migration-review</code></p>
+          <p class="muted">Rule: <code>file.high-impact-area</code></p>
           <p class="muted">Tags: data, migration</p>
         </article><article class="finding">
           <div class="finding-head">
@@ -458,7 +458,7 @@
           </div>
           <p>A deployment workflow can mint cloud credentials without an explicit GitHub environment gate.</p>
           <p class="muted">Remediation: Attach a protected environment or document why this job cannot deploy.</p>
-          <p class="muted">Rule: <code>workflow.oidc-environment</code></p>
+          <p class="muted">Rule: <code>workflow.environment-oidc-token</code></p>
           <p class="muted">Tags: ci, oidc, supply-chain</p>
         </article><article class="finding">
           <div class="finding-head">
@@ -470,7 +470,7 @@
           </div>
           <p>@acme/session-store changed from 1.8.2 to 1.9.0.</p>
           <p class="muted">Remediation: Review release notes and verify transitive dependency impact.</p>
-          <p class="muted">Rule: <code>dependency.lockfile-update</code></p>
+          <p class="muted">Rule: <code>file.lockfile</code></p>
           <p class="muted">Tags: dependencies</p>
         </article>
       </div>

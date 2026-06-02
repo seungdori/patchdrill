@@ -21,6 +21,8 @@ Re-render a dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+Saved JSON reports must satisfy the report contract before PatchDrill renders a dashboard. This prevents old reports without required verification metadata from being repackaged as current evidence.
+
 Render a dashboard with CI artifact history by passing reports in oldest-to-newest order. The last `--json` is the current report used for the main dashboard, and earlier reports populate the run trend table.
 
 ```bash

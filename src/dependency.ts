@@ -38,29 +38,36 @@ interface DependencyAnalyzer {
 }
 
 const dependencyAnalyzers: DependencyAnalyzer[] = [
-  createDependencyAnalyzer("package.json", (path) => path.endsWith("package.json"), parsePackageJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer("package.json", (path) => baseName(path) === "package.json", parsePackageJson, diffPackageJson, () => ({})),
   createDependencyAnalyzer("requirements.txt", isRequirementsFile, parseRequirements, diffRequirementPackages, () => new Map()),
-  createDependencyAnalyzer("pyproject.toml", (path) => path.endsWith("pyproject.toml"), parsePyprojectDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("pyproject.toml", (path) => baseName(path) === "pyproject.toml", parsePyprojectDependencies, diffManifestDependencies, () => new Map()),
   createDependencyAnalyzer("NuGet PackageReference/PackageVersion", isDotnetDependencyManifest, parseDotnetDependencyManifest, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer("Maven pom.xml", (path) => path.endsWith("pom.xml"), parseMavenPomDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Maven pom.xml", (path) => baseName(path) === "pom.xml", parseMavenPomDependencies, diffManifestDependencies, () => new Map()),
   createDependencyAnalyzer("Gradle build file", isGradleBuildFile, parseGradleDependencies, diffManifestDependencies, () => new Map()),
   createDependencyAnalyzer("Gradle version catalog", isGradleVersionCatalog, parseGradleVersionCatalog, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer("composer.json", (path) => path.endsWith("composer.json"), parseComposerJson, diffPackageJson, () => ({})),
-  createDependencyAnalyzer("Gemfile", (path) => path.endsWith("Gemfile"), parseGemfile, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer("go.mod", (path) => path.endsWith("go.mod"), parseGoMod, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer("Cargo.toml", (path) => path.endsWith("Cargo.toml"), parseCargoToml, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer("package-lock.json", (path) => path.endsWith("package-lock.json"), parsePackageLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer("pnpm-lock.yaml", (path) => path.endsWith("pnpm-lock.yaml"), parsePnpmLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("yarn.lock", (path) => path.endsWith("yarn.lock"), parseYarnLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("bun.lock", (path) => path.endsWith("bun.lock"), parseBunLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer("go.sum", (path) => path.endsWith("go.sum"), parseGoSum, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("Cargo.lock", (path) => path.endsWith("Cargo.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("poetry.lock", (path) => path.endsWith("poetry.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("uv.lock", (path) => path.endsWith("uv.lock"), parseUvLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("Pipfile.lock", (path) => path.endsWith("Pipfile.lock"), parsePipfileLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer("Gemfile.lock", (path) => path.endsWith("Gemfile.lock"), parseGemfileLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer("composer.lock", (path) => path.endsWith("composer.lock"), parseComposerLock, diffLockPackages, () => new Map())
+  createDependencyAnalyzer("composer.json", (path) => baseName(path) === "composer.json", parseComposerJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer("Gemfile", (path) => baseName(path) === "Gemfile", parseGemfile, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("go.mod", (path) => baseName(path) === "go.mod", parseGoMod, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Cargo.toml", (path) => baseName(path) === "Cargo.toml", parseCargoToml, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("package-lock.json", (path) => baseName(path) === "package-lock.json", parsePackageLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("pnpm-lock.yaml", (path) => baseName(path) === "pnpm-lock.yaml", parsePnpmLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("yarn.lock", (path) => baseName(path) === "yarn.lock", parseYarnLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("bun.lock", (path) => baseName(path) === "bun.lock", parseBunLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("go.sum", (path) => baseName(path) === "go.sum", parseGoSum, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("Cargo.lock", (path) => baseName(path) === "Cargo.lock", parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("poetry.lock", (path) => baseName(path) === "poetry.lock", parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("uv.lock", (path) => baseName(path) === "uv.lock", parseUvLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("Pipfile.lock", (path) => baseName(path) === "Pipfile.lock", parsePipfileLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("Gemfile.lock", (path) => baseName(path) === "Gemfile.lock", parseGemfileLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("composer.lock", (path) => baseName(path) === "composer.lock", parseComposerLock, diffLockPackages, () => new Map())
 ];
+
+// Match by exact basename, not suffix, so "my-package.json" or "x.go.mod" are not
+// misclassified as manifests — keeping dependency.ts consistent with the proof-gap
+// rules in risk.ts, which also compare basenames.
+function baseName(path: string): string {
+  return path.split("/").at(-1) ?? path;
+}
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
   const changes: DependencyChange[] = [];
@@ -208,7 +215,7 @@ function diffManifestDependencies(file: string, before: Map<string, ManifestDepe
 function parsePackageJson(value: string | undefined): PackageJson | undefined {
   if (!value) return undefined;
   try {
-    const parsed = JSON.parse(value) as PackageJson;
+    const parsed: unknown = JSON.parse(value);
     return parsed && typeof parsed === "object" ? parsed : undefined;
   } catch {
     return undefined;
@@ -218,11 +225,12 @@ function parsePackageJson(value: string | undefined): PackageJson | undefined {
 function parseComposerJson(value: string | undefined): PackageJson | undefined {
   if (!value) return undefined;
   try {
-    const parsed = JSON.parse(value) as { require?: unknown; "require-dev"?: unknown };
+    const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object") return undefined;
+    const record = parsed as { require?: unknown; "require-dev"?: unknown };
     return {
-      dependencies: readComposerJsonSection(parsed.require),
-      devDependencies: readComposerJsonSection(parsed["require-dev"])
+      dependencies: readComposerJsonSection(record.require),
+      devDependencies: readComposerJsonSection(record["require-dev"])
     };
   } catch {
     return undefined;
@@ -232,7 +240,7 @@ function parseComposerJson(value: string | undefined): PackageJson | undefined {
 function parseGemfile(value: string | undefined): Map<string, ManifestDependency> | undefined {
   if (!value) return undefined;
   const packages = new Map<string, ManifestDependency>();
-  const blockStack: Array<{ kind: "group" | "other"; groups: string[] }> = [];
+  const blockStack: { kind: "group" | "other"; groups: string[] }[] = [];
 
   for (const rawLine of value.split(/\r?\n/)) {
     const line = stripRubyComment(rawLine).trim();
@@ -476,7 +484,7 @@ function parseGradleVersionCatalog(value: string | undefined): Map<string, Manif
   if (!value) return undefined;
   const packages = new Map<string, ManifestDependency>();
   const versions = new Map<string, string>();
-  const entries: Array<{ section: "libraries" | "plugins"; alias: string; value: string }> = [];
+  const entries: { section: "libraries" | "plugins"; alias: string; value: string }[] = [];
   let section = "";
 
   for (const rawLine of value.split(/\r?\n/)) {
@@ -589,16 +597,15 @@ function groupLockPackagesByName(packages: Map<string, LockPackage>): Map<string
 function parsePackageLock(value: string | undefined): Map<string, LockPackage> | undefined {
   if (!value) return undefined;
   try {
-    const parsed = JSON.parse(value) as {
-      packages?: Record<string, { version?: unknown }>;
-      dependencies?: Record<string, LockDependencyNode>;
-    };
-    if (parsed && typeof parsed === "object" && parsed.packages && typeof parsed.packages === "object") {
-      return readPackageLockPackages(parsed.packages);
+    const root: unknown = JSON.parse(value);
+    if (!root || typeof root !== "object") return undefined;
+    const parsed = root as { packages?: unknown; dependencies?: unknown };
+    if (parsed.packages && typeof parsed.packages === "object") {
+      return readPackageLockPackages(parsed.packages as Record<string, { version?: unknown }>);
     }
-    if (parsed && typeof parsed === "object" && parsed.dependencies && typeof parsed.dependencies === "object") {
+    if (parsed.dependencies && typeof parsed.dependencies === "object") {
       const packages = new Map<string, LockPackage>();
-      collectLockDependencies(parsed.dependencies, packages);
+      collectLockDependencies(parsed.dependencies as Record<string, LockDependencyNode>, packages);
       return packages;
     }
     return undefined;
@@ -831,14 +838,32 @@ function readGemfileGroups(value: string): string[] {
   return groups;
 }
 
+const GEMFILE_SOURCE_KEYS = ["git", "github", "gitlab", "bitbucket", "path", "ref", "branch", "tag"];
+
 function parseGemfileGemLine(line: string): { name: string; spec: string } | undefined {
   const match = /^gem\s+(['"])([^'"]+)\1\s*(?:,\s*(.*))?$/.exec(line);
   if (!match?.[2]) return undefined;
-  const constraints = readGemfileStringArguments(match[3] ?? "");
+  const rest = match[3] ?? "";
+  const constraints = readGemfileStringArguments(rest);
+  if (constraints.length > 0) {
+    return { name: match[2], spec: constraints.join(", ") };
+  }
+  // No version constraint: fold the source/ref options into the spec so git/path
+  // and branch/tag/ref drift is surfaced instead of collapsing to "*".
+  const source = readGemfileSourceOptions(rest);
   return {
     name: match[2],
-    spec: constraints.length > 0 ? constraints.join(", ") : "*"
+    spec: source.length > 0 ? source.join(", ") : "*"
   };
+}
+
+function readGemfileSourceOptions(value: string): string[] {
+  const options: string[] = [];
+  for (const key of GEMFILE_SOURCE_KEYS) {
+    const match = new RegExp(`(?:^|[\\s,])${key}\\s*:\\s*(['"])([^'"]+)\\1`).exec(value);
+    if (match?.[2]) options.push(`${key}:${match[2]}`);
+  }
+  return options;
 }
 
 function readGemfileStringArguments(value: string): string[] {
@@ -875,6 +900,9 @@ function parseGoModRequireLine(line: string): { name: string; version: string; i
 }
 
 function cargoDependencySectionType(section: string): DependencyChange["dependencyType"] | undefined {
+  // Tables nested under a metadata segment (e.g. [package.metadata.docs.rs.dependencies],
+  // [workspace.metadata.release.dependencies]) are tool config, not real dependencies.
+  if (/(^|\.)metadata\./.test(section)) return undefined;
   if (section === "dependencies" || section === "workspace.dependencies" || section.endsWith(".dependencies")) return "dependencies";
   if (section === "dev-dependencies" || section === "workspace.dev-dependencies" || section.endsWith(".dev-dependencies")) return "devDependencies";
   if (section === "build-dependencies" || section === "workspace.build-dependencies" || section.endsWith(".build-dependencies")) return "dependencies";
@@ -993,7 +1021,7 @@ function readGradleBlocks(value: string, blockName: string): string[] {
   const blocks: string[] = [];
   const pattern = new RegExp(`\\b${blockName}\\s*\\{`, "g");
   for (const match of value.matchAll(pattern)) {
-    const openBrace = (match.index ?? 0) + match[0].lastIndexOf("{");
+    const openBrace = match.index + match[0].lastIndexOf("{");
     let depth = 0;
     let quote: string | undefined;
     for (let index = openBrace; index < value.length; index += 1) {
@@ -1032,7 +1060,7 @@ function stripGradleComment(line: string): string {
 }
 
 function parseGradleDependencyLine(line: string): { configuration: string; name: string; version: string } | undefined {
-  const stringMatch = /^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(\s*)?(?:platform\s*)?(?:\(\s*)?["']([^"']+)["']/.exec(line);
+  const stringMatch = /^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(\s*)?(?:(?:platform|enforcedPlatform)\s*)?(?:\(\s*)?["']([^"']+)["']/.exec(line);
   if (stringMatch?.[1] && stringMatch[2]) {
     const coordinate = parseGradleCoordinate(stringMatch[2]);
     return coordinate ? { configuration: stringMatch[1], ...coordinate } : undefined;
@@ -1112,7 +1140,10 @@ function readTomlInlineVersion(value: string, versions: Map<string, string>): st
   const version = readTomlInlineStringAttribute(value, "version");
   if (version) return version;
   const versionRef = readTomlInlineStringAttribute(value, "version.ref");
-  return versionRef ? versions.get(versionRef) : undefined;
+  if (versionRef === undefined) return undefined;
+  // A still-declared library whose version.ref points at a deleted [versions] alias
+  // must not vanish (reported as "removed"); surface the dangling ref instead.
+  return versions.get(versionRef) ?? `version.ref:${versionRef} (unresolved)`;
 }
 
 function readTomlInlineStringAttribute(value: string, name: string): string | undefined {
@@ -1122,13 +1153,16 @@ function readTomlInlineStringAttribute(value: string, name: string): string | un
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {
-  const match = new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(attributes);
-  return match?.[1]?.trim() || undefined;
+  const value = new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i").exec(attributes)?.[1]?.trim();
+  // Treat an empty (whitespace-only) match as absent, not as "".
+  if (!value) return undefined;
+  return value;
 }
 
 function readXmlElement(content: string, name: string): string | undefined {
-  const match = new RegExp(`<${name}>\\s*([^<]+?)\\s*</${name}>`, "i").exec(content);
-  return match?.[1]?.trim() || undefined;
+  const value = new RegExp(`<${name}>\\s*([^<]+?)\\s*</${name}>`, "i").exec(content)?.[1]?.trim();
+  if (!value) return undefined;
+  return value;
 }
 
 function cleanRequirementLine(rawLine: string): string | undefined {

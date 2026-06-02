@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PackageScriptChange, PatchReport, ProjectSignal, ScanOptions } from "../src/types.js";
+import { withVerification } from "../src/verification.js";
 
 describe("types", () => {
   it("includes static HTML dashboard output in scan options", () => {
@@ -131,7 +132,7 @@ describe("types", () => {
   });
 
   it("includes package script changes in patch reports", () => {
-    const report = acceptPatchReport({
+    const report = acceptPatchReport(withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -162,7 +163,7 @@ describe("types", () => {
       findings: [],
       commandPlan: [],
       commandResults: []
-    });
+    }));
 
     expect(report.packageScriptChanges[0]?.scriptName).toBe("test");
   });

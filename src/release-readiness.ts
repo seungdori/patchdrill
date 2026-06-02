@@ -65,22 +65,22 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "Run patchdrill release-check --format json in the release workflow before npm publish."
     ),
     checkBoolean(
-      Boolean(containsInOrder(ci, ["Run PatchDrill", "verify --evidence patchdrill-evidence.json", "actions/upload-artifact"])),
+      Boolean(containsInOrder(ci, ["Run PatchDrill", "--evidence patchdrill-evidence.json", "--json patchdrill-report.json", "verify --evidence patchdrill-evidence.json", "actions/upload-artifact"])),
       "CI evidence verification",
-      "CI verifies the generated PatchDrill evidence manifest before uploading Proof Pack artifacts.",
-      "Run patchdrill verify --evidence patchdrill-evidence.json after CI scan artifacts are generated and before artifact upload."
+      "CI writes JSON-backed PatchDrill evidence and verifies the generated manifest before uploading Proof Pack artifacts.",
+      "Run patchdrill scan with --evidence and --json, then verify --evidence patchdrill-evidence.json before artifact upload."
     ),
     checkBoolean(
-      Boolean(containsInOrder(action, ["Refresh evidence manifest", 'verify --evidence "$PATCHDRILL_EVIDENCE"', "Export report paths"])),
+      Boolean(containsInOrder(action, ['--evidence "$PATCHDRILL_EVIDENCE"', '--json "$PATCHDRILL_JSON"', "Refresh evidence manifest", 'verify --evidence "$PATCHDRILL_EVIDENCE"', "Export report paths"])),
       "Action evidence verification",
-      "The composite action verifies refreshed evidence manifests before exporting artifact paths.",
-      "Verify the evidence manifest inside action.yml before reporting output paths."
+      "The composite action writes JSON-backed evidence, refreshes the manifest, and verifies it before exporting artifact paths.",
+      "Pass --json with --evidence and verify the evidence manifest inside action.yml before reporting output paths."
     ),
     checkBoolean(
-      Boolean(containsInOrder(releaseWorkflow, ["release-evidence.json", "--run", "verify --evidence .patchdrill/release-evidence.json", "npm pack --dry-run"])),
+      Boolean(containsInOrder(releaseWorkflow, ["release-evidence.json", "--json .patchdrill/release.json", "--run", "verify --evidence .patchdrill/release-evidence.json", "npm pack --dry-run"])),
       "Release Proof Pack smoke",
-      "release.yml runs required verification, generates a release Proof Pack smoke bundle, and verifies it before npm packaging.",
-      "Generate a release Proof Pack with scan --run --evidence and verify it before npm pack --dry-run."
+      "release.yml runs required verification, generates a JSON-backed release Proof Pack smoke bundle, and verifies it before npm packaging.",
+      "Generate a release Proof Pack with scan --run --evidence --json and verify it before npm pack --dry-run."
     ),
     checkPullRequestTemplate(pullRequestTemplate),
     checkReadmeProofPackQuickstart(readme),
@@ -330,7 +330,7 @@ function checkStackFixtureCorpus(root: string): ReleaseCheck {
       remediation: "Add fixture-backed repository shapes under fixtures/stacks before release."
     };
   }
-  let fixturePaths: string[] = [];
+  let fixturePaths: string[];
   try {
     fixturePaths = readdirSync(fixturesRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
@@ -363,7 +363,7 @@ function checkStackFixtureCorpus(root: string): ReleaseCheck {
 
 function checkDemoArtifacts(root: string): ReleaseCheck {
   const failures: string[] = [];
-  const scenarios: Array<{ scenario: DemoScenario; directory: string }> = [
+  const scenarios: { scenario: DemoScenario; directory: string }[] = [
     { scenario: "review-ready", directory: "examples/demo" },
     { scenario: "risky-agent-pr", directory: "examples/risky-agent-pr" }
   ];
@@ -439,10 +439,15 @@ function checkSchemaContract(root: string, name: SchemaName, readme: string | un
     if (parsed.$id !== `https://patchdrill.dev/schemas/${fileName}`) missing.push(`${relativePath} $id`);
     if (typeof parsed.title !== "string" || !parsed.title.trim()) missing.push(`${relativePath} title`);
     if (parsed.type !== "object") missing.push(`${relativePath} object root type`);
+    if (name === "report") {
+      if (!isStringArray(parsed.required) || !parsed.required.includes("verification")) missing.push(`${relativePath} required verification`);
+      if (!isRecord(parsed.properties) || !isRecord(parsed.properties.verification)) missing.push(`${relativePath} verification property`);
+    }
   }
   if (!readme?.includes(`patchdrill schema ${name}`)) missing.push(`README schema command ${name}`);
   if (!schemaDocs?.includes(`patchdrill schema ${name}`)) missing.push(`docs/SCHEMAS.md command ${name}`);
   if (!schemaDocs?.includes(fileName)) missing.push(`docs/SCHEMAS.md reference ${fileName}`);
+  if (name === "report" && !schemaDocs?.includes("required computed `verification`")) missing.push("docs/SCHEMAS.md required verification");
   return {
     status: missing.length === 0 ? "pass" : "fail",
     title: schemaCheckTitle(name),
@@ -458,13 +463,13 @@ function readSchemaJson(
   path: string,
   failures: string[],
   label: string
-): { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown } | undefined {
+): { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown; required?: unknown; properties?: unknown } | undefined {
   if (!existsSync(path)) {
     failures.push(`${label} file`);
     return undefined;
   }
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown };
+    return JSON.parse(readFileSync(path, "utf8")) as { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown; required?: unknown; properties?: unknown };
   } catch {
     failures.push(`${label} valid JSON`);
     return undefined;

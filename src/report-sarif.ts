@@ -77,11 +77,17 @@ export function renderSarif(report: PatchReport): string {
   )}\n`;
 }
 
-function sarifLevel(severity: Severity): "error" | "warning" | "note" | "none" {
-  if (severity === "critical" || severity === "high") return "error";
-  if (severity === "medium") return "warning";
-  if (severity === "low" || severity === "info") return "note";
-  return "none";
+function sarifLevel(severity: Severity): "error" | "warning" | "note" {
+  switch (severity) {
+    case "critical":
+    case "high":
+      return "error";
+    case "medium":
+      return "warning";
+    case "low":
+    case "info":
+      return "note";
+  }
 }
 
 function slug(value: string): string {

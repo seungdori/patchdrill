@@ -22,8 +22,14 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.eslint.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "check": "npm run build && npm test",
+    "test:fast": "vitest run --exclude tests/dependency.test.ts --exclude tests/fixtures.test.ts --exclude tests/scan.test.ts",
+    "test:integration": "vitest run tests/dependency.test.ts tests/fixtures.test.ts tests/scan.test.ts",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run build && npm run typecheck && npm run lint && npm test",
     "prepare": "npm run build",
     "prepack": "npm run check"
   },
@@ -58,9 +64,14 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "4.1.8",
     "ajv": "^8.20.0",
+    "eslint": "10.4.1",
+    "globals": "17.6.0",
     "typescript": "^6.0.3",
+    "typescript-eslint": "8.60.1",
     "vitest": "^4.1.8"
   },
   "dependencies": {

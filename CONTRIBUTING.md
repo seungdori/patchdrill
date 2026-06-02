@@ -9,11 +9,30 @@ npm install
 npm run check
 ```
 
+`npm run check` is the full confidence gate. It runs, in order, `build`
+(emitting and type-checking `src/`), `typecheck` (type-checking `src/` **and**
+`tests/` with no emit via `tsconfig.eslint.json`), `lint` (ESLint with
+type-aware rules), and the test suite, which intentionally includes git-backed
+integration fixtures. For a faster local edit loop, use `npm run test:fast`; use
+`npm run test:integration` when changing scan orchestration, dependency diffing,
+stack fixtures, or git-backed behavior.
+
+The linter (`eslint.config.js`) enforces type-aware correctness rules such as
+`no-floating-promises` and `no-unnecessary-condition`. Run `npm run lint:fix` to
+auto-apply safe fixes. `.editorconfig` and `.gitattributes` keep formatting and
+line endings consistent, which protects the byte-identical fixtures.
+
 ## Useful Commands
 
 ```bash
 npm run build
+npm run typecheck
+npm run lint
+npm run lint:fix
+npm run test:fast
 npm test
+npm run test:integration
+npm run test:coverage
 node dist/cli.js scan
 ```
 

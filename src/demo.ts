@@ -1,4 +1,5 @@
 import type { PatchReport } from "./types.js";
+import { withVerification } from "./verification.js";
 
 export const demoScenarioNames = ["review-ready", "risky-agent-pr"] as const;
 
@@ -13,7 +14,7 @@ export function createDemoReport(scenario: DemoScenario = "review-ready"): Patch
 }
 
 function createReviewReadyReport(): PatchReport {
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: "2026-06-01T00:00:00.000Z",
     root: "/demo/checkout",
@@ -139,7 +140,7 @@ function createReviewReadyReport(): PatchReport {
         tags: ["security", "auth"]
       },
       {
-        ruleId: "file.migration-review",
+        ruleId: "file.high-impact-area",
         severity: "high",
         title: "Data migration review required",
         detail: "A database migration can alter production session state.",
@@ -148,7 +149,7 @@ function createReviewReadyReport(): PatchReport {
         tags: ["data", "migration"]
       },
       {
-        ruleId: "workflow.oidc-environment",
+        ruleId: "workflow.environment-oidc-token",
         severity: "medium",
         title: "OIDC deployment job should use a protected environment",
         detail: "A deployment workflow can mint cloud credentials without an explicit GitHub environment gate.",
@@ -158,7 +159,7 @@ function createReviewReadyReport(): PatchReport {
         tags: ["ci", "oidc", "supply-chain"]
       },
       {
-        ruleId: "dependency.lockfile-update",
+        ruleId: "file.lockfile",
         severity: "low",
         title: "Dependency lockfile changed",
         detail: "@acme/session-store changed from 1.8.2 to 1.9.0.",
@@ -231,11 +232,11 @@ function createReviewReadyReport(): PatchReport {
         stderr: ""
       }
     ]
-  };
+  });
 }
 
 function createRiskyAgentPrReport(): PatchReport {
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: "2026-06-01T00:00:00.000Z",
     root: "/demo/checkout",
@@ -387,7 +388,7 @@ function createRiskyAgentPrReport(): PatchReport {
         tags: ["ci", "supply-chain", "github-actions"]
       },
       {
-        ruleId: "secret.added",
+        ruleId: "secret.generic-assignment",
         severity: "critical",
         title: "Secret-looking value added",
         detail: "A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body.",
@@ -397,7 +398,7 @@ function createRiskyAgentPrReport(): PatchReport {
         tags: ["secret", "credentials"]
       },
       {
-        ruleId: "agent.instructions-changed",
+        ruleId: "agent.control-file",
         severity: "high",
         title: "Agent instructions changed",
         detail: "Repository-level coding-agent instructions changed in the same patch as release and billing code.",
@@ -433,7 +434,7 @@ function createRiskyAgentPrReport(): PatchReport {
         tags: ["dependencies", "supply-chain", "package-script"]
       },
       {
-        ruleId: "test.missing-source-match",
+        ruleId: "test.source-without-test-change",
         severity: "medium",
         title: "Source changed without matching test changes",
         detail: "Billing source files changed, but no matching checkout or webhook test files changed.",
@@ -442,7 +443,7 @@ function createRiskyAgentPrReport(): PatchReport {
         tags: ["tests"]
       },
       {
-        ruleId: "dependency.lockfile-update",
+        ruleId: "file.lockfile",
         severity: "low",
         title: "Dependency lockfile changed",
         detail: "@acme/payments changed from 4.2.0 to 4.3.0.",
@@ -527,5 +528,5 @@ function createRiskyAgentPrReport(): PatchReport {
         stderr: ""
       }
     ]
-  };
+  });
 }

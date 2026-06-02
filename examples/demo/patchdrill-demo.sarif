@@ -10,23 +10,6 @@
           "rules": [
             {
               "id": "file.high-impact-area",
-              "name": "High-impact product area changed",
-              "shortDescription": {
-                "text": "High-impact product area changed"
-              },
-              "help": {
-                "text": "Require owner review and targeted session regression evidence."
-              },
-              "properties": {
-                "severity": "high",
-                "tags": [
-                  "security",
-                  "auth"
-                ]
-              }
-            },
-            {
-              "id": "file.migration-review",
               "name": "Data migration review required",
               "shortDescription": {
                 "text": "Data migration review required"
@@ -43,7 +26,7 @@
               }
             },
             {
-              "id": "workflow.oidc-environment",
+              "id": "workflow.environment-oidc-token",
               "name": "OIDC deployment job should use a protected environment",
               "shortDescription": {
                 "text": "OIDC deployment job should use a protected environment"
@@ -61,7 +44,7 @@
               }
             },
             {
-              "id": "dependency.lockfile-update",
+              "id": "file.lockfile",
               "name": "Dependency lockfile changed",
               "shortDescription": {
                 "text": "Dependency lockfile changed"
@@ -120,7 +103,7 @@
           }
         },
         {
-          "ruleId": "file.migration-review",
+          "ruleId": "file.high-impact-area",
           "level": "error",
           "message": {
             "text": "Data migration review required: A database migration can alter production session state. Remediation: Attach dry-run, rollback, and data-owner approval notes."
@@ -145,11 +128,11 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "517cc738ebb6373a8d9a18433a9847d407081b6aadffca765e1a48c463bc3f72"
+            "patchdrillFinding": "09f68fa17d892e6441ec1ee58e0db1531675121edf5db634e1ff31a238635e28"
           }
         },
         {
-          "ruleId": "workflow.oidc-environment",
+          "ruleId": "workflow.environment-oidc-token",
           "level": "warning",
           "message": {
             "text": "OIDC deployment job should use a protected environment: A deployment workflow can mint cloud credentials without an explicit GitHub environment gate. Remediation: Attach a protected environment or document why this job cannot deploy."
@@ -175,11 +158,11 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "692be4ec45a108b67c0b7e1d216632b78d8cb583fbe9db406e1025897a0f5c49"
+            "patchdrillFinding": "d1195d6fb484dff935b2007c8f47ba3b37baa26a9952e27293505ab1923f34b2"
           }
         },
         {
-          "ruleId": "dependency.lockfile-update",
+          "ruleId": "file.lockfile",
           "level": "note",
           "message": {
             "text": "Dependency lockfile changed: @acme/session-store changed from 1.8.2 to 1.9.0. Remediation: Review release notes and verify transitive dependency impact."
@@ -203,7 +186,7 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "29cf41858f87c2c56206c74272589b0baef70cfd09811e798c2e64577d83ded9"
+            "patchdrillFinding": "5cdefc8ce238a88cde78ab92957d8d0b3f84483f99a431e5dd9af6c80012c92d"
           }
         }
       ]

@@ -70,9 +70,9 @@ Schema version: 1
 | Severity | Rule | Finding | Location | Remediation |
 | --- | --- | --- | --- | --- |
 | high | file.high-impact-area | High-impact product area changed: Authentication/session code changed and needs strong proof before merge. | apps/api/src/auth/session.ts | Require owner review and targeted session regression evidence. |
-| high | file.migration-review | Data migration review required: A database migration can alter production session state. | packages/db/migrations/20260601090000_add_session_rotation.sql | Attach dry-run, rollback, and data-owner approval notes. |
-| medium | workflow.oidc-environment | OIDC deployment job should use a protected environment: A deployment workflow can mint cloud credentials without an explicit GitHub environment gate. | .github/workflows/deploy.yml:34 | Attach a protected environment or document why this job cannot deploy. |
-| low | dependency.lockfile-update | Dependency lockfile changed: @acme/session-store changed from 1.8.2 to 1.9.0. | package-lock.json | Review release notes and verify transitive dependency impact. |
+| high | file.high-impact-area | Data migration review required: A database migration can alter production session state. | packages/db/migrations/20260601090000_add_session_rotation.sql | Attach dry-run, rollback, and data-owner approval notes. |
+| medium | workflow.environment-oidc-token | OIDC deployment job should use a protected environment: A deployment workflow can mint cloud credentials without an explicit GitHub environment gate. | .github/workflows/deploy.yml:34 | Attach a protected environment or document why this job cannot deploy. |
+| low | file.lockfile | Dependency lockfile changed: @acme/session-store changed from 1.8.2 to 1.9.0. | package-lock.json | Review release notes and verify transitive dependency impact. |
 
 ## Verification Plan
 
@@ -85,7 +85,7 @@ Schema version: 1
 
 ## Command Results
 
-### pnpm exec turbo run typecheck --filter=@acme/api
+### `pnpm exec turbo run typecheck --filter=@acme/api`
 
 - Exit code: 0
 - Duration: 8421ms
@@ -95,7 +95,7 @@ Schema version: 1
 @acme/api:typecheck: ok
 ```
 
-### pnpm exec turbo run test --filter=@acme/api
+### `pnpm exec turbo run test --filter=@acme/api`
 
 - Exit code: 0
 - Duration: 12544ms
@@ -104,7 +104,7 @@ Schema version: 1
 @acme/api:test: 42 tests passed
 ```
 
-### pnpm run test:contracts
+### `pnpm run test:contracts`
 
 - Exit code: 0
 - Duration: 15038ms

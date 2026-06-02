@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
+import { reportVerification, withVerification } from "../src/verification.js";
 
 const tempDirs: string[] = [];
 
@@ -29,8 +30,8 @@ describe("evidence manifest", () => {
       schemaVersion: string;
       tool: { version?: string };
       report: { sha256: string; bytes: number; commandResultCount: number };
-      artifacts: Array<{ kind: string; path: string; sha256: string; bytes: number }>;
-      commands: Array<{ stdout: { sha256: string; bytes: number }; stderr: { sha256: string; bytes: number } }>;
+      artifacts: { kind: string; path: string; sha256: string; bytes: number }[];
+      commands: { stdout: { sha256: string; bytes: number }; stderr: { sha256: string; bytes: number } }[];
     };
 
     expect(manifest.schemaVersion).toBe("1");
@@ -164,7 +165,7 @@ describe("evidence manifest", () => {
     const manifest = JSON.parse(
       renderEvidenceManifest(report, [{ kind: "json", path: "patchdrill-report.json", contents: reportJson }], root, reportJson)
     ) as {
-      commands: Array<{ stdout: { sha256: string; bytes: number }; exitCode: number }>;
+      commands: { stdout: { sha256: string; bytes: number }; exitCode: number }[];
     };
     manifest.commands[0]!.stdout.bytes = 999;
     manifest.commands[0]!.exitCode = 1;
@@ -179,6 +180,48 @@ describe("evidence manifest", () => {
     expect(result.failures).toContain("Manifest command exit code does not match the JSON report for test.");
     expect(result.failures).toContain("Manifest stdout digest does not match the JSON report for test.");
   });
+
+  it("fails verification when JSON report verification status drifts from command evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
+    tempDirs.push(root);
+    const report = exampleReport();
+    report.verification = reportVerification(report);
+    report.verification.summary.passed = 0;
+    const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+    writeFileSync(join(root, "patchdrill-report.json"), reportJson, "utf8");
+    writeFileSync(
+      join(root, "patchdrill-evidence.json"),
+      renderEvidenceManifest(report, [{ kind: "json", path: "patchdrill-report.json", contents: reportJson }], root, reportJson),
+      "utf8"
+    );
+
+    const result = verifyEvidenceManifest("patchdrill-evidence.json", root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checkedReportArtifact).toBe(true);
+    expect(result.checkedReportContract).toBe(false);
+    expect(result.failures).toContain("JSON report verification does not match commandPlan and commandResults.");
+  });
+
+  it("fails verification when the JSON report omits structured verification status", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
+    tempDirs.push(root);
+    const report: Partial<PatchReport> = { ...exampleReport() };
+    delete report.verification;
+    const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+    writeFileSync(join(root, "patchdrill-report.json"), reportJson, "utf8");
+    writeFileSync(
+      join(root, "patchdrill-evidence.json"),
+      renderEvidenceManifest(exampleReport(), [{ kind: "json", path: "patchdrill-report.json", contents: reportJson }], root, reportJson),
+      "utf8"
+    );
+
+    const result = verifyEvidenceManifest("patchdrill-evidence.json", root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checkedReportContract).toBe(false);
+    expect(result.failures).toContain("JSON report verification is missing.");
+  });
 });
 
 function sha256(value: string): string {
@@ -186,7 +229,7 @@ function sha256(value: string): string {
 }
 
 function exampleReport(): PatchReport {
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: "2026-06-01T00:00:00.000Z",
     root: "/repo",
@@ -210,5 +253,5 @@ function exampleReport(): PatchReport {
     findings: [],
     commandPlan: [{ id: "test", label: "Tests", command: "npm test", reason: "Source changed.", ecosystem: "node", required: true }],
     commandResults: [{ id: "test", command: "npm test", exitCode: 0, durationMs: 1200, stdout: "ok\n", stderr: "" }]
-  };
+  });
 }

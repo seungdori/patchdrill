@@ -1,5 +1,6 @@
 import type { PatchReport } from "./types.js";
-import { formatVerificationStatus, verificationExecutions, verificationSummary, type VerificationExecution, type VerificationStatus } from "./verification.js";
+import type { VerificationStatus } from "./types.js";
+import { formatVerificationStatus, verificationExecutions, verificationSummary, type VerificationExecution } from "./verification.js";
 
 export interface HtmlOptions {
   history?: PatchReport[];
@@ -638,7 +639,7 @@ function htmlProjectSignals(report: PatchReport): string {
 }
 
 function htmlReviewContext(report: PatchReport): string {
-  const details: Array<[string, string]> = [];
+  const details: [string, string][] = [];
   if (report.policy) {
     details.push(["Policy", `${report.policy.path} (${report.policy.ruleCount} rules)`]);
     details.push(["Policy commands", `${report.policy.requiredCommandCount} required, ${report.policy.optionalCommandCount} optional`]);

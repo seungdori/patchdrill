@@ -37,10 +37,12 @@ function diffPackageScripts(file: string, before: PackageScripts, after: Package
 function parsePackageScripts(value: string | undefined): PackageScripts | undefined {
   if (!value) return undefined;
   try {
-    const parsed = JSON.parse(value) as { scripts?: unknown };
-    if (!parsed || typeof parsed !== "object" || !parsed.scripts || typeof parsed.scripts !== "object") return undefined;
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object") return undefined;
+    const scriptsValue = (parsed as { scripts?: unknown }).scripts;
+    if (!scriptsValue || typeof scriptsValue !== "object") return undefined;
     const scripts: PackageScripts = {};
-    for (const [scriptName, command] of Object.entries(parsed.scripts)) {
+    for (const [scriptName, command] of Object.entries(scriptsValue)) {
       if (typeof command === "string") scripts[scriptName] = command;
     }
     return scripts;

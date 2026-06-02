@@ -18,7 +18,8 @@
     "packageScriptChanges",
     "findings",
     "commandPlan",
-    "commandResults"
+    "commandResults",
+    "verification"
   ],
   "properties": {
     "schemaVersion": {
@@ -101,6 +102,9 @@
       "items": {
         "$ref": "#/$defs/commandResult"
       }
+    },
+    "verification": {
+      "$ref": "#/$defs/patchVerification"
     }
   },
   "$defs": {
@@ -123,6 +127,10 @@
     "commandEcosystem": {
       "type": "string",
       "enum": ["node", "python", "rust", "go", "java", "android", "ruby", "php", "dotnet", "swift", "xcode", "terraform", "docker", "kubernetes", "bazel", "buck", "pants", "github-actions", "unknown", "general"]
+    },
+    "verificationStatus": {
+      "type": "string",
+      "enum": ["passed", "failed", "timed-out", "not-run", "skipped-optional"]
     },
     "patchSummary": {
       "type": "object",
@@ -466,6 +474,112 @@
         "unchangedFindingCount": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "patchVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "commands"],
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/verificationSummary"
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verificationCommand"
+          }
+        }
+      }
+    },
+    "verificationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plannedRequired", "plannedOptional", "run", "passed", "failed", "timedOut", "missingRequired", "skippedOptional", "unplannedResults"],
+      "properties": {
+        "plannedRequired": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "plannedOptional": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "run": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timedOut": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missingRequired": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skippedOptional": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unplannedResults": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "verificationCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "command", "reason", "ecosystem", "required", "planned", "status"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "ecosystem": {
+          "$ref": "#/$defs/commandEcosystem"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "planned": {
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/verificationStatus"
+        },
+        "packageName": {
+          "type": "string"
+        },
+        "packagePath": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timedOut": {
+          "type": "boolean"
         }
       }
     },

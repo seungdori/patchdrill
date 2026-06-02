@@ -163,7 +163,7 @@ export function renderMarkdown(report: PatchReport): string {
     for (const finding of report.findings) {
       const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "";
       lines.push(
-        `| ${finding.severity} | ${escapePipe(finding.ruleId ?? "")} | ${escapePipe(finding.title)}: ${escapePipe(finding.detail)} | ${escapePipe(location)} | ${escapePipe(
+        `| ${finding.severity} | ${escapeText(finding.ruleId ?? "")} | ${escapeText(finding.title)}: ${escapeText(finding.detail)} | ${escapeText(location)} | ${escapeText(
           finding.remediation ?? ""
         )} |`
       );
@@ -180,9 +180,9 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("| --- | --- | --- | --- | --- |");
     for (const command of executions) {
       lines.push(
-        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? command.packagePath ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(
+        `| ${command.required ? "yes" : "no"} | ${escapeText(command.packageName ?? command.packagePath ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(
           formatVerificationStatus(command)
-        )} | ${escapePipe(command.reason)} |`
+        )} | ${escapeText(command.reason)} |`
       );
     }
   }
@@ -192,22 +192,18 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("## Command Results");
     lines.push("");
     for (const result of report.commandResults) {
-      lines.push(`### ${result.command}`);
+      lines.push(`### ${inlineCode(result.command)}`);
       lines.push("");
       lines.push(`- Exit code: ${result.exitCode}`);
       lines.push(`- Duration: ${result.durationMs}ms`);
       if (result.timedOut) lines.push("- Timed out: yes");
       if (result.stdout.trim()) {
         lines.push("");
-        lines.push("```text");
-        lines.push(result.stdout.trim());
-        lines.push("```");
+        lines.push(...fencedCodeBlock(result.stdout.trim()));
       }
       if (result.stderr.trim()) {
         lines.push("");
-        lines.push("```text");
-        lines.push(result.stderr.trim());
-        lines.push("```");
+        lines.push(...fencedCodeBlock(result.stderr.trim()));
       }
       lines.push("");
     }
@@ -267,7 +263,7 @@ export function renderSummaryMarkdown(report: PatchReport): string {
     lines.push("| Severity | Finding | Location |");
     lines.push("| --- | --- | --- |");
     for (const finding of report.findings.slice(0, 5)) {
-      lines.push(`| ${finding.severity} | ${escapePipe(finding.title)} | ${escapePipe(findingLocation(finding))} |`);
+      lines.push(`| ${finding.severity} | ${escapeText(finding.title)} | ${escapeText(findingLocation(finding))} |`);
     }
     if (report.findings.length > 5) {
       lines.push("");
@@ -306,12 +302,47 @@ function escapePipe(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
+// Untrusted free text rendered as plain Markdown can carry inline HTML that
+// renderers like GitHub permit (e.g. <img src=x>, <a href> spoofs). Neutralizing
+// "<" breaks every tag while keeping the text legible.
+function escapeText(value: string): string {
+  return escapePipe(value).replaceAll("<", "&lt;");
+}
+
 function escapeBackticks(value: string): string {
   return value.replaceAll("`", "\\`");
 }
 
 function markdownTableCode(value: string): string {
   return `\`${escapePipe(escapeBackticks(value))}\``;
+}
+
+function longestBacktickRun(value: string): number {
+  let longest = 0;
+  let current = 0;
+  for (const char of value) {
+    if (char === "`") {
+      current += 1;
+      if (current > longest) longest = current;
+    } else {
+      current = 0;
+    }
+  }
+  return longest;
+}
+
+// Untrusted command output may itself contain ``` fences; size the fence to one
+// backtick longer than the longest run so the content cannot break out.
+function fencedCodeBlock(content: string): string[] {
+  const fence = "`".repeat(Math.max(3, longestBacktickRun(content) + 1));
+  return [`${fence}text`, content, fence];
+}
+
+function inlineCode(value: string): string {
+  const ticks = "`".repeat(longestBacktickRun(value) + 1);
+  const single = value.replaceAll("\n", " ");
+  const padded = single.startsWith("`") || single.endsWith("`") ? ` ${single} ` : single;
+  return `${ticks}${padded}${ticks}`;
 }
 
 function formatDelta(value: number): string {

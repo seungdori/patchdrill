@@ -81,13 +81,13 @@ Schema version: 1
 | Severity | Rule | Finding | Location | Remediation |
 | --- | --- | --- | --- | --- |
 | critical | workflow.pull-request-target-head-checkout | Privileged workflow checks out pull request code: A pull_request_target workflow can run untrusted pull request code while write tokens or repository secrets are available. | .github/workflows/release.yml:19 | Use pull_request for untrusted code, remove PR-head checkout, or split the privileged publishing step behind an environment gate. |
-| critical | secret.added | Secret-looking value added: A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body. | .env.example:8 | Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as <redacted>. |
-| high | agent.instructions-changed | Agent instructions changed: Repository-level coding-agent instructions changed in the same patch as release and billing code. | AGENTS.md | Review instruction changes separately and require maintainer approval before agent-visible rules change. |
+| critical | secret.generic-assignment | Secret-looking value added: A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body. | .env.example:8 | Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as &lt;redacted>. |
+| high | agent.control-file | Agent instructions changed: Repository-level coding-agent instructions changed in the same patch as release and billing code. | AGENTS.md | Review instruction changes separately and require maintainer approval before agent-visible rules change. |
 | high | file.high-impact-area | High-impact product area changed: Billing checkout and webhook code changed, which can affect payment capture, refunds, and entitlement state. | apps/web/src/billing/checkout.ts | Attach targeted billing regression tests and owner approval. |
 | high | package-script.disabled-verification | Verification script disabled: test: package.json verification script "test" now appears to exit successfully without running meaningful checks. | package.json | Restore the real verification command or explain why this repository no longer has that check. |
 | high | package-script.lifecycle | Package lifecycle script changed: postinstall: package.json lifecycle script "postinstall" was added, creating code that can run during install, prepare, pack, or publish flows. | package.json | Review the script as executable supply-chain surface. Prefer explicit CI steps or documented commands over implicit install-time behavior. |
-| medium | test.missing-source-match | Source changed without matching test changes: Billing source files changed, but no matching checkout or webhook test files changed. | apps/web/src/billing/checkout.ts | Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates. |
-| low | dependency.lockfile-update | Dependency lockfile changed: @acme/payments changed from 4.2.0 to 4.3.0. | package-lock.json | Review release notes and verify transitive dependency impact. |
+| medium | test.source-without-test-change | Source changed without matching test changes: Billing source files changed, but no matching checkout or webhook test files changed. | apps/web/src/billing/checkout.ts | Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates. |
+| low | file.lockfile | Dependency lockfile changed: @acme/payments changed from 4.2.0 to 4.3.0. | package-lock.json | Review release notes and verify transitive dependency impact. |
 
 ## Verification Plan
 
@@ -101,7 +101,7 @@ Schema version: 1
 
 ## Command Results
 
-### npm run lint --workspace @acme/web
+### `npm run lint --workspace @acme/web`
 
 - Exit code: 0
 - Duration: 6240ms
@@ -110,7 +110,7 @@ Schema version: 1
 @acme/web lint: ok
 ```
 
-### npm test --workspace @acme/web
+### `npm test --workspace @acme/web`
 
 - Exit code: 1
 - Duration: 11982ms
@@ -124,7 +124,7 @@ Webhook signature regression: expected 401, received 200
 FAIL apps/web/src/billing/webhook.test.ts > rejects unsigned webhook payloads
 ```
 
-### npm run build --workspace @acme/web
+### `npm run build --workspace @acme/web`
 
 - Exit code: 0
 - Duration: 18321ms

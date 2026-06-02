@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { renderSarif } from "../src/report.js";
 import { renderSarif as renderSarifDirect } from "../src/report-sarif.js";
 import type { PatchReport } from "../src/types.js";
+import { withVerification } from "../src/verification.js";
 
 describe("renderSarif", () => {
   it("renders SARIF results for file findings", () => {
-    const report: PatchReport = {
+    const report: PatchReport = withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -38,17 +39,17 @@ describe("renderSarif", () => {
       ],
       commandPlan: [],
       commandResults: []
-    };
+    });
 
     const sarif = JSON.parse(renderSarif(report)) as {
-      runs: Array<{
-        results: Array<{
+      runs: {
+        results: {
           ruleId: string;
           level: string;
           partialFingerprints: Record<string, string>;
-          locations: Array<{ physicalLocation: { region: { startLine: number } } }>;
-        }>;
-      }>;
+          locations: { physicalLocation: { region: { startLine: number } } }[];
+        }[];
+      }[];
     };
 
     expect(sarif.runs[0]?.results[0]?.ruleId).toBe("agent.prompt-injection");
@@ -58,7 +59,7 @@ describe("renderSarif", () => {
   });
 
   it("keeps the report SARIF re-export equivalent to the SARIF renderer", () => {
-    const report: PatchReport = {
+    const report: PatchReport = withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -91,7 +92,7 @@ describe("renderSarif", () => {
       ],
       commandPlan: [],
       commandResults: []
-    };
+    });
 
     expect(renderSarif(report)).toBe(renderSarifDirect(report));
   });

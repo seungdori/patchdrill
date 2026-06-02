@@ -13,6 +13,7 @@ import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "
 import { runCommandPlan } from "./runner.js";
 import { assessRisk } from "./risk.js";
 import type { PatchReport, ScanOptions } from "./types.js";
+import { withVerification } from "./verification.js";
 
 export async function scan(options: ScanOptions): Promise<PatchReport> {
   const root = gitRoot(options.cwd);
@@ -62,9 +63,9 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
       })
     : undefined;
 
-  const report: PatchReport = {
+  const report: PatchReport = withVerification({
     schemaVersion: "1",
-    generatedAt: new Date().toISOString(),
+    generatedAt: resolveGeneratedAt(options),
     root,
     ...(options.base ? { base: options.base } : {}),
     ...(options.head ? { head: options.head } : {}),
@@ -109,7 +110,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
     findings: assessment.findings,
     commandPlan,
     commandResults
-  };
+  });
 
   const reportJson = `${JSON.stringify(report, null, 2)}\n`;
   const artifacts: RenderedEvidenceArtifact[] = [];
@@ -128,7 +129,7 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   return report;
 }
 
-function readWorkflowFiles(gitOptions: { cwd: string; base?: string; head?: string }, changedFiles: PatchReport["changedFiles"]): Array<{ file: string; content: string }> {
+function readWorkflowFiles(gitOptions: { cwd: string; base?: string; head?: string }, changedFiles: PatchReport["changedFiles"]): { file: string; content: string }[] {
   const workflowFiles = new Map<string, string>();
   const queue: string[] = [];
   for (const file of changedFiles) {
@@ -136,8 +137,7 @@ function readWorkflowFiles(gitOptions: { cwd: string; base?: string; head?: stri
     queue.push(file.path);
   }
 
-  for (let index = 0; index < queue.length; index += 1) {
-    const path = queue[index];
+  for (const path of queue) {
     if (!path || workflowFiles.has(path)) continue;
     const after = readFilePair(gitOptions, path).after;
     if (after === undefined) continue;
@@ -175,4 +175,16 @@ function writeOutput(path: string, contents: string, root: string): void {
   const resolved = resolve(root, path);
   mkdirSync(dirname(resolved), { recursive: true });
   writeFileSync(resolved, contents, "utf8");
+}
+
+// The report timestamp is the one intentionally non-deterministic field. Honor an
+// explicit override or SOURCE_DATE_EPOCH so identical patches can produce
+// byte-identical reports for caching, snapshotting, and reproducible audits.
+function resolveGeneratedAt(options: ScanOptions): string {
+  if (options.generatedAt) return options.generatedAt;
+  const sourceDateEpoch = process.env.SOURCE_DATE_EPOCH;
+  if (sourceDateEpoch && /^\d+$/.test(sourceDateEpoch)) {
+    return new Date(Number.parseInt(sourceDateEpoch, 10) * 1000).toISOString();
+  }
+  return new Date().toISOString();
 }

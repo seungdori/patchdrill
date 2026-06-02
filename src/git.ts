@@ -60,6 +60,7 @@ export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
     mergeDiff(entries, root, ["diff", "--name-status", "--find-renames", "--no-ext-diff", range], [
       "diff",
       "--numstat",
+      "--find-renames",
       "--no-ext-diff",
       range
     ], true);
@@ -67,12 +68,14 @@ export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
     mergeDiff(entries, root, ["diff", "--name-status", "--find-renames", "--no-ext-diff"], [
       "diff",
       "--numstat",
+      "--find-renames",
       "--no-ext-diff"
     ]);
     mergeDiff(entries, root, ["diff", "--cached", "--name-status", "--find-renames", "--no-ext-diff"], [
       "diff",
       "--cached",
       "--numstat",
+      "--find-renames",
       "--no-ext-diff"
     ]);
     mergeUntracked(entries, root);
@@ -130,12 +133,12 @@ function mergeDiff(
     entries.set(entry.path, {
       path: entry.path,
       ...(entry.previousPath ?? current?.previousPath
-        ? { previousPath: (entry.previousPath ?? current?.previousPath) as string }
+        ? { previousPath: (entry.previousPath ?? current?.previousPath)! }
         : {}),
       status: entry.status,
       additions: (current?.additions ?? 0) + (stat?.additions ?? 0),
       deletions: (current?.deletions ?? 0) + (stat?.deletions ?? 0),
-      binary: Boolean(current?.binary || stat?.binary)
+      binary: Boolean(current?.binary) || Boolean(stat?.binary)
     });
   }
 }
@@ -257,7 +260,7 @@ function stripGitPrefix(path: string): string {
   return path;
 }
 
-function parseNameStatus(output: string): Array<Pick<RawDiffEntry, "path" | "previousPath" | "status">> {
+function parseNameStatus(output: string): Pick<RawDiffEntry, "path" | "previousPath" | "status">[] {
   if (!output.trim()) return [];
   return output.split("\n").flatMap((line) => {
     const parts = line.split("\t");
@@ -286,16 +289,42 @@ function parseNumstat(output: string): Map<string, Pick<RawDiffEntry, "additions
     const parts = line.split("\t");
     const rawAdditions = parts[0] ?? "0";
     const rawDeletions = parts[1] ?? "0";
-    const path = parts.at(-1);
-    if (!path) continue;
+    const rawPath = parts.at(-1);
+    if (!rawPath) continue;
+    const path = resolveNumstatPath(rawPath);
     const binary = rawAdditions === "-" || rawDeletions === "-";
-    stats.set(path, {
+    const stat = {
       additions: binary ? 0 : Number.parseInt(rawAdditions, 10) || 0,
       deletions: binary ? 0 : Number.parseInt(rawDeletions, 10) || 0,
       binary
-    });
+    };
+    // Key on both the raw and rename-resolved path so a genuine rename ("old =>
+    // new") matches the post-rename name-status entry, while a real file whose
+    // name literally contains " => " or "{ => }" still resolves to its own stats.
+    stats.set(rawPath, stat);
+    if (path && path !== rawPath) stats.set(path, stat);
   }
   return stats;
+}
+
+// `git diff --numstat --find-renames` emits the rename path as `old => new` or
+// the brace form `pre/{old => new}/post`; resolve it to the post-rename path so
+// the stat keys match the post-rename paths from --name-status.
+function resolveNumstatPath(raw: string): string {
+  let path = raw;
+  if (path.startsWith('"') && path.endsWith('"') && path.length >= 2) {
+    path = path.slice(1, -1);
+  }
+  const brace = /\{(.*?) => (.*?)\}/;
+  const braceMatch = brace.exec(path);
+  if (braceMatch) {
+    return path.replace(brace, braceMatch[2] ?? "").replaceAll("//", "/");
+  }
+  const arrowIndex = path.indexOf(" => ");
+  if (arrowIndex >= 0) {
+    return path.slice(arrowIndex + 4);
+  }
+  return path;
 }
 
 function statusFromCode(code: string): FileStatus {

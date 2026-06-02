@@ -41,7 +41,7 @@ npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json
 ## Why Star It
 
 - Makes AI-era PRs reviewable without asking another model to be the source of truth.
-- Builds a Proof Pack for each patch: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
+- Builds a Proof Pack for each patch: Markdown for humans, JSON for bots with required structured verification status, SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Works locally first and in CI later. `scan` never mutates the repository, and commands only run when `--run` is set.
 - Flags the review surfaces that routinely hide regressions: auth, billing, migrations, secrets, CI workflow supply chain, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but not run.
 - Infers reviewable commands from the patch instead of only running root-level defaults.
@@ -202,6 +202,8 @@ Create a static dashboard from a saved JSON report:
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
+`patchdrill dashboard` validates each saved JSON report contract before rendering, so stale or incomplete reports do not become polished dashboards.
+
 Verify an evidence manifest against its generated artifacts:
 
 ```bash
@@ -232,6 +234,8 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
   --sarif patchdrill.sarif \
   --html patchdrill-dashboard.html
 ```
+
+`patchdrill evidence` validates the saved JSON report contract first, including the required structured verification status, before writing the manifest.
 
 See committed demo outputs in [examples/demo](examples/demo), including `patchdrill-demo-summary.md` as the PR comment preview.
 
@@ -317,7 +321,7 @@ Options:
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
-| `--evidence <path>` | Write a Proof Pack evidence manifest during `scan`/`evidence`, or select one for `verify`. |
+| `--evidence <path>` | Write a Proof Pack evidence manifest during `scan`/`evidence`, or select one for `verify`. `scan --evidence` requires `--json` so the manifest can verify the report contract. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
@@ -328,7 +332,7 @@ Options:
 | `--html <path>` | Write a self-contained static HTML dashboard. |
 | `--fail-on <level>` | Fail when findings meet severity: `info`, `low`, `medium`, `high`, `critical`. |
 | `--max-risk <score>` | Fail when risk score is above a 0-100 threshold, default `69`. |
-| `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. |
+| `--max-risk-delta <score>` | Fail when baseline risk increase is above a 0-100 threshold. Requires `--baseline`. |
 | `--max-output-chars <n>` | Keep the last `n` characters from each command output stream, default `20000`. |
 | `--command-timeout-ms <n>` | Stop each verification command after `n` milliseconds. |
 | `--quiet` | Only use exit code. |
@@ -530,7 +534,7 @@ PatchDrill also summarizes `package.json` script additions, removals, and update
 
 ## Design Principles
 
-- Deterministic first. No model call is required to get a useful answer.
+- Deterministic first. No model call is required to get a useful answer. Findings, risk score, and command plan are reproducible for the same diff; the report's `generatedAt` timestamp is the only intentionally variable field, and it honors `SOURCE_DATE_EPOCH` so reports can be made byte-identical for caching, snapshotting, and reproducible audits.
 - Proof Packs over vibes. A reviewer should see the exact commands, findings, artifacts, and digests.
 - Local by default. Source code stays in your checkout.
 - Conservative scoring. PatchDrill would rather ask for proof than silently bless a risky patch.

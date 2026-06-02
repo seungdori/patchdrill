@@ -11,7 +11,16 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 60_000,
     coverage: {
-      reporter: ["text", "lcov"]
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      include: ["src/**/*.ts"],
+      // Floor a bit below current coverage so it ratchets without flaking.
+      thresholds: {
+        statements: 85,
+        branches: 73,
+        functions: 90,
+        lines: 90
+      }
     }
   }
 });

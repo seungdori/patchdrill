@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadCodeOwners } from "./codeowners.js";
+import { nodeTaskAliases } from "./planner.js";
 import { loadPolicy } from "./policy.js";
 import { discoverProjectSignals } from "./project.js";
 import type { ProjectSignal } from "./types.js";
@@ -169,7 +170,7 @@ function nodeScriptChecks(signals: ProjectSignal[]): DoctorCheck[] {
       });
       continue;
     }
-    const testScript = firstMatchingScript(scriptNames, [/^test$/, /^test:/, /unit/]);
+    const testScript = firstMatchingScript(scriptNames, nodeTaskAliases("test"));
     checks.push(
       testScript
         ? {
@@ -185,7 +186,11 @@ function nodeScriptChecks(signals: ProjectSignal[]): DoctorCheck[] {
           }
     );
 
-    const staticScript = firstMatchingScript(scriptNames, [/typecheck/, /check:types/, /^lint$/, /^build$/]);
+    const staticScript = firstMatchingScript(scriptNames, [
+      ...nodeTaskAliases("typecheck"),
+      ...nodeTaskAliases("lint"),
+      ...nodeTaskAliases("build")
+    ]);
     checks.push(
       staticScript
         ? {
@@ -204,8 +209,10 @@ function nodeScriptChecks(signals: ProjectSignal[]): DoctorCheck[] {
   return checks;
 }
 
-function firstMatchingScript(scriptNames: string[], patterns: RegExp[]): string | undefined {
-  return scriptNames.find((script) => patterns.some((pattern) => pattern.test(script)));
+function firstMatchingScript(scriptNames: string[], aliases: string[]): string | undefined {
+  // Exact-match the planner's aliases so doctor never claims a script the planner
+  // would not actually recognize (e.g. "reunite" matching an unanchored /unit/).
+  return scriptNames.find((script) => aliases.includes(script));
 }
 
 function suggestedCommands(signals: ProjectSignal[], hasPolicy: boolean): string[] {

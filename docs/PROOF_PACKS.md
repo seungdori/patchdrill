@@ -10,7 +10,7 @@ PatchDrill does not replace reviewer judgment. It gives reviewers the same deter
 | --- | --- | --- |
 | Compact Markdown summary | Pull request reviewers | Shows status, risk, top findings, and required commands in a short comment or step summary. |
 | Full Markdown report | Human reviewers | Provides changed files, command plan, findings, dependency changes, package script changes, and command results. |
-| JSON report | Bots and dashboards | Preserves the complete report contract for policy gates and custom tooling. |
+| JSON report | Bots and dashboards | Preserves the complete report contract, including required structured verification status, for policy gates and custom tooling. |
 | SARIF report | GitHub code scanning | Turns findings into code scanning alerts with stable fingerprints. |
 | HTML dashboard | Humans and CI artifacts | Gives a self-contained visual report, including optional trend history from prior JSON reports. |
 | Evidence manifest | CI and audit trails | Records the PatchDrill version, report metadata, artifact digests, command metadata, and command-output digests so the bundle can be verified later. |

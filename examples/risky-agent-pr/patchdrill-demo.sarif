@@ -27,7 +27,7 @@
               }
             },
             {
-              "id": "secret.added",
+              "id": "secret.generic-assignment",
               "name": "Secret-looking value added",
               "shortDescription": {
                 "text": "Secret-looking value added"
@@ -44,7 +44,7 @@
               }
             },
             {
-              "id": "agent.instructions-changed",
+              "id": "agent.control-file",
               "name": "Agent instructions changed",
               "shortDescription": {
                 "text": "Agent instructions changed"
@@ -114,7 +114,7 @@
               }
             },
             {
-              "id": "test.missing-source-match",
+              "id": "test.source-without-test-change",
               "name": "Source changed without matching test changes",
               "shortDescription": {
                 "text": "Source changed without matching test changes"
@@ -130,7 +130,7 @@
               }
             },
             {
-              "id": "dependency.lockfile-update",
+              "id": "file.lockfile",
               "name": "Dependency lockfile changed",
               "shortDescription": {
                 "text": "Dependency lockfile changed"
@@ -190,7 +190,7 @@
           }
         },
         {
-          "ruleId": "secret.added",
+          "ruleId": "secret.generic-assignment",
           "level": "error",
           "message": {
             "text": "Secret-looking value added: A newly added environment example contains a value with a live-key shape. The demo redacts the actual token body. Remediation: Remove the value, rotate the credential if it was real, and use a non-secret placeholder such as <redacted>."
@@ -215,11 +215,11 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "cca0f7ad923522586fb1906e30a3a643133ae3ccb82aa28b64cdc187979afac0"
+            "patchdrillFinding": "7cce2c7a32196fafdb1cd236916f34fb87c4809d0d0f9b6711b9746cb047ddb4"
           }
         },
         {
-          "ruleId": "agent.instructions-changed",
+          "ruleId": "agent.control-file",
           "level": "error",
           "message": {
             "text": "Agent instructions changed: Repository-level coding-agent instructions changed in the same patch as release and billing code. Remediation: Review instruction changes separately and require maintainer approval before agent-visible rules change."
@@ -244,7 +244,7 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "f8c0cdee792174c19d4c7efd9b45b0c3674f92df6839e5572b9a1f06d68a653d"
+            "patchdrillFinding": "152935f9d990a29a16471df2c81a179d3c1e4c49f056bff3ccf629362d22d014"
           }
         },
         {
@@ -337,7 +337,7 @@
           }
         },
         {
-          "ruleId": "test.missing-source-match",
+          "ruleId": "test.source-without-test-change",
           "level": "warning",
           "message": {
             "text": "Source changed without matching test changes: Billing source files changed, but no matching checkout or webhook test files changed. Remediation: Add or update tests covering signed webhook verification, failed payment paths, and entitlement updates."
@@ -361,11 +361,11 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "a51aa9a45f3e7b15303a1b4a36512f9d9e22c2e32c1d4ffd63d709f415459fe8"
+            "patchdrillFinding": "07dddbd9eebea7fef9b24ccb8c66e70be0936ed69cc404f657ec6a3d2feb87ac"
           }
         },
         {
-          "ruleId": "dependency.lockfile-update",
+          "ruleId": "file.lockfile",
           "level": "note",
           "message": {
             "text": "Dependency lockfile changed: @acme/payments changed from 4.2.0 to 4.3.0. Remediation: Review release notes and verify transitive dependency impact."
@@ -389,7 +389,7 @@
             ]
           },
           "partialFingerprints": {
-            "patchdrillFinding": "29cf41858f87c2c56206c74272589b0baef70cfd09811e798c2e64577d83ded9"
+            "patchdrillFinding": "5cdefc8ce238a88cde78ab92957d8d0b3f84483f99a431e5dd9af6c80012c92d"
           }
         }
       ]

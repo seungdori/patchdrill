@@ -186,7 +186,7 @@
       ]
     },
     {
-      "ruleId": "file.migration-review",
+      "ruleId": "file.high-impact-area",
       "severity": "high",
       "title": "Data migration review required",
       "detail": "A database migration can alter production session state.",
@@ -198,7 +198,7 @@
       ]
     },
     {
-      "ruleId": "workflow.oidc-environment",
+      "ruleId": "workflow.environment-oidc-token",
       "severity": "medium",
       "title": "OIDC deployment job should use a protected environment",
       "detail": "A deployment workflow can mint cloud credentials without an explicit GitHub environment gate.",
@@ -212,7 +212,7 @@
       ]
     },
     {
-      "ruleId": "dependency.lockfile-update",
+      "ruleId": "file.lockfile",
       "severity": "low",
       "title": "Dependency lockfile changed",
       "detail": "@acme/session-store changed from 1.8.2 to 1.9.0.",
@@ -286,5 +286,70 @@
       "stdout": "contract auth-session passed\ncontract deployment-claims passed\n",
       "stderr": ""
     }
-  ]
+  ],
+  "verification": {
+    "summary": {
+      "plannedRequired": 3,
+      "plannedOptional": 1,
+      "run": 3,
+      "passed": 3,
+      "failed": 0,
+      "timedOut": 0,
+      "missingRequired": 0,
+      "skippedOptional": 1,
+      "unplannedResults": 0
+    },
+    "commands": [
+      {
+        "id": "node-turbo-api-typecheck",
+        "label": "Typecheck affected API package",
+        "command": "pnpm exec turbo run typecheck --filter=@acme/api",
+        "reason": "Auth source changed in @acme/api.",
+        "ecosystem": "node",
+        "required": true,
+        "planned": true,
+        "status": "passed",
+        "packageName": "@acme/api",
+        "packagePath": "apps/api",
+        "exitCode": 0,
+        "durationMs": 8421
+      },
+      {
+        "id": "node-turbo-api-test",
+        "label": "Test affected API package",
+        "command": "pnpm exec turbo run test --filter=@acme/api",
+        "reason": "Session behavior changed and matching tests exist.",
+        "ecosystem": "node",
+        "required": true,
+        "planned": true,
+        "status": "passed",
+        "packageName": "@acme/api",
+        "packagePath": "apps/api",
+        "exitCode": 0,
+        "durationMs": 12544
+      },
+      {
+        "id": "policy-contract-tests",
+        "label": "Contract tests",
+        "command": "pnpm run test:contracts",
+        "reason": "Repository policy requires contract tests for auth/session changes.",
+        "ecosystem": "general",
+        "required": true,
+        "planned": true,
+        "status": "passed",
+        "exitCode": 0,
+        "durationMs": 15038
+      },
+      {
+        "id": "node-e2e",
+        "label": "Browser e2e",
+        "command": "pnpm run test:e2e",
+        "reason": "Optional browser coverage is available for session rotation flows.",
+        "ecosystem": "node",
+        "required": false,
+        "planned": true,
+        "status": "skipped-optional"
+      }
+    ]
+  }
 }

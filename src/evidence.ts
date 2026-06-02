@@ -38,12 +38,12 @@ export interface EvidenceManifest {
     commandPlanCount: number;
     commandResultCount: number;
   };
-  artifacts: Array<{
+  artifacts: {
     kind: EvidenceArtifactKind;
     path: string;
     sha256: string;
     bytes: number;
-  }>;
+  }[];
   commands: EvidenceCommand[];
 }
 
@@ -126,7 +126,7 @@ export function verifyEvidenceManifest(path: string, cwd = process.cwd()): Evide
 
   const artifactDigests = new Map<EvidenceArtifactKind, EvidenceDigest>();
   const artifactKindCounts = new Map<EvidenceArtifactKind, number>();
-  const jsonReports: Array<{ path: string; report: Partial<PatchReport> }> = [];
+  const jsonReports: { path: string; report: Partial<PatchReport> }[] = [];
   for (const artifact of manifest.artifacts) {
     if (!isEvidenceArtifact(artifact)) {
       failures.push("Manifest contains an invalid artifact entry.");
@@ -158,14 +158,19 @@ export function verifyEvidenceManifest(path: string, cwd = process.cwd()): Evide
   }
 
   const jsonDigest = artifactDigests.get("json");
-  if (!jsonDigest) {
-    warnings.push("No JSON report artifact recorded; report digest could not be cross-checked against a file.");
-  } else if (!isDigestLike(manifest.report)) {
-    failures.push("Manifest report digest is invalid.");
-  } else if (jsonDigest.sha256 !== manifest.report.sha256 || jsonDigest.bytes !== manifest.report.bytes) {
-    failures.push("Report digest does not match the JSON report artifact.");
-  } else {
-    checkedReportArtifact = true;
+  if (!artifactKindCounts.get("json")) {
+    // A manifest with no JSON report artifact cannot prove the report digest or
+    // contract. Treating this as a pass let a tampered report verify as ok simply
+    // by dropping the JSON artifact entry from the manifest.
+    failures.push("Manifest records no JSON report artifact; the report digest and report contract cannot be verified.");
+  } else if (jsonDigest) {
+    if (!isDigestLike(manifest.report)) {
+      failures.push("Manifest report digest is invalid.");
+    } else if (jsonDigest.sha256 !== manifest.report.sha256 || jsonDigest.bytes !== manifest.report.bytes) {
+      failures.push("Report digest does not match the JSON report artifact.");
+    } else {
+      checkedReportArtifact = true;
+    }
   }
   if (jsonReports.length === 1) {
     checkedReportContract = verifyReportContract(manifest, jsonReports[0]!, failures);
@@ -270,7 +275,7 @@ function parseReportArtifact(path: string, data: Buffer, failures: string[]): Pa
       failures.push(`JSON report artifact is not an object: ${path}`);
       return undefined;
     }
-    return value as Partial<PatchReport>;
+    return value;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     failures.push(`Failed to parse JSON report artifact ${path}: ${message}`);
@@ -322,7 +327,7 @@ function verifyCommandContracts(manifestCommands: unknown, reportCommands: Comma
     return;
   }
   for (const [index, reportCommand] of reportCommands.entries()) {
-    const manifestCommand = manifestCommands[index];
+    const manifestCommand: unknown = manifestCommands[index];
     if (!isEvidenceCommand(manifestCommand)) {
       failures.push(`Manifest command entry is invalid at index ${index}.`);
       continue;

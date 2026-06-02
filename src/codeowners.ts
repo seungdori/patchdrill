@@ -73,9 +73,18 @@ function codeOwnersPatternToRegExp(pattern: string): RegExp {
   const anchored = normalized.startsWith("/");
   const directoryPattern = normalized.endsWith("/");
   const withoutLeadingSlash = anchored ? normalized.slice(1) : normalized;
+  const hasWildcard = withoutLeadingSlash.includes("*") || withoutLeadingSlash.includes("?");
   const expanded = directoryPattern ? `${withoutLeadingSlash}**` : withoutLeadingSlash;
-  const prefix = anchored || expanded.includes("/") ? "^" : "^(?:.*/)?";
-  return new RegExp(`${prefix}${globToRegExpSource(expanded)}$`);
+  // Anchor on the ORIGINAL pattern shape (a leading slash or an interior slash),
+  // not on the slash introduced by directory expansion — otherwise "apps/" is
+  // wrongly root-anchored and never matches packages/apps/... at depth.
+  const hasInteriorSlash = withoutLeadingSlash.replace(/\/$/, "").includes("/");
+  const prefix = anchored || hasInteriorSlash ? "^" : "^(?:.*/)?";
+  // A plain path component (no glob metacharacters, no trailing slash) names a
+  // file or directory and owns everything under it too, per gitignore/GitHub
+  // semantics: "/scripts" owns "scripts/deploy.sh". "*.md" still matches files only.
+  const suffix = !directoryPattern && !hasWildcard ? "(?:/.*)?" : "";
+  return new RegExp(`${prefix}${globToRegExpSource(expanded)}${suffix}$`);
 }
 
 function globToRegExpSource(pattern: string): string {

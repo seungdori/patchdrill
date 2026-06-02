@@ -1,4 +1,5 @@
 import type { PatchReport } from "./types.js";
+import { reportVerification } from "./verification.js";
 
 export function reportContractFailures(report: Partial<PatchReport>): string[] {
   const failures: string[] = [];
@@ -31,6 +32,26 @@ export function reportContractFailures(report: Partial<PatchReport>): string[] {
     failures.push("JSON report summary.failedCommandCount does not match commandResults.");
   }
 
+  // findings is the explanation of the risk score and is required by the schema;
+  // a report missing it must not pass verify/dashboard/evidence.
+  if (!Array.isArray(report.findings)) {
+    failures.push("JSON report findings is invalid.");
+  }
+
+  if (report.verification === undefined) {
+    failures.push("JSON report verification is missing.");
+  } else if (!isRecord(report.verification)) {
+    failures.push("JSON report verification is invalid.");
+  } else if (Array.isArray(report.commandPlan) && Array.isArray(report.commandResults)) {
+    const expected = reportVerification({
+      commandPlan: report.commandPlan,
+      commandResults: report.commandResults
+    });
+    if (!structurallyEqual(report.verification, expected)) {
+      failures.push("JSON report verification does not match commandPlan and commandResults.");
+    }
+  }
+
   return failures;
 }
 
@@ -39,5 +60,25 @@ function numericField(value: unknown, field: string): number {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function structurallyEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => structurallyEqual(value, right[index]));
+  }
+  if (!isRecord(left) || !isRecord(right)) return false;
+
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (let index = 0; index < leftKeys.length; index += 1) {
+    const key = leftKeys[index];
+    const rightKey = rightKeys[index];
+    if (key === undefined || rightKey === undefined || key !== rightKey) return false;
+    if (!structurallyEqual(left[key], right[key])) return false;
+  }
+  return true;
 }

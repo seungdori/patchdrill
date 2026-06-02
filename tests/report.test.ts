@@ -3,10 +3,11 @@ import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSummaryMarkd
 import { renderGitHubAnnotations as renderGitHubAnnotationsDirect } from "../src/report-annotations.js";
 import { renderHtml as renderHtmlDashboard } from "../src/report-html.js";
 import type { PatchReport } from "../src/types.js";
+import { withVerification } from "../src/verification.js";
 
 describe("report", () => {
   it("renders Markdown and respects fail thresholds", () => {
-    const report: PatchReport = {
+    const report: PatchReport = withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -54,7 +55,7 @@ describe("report", () => {
         }
       ],
       commandResults: []
-    };
+    });
 
     expect(renderMarkdown(report)).toContain("PatchDrill Report");
     expect(renderMarkdown(report)).toContain("Schema version: 1");
@@ -114,7 +115,7 @@ describe("report", () => {
   });
 
   it("renders a self-contained escaped HTML dashboard", () => {
-    const report: PatchReport = {
+    const report: PatchReport = withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -172,7 +173,7 @@ describe("report", () => {
           stderr: "failed & unsafe"
         }
       ]
-    };
+    });
 
     const html = renderHtml(report);
 
@@ -299,7 +300,7 @@ function linesWithTrailingWhitespace(value: string): string[] {
 }
 
 function htmlReport(overrides: { generatedAt: string; riskScore: number; failedCommandCount: number; head?: string }): PatchReport {
-  return {
+  return withVerification({
     schemaVersion: "1",
     generatedAt: overrides.generatedAt,
     root: "/repo",
@@ -327,5 +328,5 @@ function htmlReport(overrides: { generatedAt: string; riskScore: number; failedC
       overrides.failedCommandCount > 0
         ? [{ id: "test", command: "npm test", exitCode: 1, durationMs: 1000, stdout: "", stderr: "failed" }]
         : []
-  };
+  });
 }

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { ProjectSignal, WorkspacePackage } from "./types.js";
@@ -184,7 +184,7 @@ function findFastApiEntrypoint(root: string): string | undefined {
 function parseFastApiEntrypoint(root: string, path: string): string | undefined {
   try {
     const content = readFileSync(join(root, path), "utf8");
-    const match = content.match(/(?:^|\n)\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*FastAPI\s*\(/);
+    const match = /(?:^|\n)\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*FastAPI\s*\(/.exec(content);
     if (!match?.[1]) return undefined;
     const moduleName = pythonModuleName(path);
     if (!moduleName) return undefined;
@@ -474,7 +474,10 @@ function discoverNestedGoSignals(root: string): ProjectSignal[] {
   for (const manifestPath of manifests) {
     if (selected.has(manifestPath) || fileName(manifestPath) !== "go.mod") continue;
     const projectRoot = parentPath(manifestPath);
-    if (workspaceRoots.some((workspaceRoot) => projectRoot.startsWith(`${workspaceRoot}/`))) continue;
+    // A go.work with `use .` places the root module at the workspace root itself,
+    // so exclude an equal projectRoot too — otherwise it is double-listed as both a
+    // workspace member and a standalone go signal.
+    if (workspaceRoots.some((workspaceRoot) => projectRoot === workspaceRoot || projectRoot.startsWith(`${workspaceRoot}/`))) continue;
     selected.add(manifestPath);
   }
 
@@ -488,7 +491,7 @@ function discoverNestedGoSignals(root: string): ProjectSignal[] {
 }
 
 function discoverCargoWorkspacePackages(root: string, manifestPath: string): WorkspacePackage[] {
-  let rootManifest = "";
+  let rootManifest: string;
   try {
     rootManifest = readFileSync(join(root, manifestPath), "utf8");
   } catch {
@@ -600,7 +603,7 @@ function readTomlStringArray(value: string): string[] {
 }
 
 function discoverGoWorkspacePackages(root: string, manifestPath: string): WorkspacePackage[] {
-  let workspace = "";
+  let workspace: string;
   try {
     workspace = readFileSync(join(root, manifestPath), "utf8");
   } catch {
@@ -779,15 +782,45 @@ function readWorkspacePatterns(root: string): string[] {
 function expandWorkspacePattern(root: string, pattern: string, manifestName = "package.json"): string[] {
   const normalized = pattern.replace(/^\.\//, "").replace(/\/$/, "");
   if (!normalized.includes("*")) return exists(root, join(normalized, manifestName)) ? [normalized] : [];
-  const prefix = normalized.split("*", 1)[0]?.replace(/\/$/, "") ?? "";
-  const base = prefix || ".";
-  return walkForManifest(join(root, base), root, manifestName, normalized.includes("**") ? 5 : 1);
+  const segments = normalized.split("/");
+  const baseSegments: string[] = [];
+  for (const segment of segments) {
+    if (segment.includes("*")) break;
+    baseSegments.push(segment);
+  }
+  const base = baseSegments.join("/") || ".";
+  const hasGlobstar = normalized.includes("**");
+  const maxDepth = hasGlobstar ? 10 : Math.max(1, segments.length - baseSegments.length);
+  const matcher = workspacePatternToRegExp(normalized);
+  // Walk candidate manifest directories, then keep only those whose full relative
+  // path matches the glob — honoring segments after "*" and excluding the base
+  // directory itself, which a single "*" must not match.
+  return walkForManifest(join(root, base), root, manifestName, maxDepth)
+    .filter((candidate) => candidate !== "." && matcher.test(candidate))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function workspacePatternToRegExp(pattern: string): RegExp {
+  let source = "";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    const next = pattern[index + 1];
+    if (char === "*" && next === "*") {
+      source += ".*";
+      index += 1;
+    } else if (char === "*") {
+      source += "[^/]+";
+    } else {
+      source += escapeRegExp(char ?? "");
+    }
+  }
+  return new RegExp(`^${source}$`);
 }
 
 function walkForManifest(directory: string, root: string, manifestName: string, maxDepth: number, depth = 0): string[] {
   if (depth > maxDepth) return [];
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     const results: string[] = [];
     if (entries.some((entry) => entry.isFile() && entry.name === manifestName)) {
       results.push(relativePath(root, directory));
@@ -818,8 +851,16 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function hasFileWithExtension(root: string, extension: string, maxDepth: number): boolean {
-  return walkForExtension(root, extension, maxDepth, 0);
+// readdirSync order is filesystem-dependent. Single-result walkers must iterate
+// deterministically (files before directories, then by name) so the same repo
+// yields the same chosen path on every machine — the byte-identical promise.
+function readDirentsSorted(directory: string): Dirent[] {
+  return readdirSync(directory, { withFileTypes: true, encoding: "utf8" }).sort((a, b) => {
+    const aFile = a.isFile();
+    const bFile = b.isFile();
+    if (aFile !== bFile) return aFile ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 function findFileWithExtension(root: string, extension: string, maxDepth: number): string | undefined {
@@ -837,7 +878,7 @@ function findFilesNamed(root: string, fileNames: string[], maxDepth: number): st
 function walkForFileNames(root: string, directory: string, fileNames: Set<string>, maxDepth: number, depth: number): string[] {
   if (depth > maxDepth) return [];
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     const results: string[] = [];
     for (const entry of entries) {
       if (shouldSkipDirectory(entry.name)) continue;
@@ -851,26 +892,10 @@ function walkForFileNames(root: string, directory: string, fileNames: Set<string
   }
 }
 
-function walkForExtension(directory: string, extension: string, maxDepth: number, depth: number): boolean {
-  if (depth > maxDepth) return false;
-  try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
-    for (const entry of entries) {
-      if (shouldSkipDirectory(entry.name)) continue;
-      const path = join(directory, entry.name);
-      if (entry.isFile() && entry.name.endsWith(extension)) return true;
-      if (entry.isDirectory() && walkForExtension(path, extension, maxDepth, depth + 1)) return true;
-    }
-  } catch {
-    return false;
-  }
-  return false;
-}
-
 function walkForExtensionPath(root: string, directory: string, extension: string, maxDepth: number, depth: number): string | undefined {
   if (depth > maxDepth) return undefined;
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     for (const entry of entries) {
       if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
@@ -889,7 +914,7 @@ function walkForExtensionPath(root: string, directory: string, extension: string
 function walkForDirectoryExtensionPath(root: string, directory: string, extension: string, maxDepth: number, depth: number): string | undefined {
   if (depth > maxDepth) return undefined;
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     for (const entry of entries) {
       if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
@@ -945,7 +970,7 @@ function findFileWithExtensionMentioning(root: string, extension: string, needle
 function walkForFileMentioning(directory: string, root: string, fileNames: Set<string>, needles: string[], maxDepth: number, depth: number): string | undefined {
   if (depth > maxDepth) return undefined;
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     for (const entry of entries) {
       if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
@@ -967,7 +992,7 @@ function walkForFileMentioning(directory: string, root: string, fileNames: Set<s
 function walkForExtensionMentioning(root: string, directory: string, extension: string, needles: string[], maxDepth: number, depth: number): string | undefined {
   if (depth > maxDepth) return undefined;
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     for (const entry of entries) {
       if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
@@ -989,7 +1014,7 @@ function walkForExtensionMentioning(root: string, directory: string, extension: 
 function walkForFileName(directory: string, fileName: string, maxDepth: number, depth: number): boolean {
   if (depth > maxDepth) return false;
   try {
-    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const entries = readDirentsSorted(directory);
     for (const entry of entries) {
       if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);

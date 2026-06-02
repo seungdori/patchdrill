@@ -1,31 +1,7 @@
-import type { CommandPlan, CommandResult, PatchReport } from "./types.js";
+import type { CommandPlan, CommandResult, PatchReport, PatchVerification, VerificationCommand, VerificationStatus, VerificationSummary } from "./types.js";
 
-export type VerificationStatus = "passed" | "failed" | "timed-out" | "not-run" | "skipped-optional";
-
-export interface VerificationExecution {
-  id: string;
-  label: string;
-  command: string;
-  reason: string;
-  ecosystem: CommandPlan["ecosystem"];
-  required: boolean;
-  planned: boolean;
-  packageName?: string;
-  packagePath?: string;
+export interface VerificationExecution extends VerificationCommand {
   result?: CommandResult;
-  status: VerificationStatus;
-}
-
-export interface VerificationSummary {
-  plannedRequired: number;
-  plannedOptional: number;
-  run: number;
-  passed: number;
-  failed: number;
-  timedOut: number;
-  missingRequired: number;
-  skippedOptional: number;
-  unplannedResults: number;
 }
 
 export function verificationExecutions(report: Pick<PatchReport, "commandPlan" | "commandResults">): VerificationExecution[] {
@@ -44,6 +20,8 @@ export function verificationExecutions(report: Pick<PatchReport, "commandPlan" |
       ...(plan.packageName ? { packageName: plan.packageName } : {}),
       ...(plan.packagePath ? { packagePath: plan.packagePath } : {}),
       ...(result ? { result } : {}),
+      ...(result ? { exitCode: result.exitCode, durationMs: result.durationMs } : {}),
+      ...(result?.timedOut !== undefined ? { timedOut: result.timedOut } : {}),
       status: statusFor(plan, result)
     };
   });
@@ -59,6 +37,9 @@ export function verificationExecutions(report: Pick<PatchReport, "commandPlan" |
       required: false,
       planned: false,
       result,
+      exitCode: result.exitCode,
+      durationMs: result.durationMs,
+      ...(result.timedOut !== undefined ? { timedOut: result.timedOut } : {}),
       status: statusFor(undefined, result)
     });
   }
@@ -68,12 +49,18 @@ export function verificationExecutions(report: Pick<PatchReport, "commandPlan" |
 
 export function verificationSummary(report: Pick<PatchReport, "commandPlan" | "commandResults">): VerificationSummary {
   const executions = verificationExecutions(report);
+  return summarizeExecutions(report.commandPlan, executions);
+}
+
+function summarizeExecutions(commandPlan: CommandPlan[], executions: VerificationExecution[]): VerificationSummary {
   return {
-    plannedRequired: report.commandPlan.filter((command) => command.required).length,
-    plannedOptional: report.commandPlan.filter((command) => !command.required).length,
+    plannedRequired: commandPlan.filter((command) => command.required).length,
+    plannedOptional: commandPlan.filter((command) => !command.required).length,
     run: executions.filter((execution) => execution.result).length,
     passed: executions.filter((execution) => execution.result && execution.status === "passed").length,
-    failed: executions.filter((execution) => execution.result && execution.result.exitCode !== 0).length,
+    // Status-based so passed + failed + timedOut partitions `run`: a timed-out
+    // command has exitCode 124 and must not also be counted as failed.
+    failed: executions.filter((execution) => execution.result && execution.status === "failed").length,
     timedOut: executions.filter((execution) => execution.result?.timedOut === true).length,
     missingRequired: executions.filter((execution) => execution.status === "not-run").length,
     skippedOptional: executions.filter((execution) => execution.status === "skipped-optional").length,
@@ -87,6 +74,39 @@ export function formatVerificationStatus(execution: VerificationExecution): stri
   if (execution.result.timedOut) return `${prefix}timed out (${execution.result.exitCode})`;
   if (execution.result.exitCode === 0) return `${prefix}passed`;
   return `${prefix}failed (${execution.result.exitCode})`;
+}
+
+export function reportVerification(report: Pick<PatchReport, "commandPlan" | "commandResults">): PatchVerification {
+  const executions = verificationExecutions(report);
+  return {
+    summary: summarizeExecutions(report.commandPlan, executions),
+    commands: executions.map(toVerificationCommand)
+  };
+}
+
+export function withVerification<T extends Omit<PatchReport, "verification">>(report: T): T & { verification: PatchVerification } {
+  return {
+    ...report,
+    verification: reportVerification(report)
+  };
+}
+
+function toVerificationCommand(execution: VerificationExecution): VerificationCommand {
+  return {
+    id: execution.id,
+    label: execution.label,
+    command: execution.command,
+    reason: execution.reason,
+    ecosystem: execution.ecosystem,
+    required: execution.required,
+    planned: execution.planned,
+    status: execution.status,
+    ...(execution.packageName ? { packageName: execution.packageName } : {}),
+    ...(execution.packagePath ? { packagePath: execution.packagePath } : {}),
+    ...(execution.exitCode !== undefined ? { exitCode: execution.exitCode } : {}),
+    ...(execution.durationMs !== undefined ? { durationMs: execution.durationMs } : {}),
+    ...(execution.timedOut !== undefined ? { timedOut: execution.timedOut } : {})
+  };
 }
 
 function statusFor(plan: CommandPlan | undefined, result: CommandResult | undefined): VerificationStatus {

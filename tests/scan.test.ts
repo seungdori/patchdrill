@@ -51,6 +51,8 @@ describe("scan", () => {
     expect(report.codeOwners).toEqual({ path: ".github/CODEOWNERS", ruleCount: 1 });
     expect(report.projectSignals).toContainEqual(expect.objectContaining({ ecosystem: "node" }));
     expect(report.commandPlan.map((command) => command.id)).toContain("node-test");
+    expect(report.verification.summary).toMatchObject({ missingRequired: 2, run: 0 });
+    expect(report.verification.commands.find((command) => command.id === "node-test")).toMatchObject({ status: "not-run", planned: true });
     expect(report.findings.map((finding) => finding.title)).toContain("High-impact product area changed");
     expect(report.findings).toContainEqual(
       expect.objectContaining({
@@ -649,7 +651,7 @@ backend_packages = ["pants.backend.python"]
     const evidence = JSON.parse(readFileSync(join(root, "reports", "patchdrill-evidence.json"), "utf8")) as {
       schemaVersion: string;
       report: { sha256: string };
-      artifacts: Array<{ kind: string; path: string; sha256: string }>;
+      artifacts: { kind: string; path: string; sha256: string }[];
     };
     const html = readFileSync(join(root, "reports", "patchdrill-dashboard.html"), "utf8");
     const json = readFileSync(join(root, "reports", "patchdrill-report.json"), "utf8");

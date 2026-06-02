@@ -1,8 +1,10 @@
-import Ajv2020 from "ajv/dist/2020.js";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 import { inspectDoctor } from "../src/doctor.js";
 import { checkReleaseReadiness, createReleaseReadinessReport } from "../src/release-readiness.js";
 import { isSchemaName, listSchemas, readSchema, schemaFileName, schemaNames } from "../src/schema.js";
+import type { PatchReport } from "../src/types.js";
+import { withVerification } from "../src/verification.js";
 
 describe("schemas", () => {
   it("exposes public schemas using JSON Schema draft 2020-12", () => {
@@ -47,6 +49,7 @@ describe("schemas", () => {
     expect(reportSchema.required).toContain("summary");
     expect(reportSchema.required).toContain("dependencyChanges");
     expect(reportSchema.required).toContain("packageScriptChanges");
+    expect(reportSchema.required).toContain("verification");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("kubernetes");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("bazel");
     expect(reportSchema.$defs.ecosystem?.enum).toContain("buck");
@@ -61,6 +64,7 @@ describe("schemas", () => {
     expect(reportSchema.$defs.commandEcosystem?.enum).toContain("android");
     expect(reportSchema.$defs.projectSignal?.properties?.framework?.enum).toEqual(["django", "fastapi", "spring-boot", "rails", "laravel", "aspnet-core"]);
     expect(reportSchema.properties.commandResults).toBeDefined();
+    expect(reportSchema.properties.verification).toBeDefined();
   });
 
   it("documents the evidence manifest contract surface", () => {
@@ -121,7 +125,7 @@ describe("schemas", () => {
         }
       ]
     };
-    const report = {
+    const report: PatchReport = withVerification({
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
       root: "/repo",
@@ -299,7 +303,7 @@ describe("schemas", () => {
           timedOut: false
         }
       ]
-    };
+    } satisfies Omit<PatchReport, "verification">);
     const evidence = {
       schemaVersion: "1",
       generatedAt: "2026-06-01T00:00:00.000Z",
