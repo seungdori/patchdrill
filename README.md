@@ -25,7 +25,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
-- Understands Node, Cargo, Go, and Pants workspaces, plus Turborepo and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
+- Understands Node, Cargo, Go, and Pants workspaces, plus nested Python projects, nested Cargo workspaces, Turborepo, and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
 - Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Maven/Gradle, Spring Boot Maven/Gradle, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, pyproject.toml, requirements.txt, NuGet PackageReference and central PackageVersion files, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, uv.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Flags dependency proof gaps such as manifest-only dependency changes or lockfile-only resolution drift.
@@ -269,8 +269,8 @@ PatchDrill detects project shape from repo manifests:
 | Ecosystem | Signals | Typical commands |
 | --- | --- | --- |
 | Node | `package.json`, lockfiles, scripts | `npm run typecheck`, `npm run check:types`, `npm run lint`, `npm run test`, `npm run test:unit`, `npm run build`, optional `npm run test:e2e` |
-| Python | `pyproject.toml`, `uv.lock`, `requirements.txt`, `setup.py`, `manage.py`, `FastAPI()`, FastAPI routers/dependencies, Ruff/mypy/Pyright config | `uv run pytest tests/test_module.py`, `python -m pytest`, `python manage.py test`, `python -m compileall .`, optional `uv run ruff check .`, optional `uv run mypy .`, optional `uv run pyright`, FastAPI app and changed-module import smoke |
-| Rust | `Cargo.toml`, Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
+| Python | `pyproject.toml`, `uv.lock`, `requirements.txt`, `setup.py`, `manage.py`, nested Python package roots, `FastAPI()`, FastAPI routers/dependencies, Ruff/mypy/Pyright config | `uv run pytest tests/test_module.py`, `cd packages/api && uv run pytest`, `python -m pytest`, `python manage.py test`, `python -m compileall .`, optional `uv run ruff check .`, optional `uv run mypy .`, optional `uv run pyright`, FastAPI app and changed-module import smoke |
+| Rust | `Cargo.toml`, root and nested Cargo workspaces | `cargo test --all-targets`, `cargo test -p crate --all-targets`, `cargo test --manifest-path packages/wasm/Cargo.toml -p crate --all-targets`, `cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`, `go.work` | `go test ./...`, `go test ./module/...`, `go vet ./module/...` |
 | Java/Kotlin | `pom.xml`, `build.gradle`, wrappers | `mvn test`, `gradle test`, `./gradlew test`, `./gradlew bootJar` |
 | Android | `com.android.application`, `com.android.library`, `AndroidManifest.xml`, build types, product flavors, `variantFilter`, variant source sets, generated source paths | `./gradlew testDebugUnitTest`, `./gradlew testReleaseUnitTest`, `./gradlew testFreeDebugUnitTest`, `./gradlew testMinApi24DemoDebugUnitTest`, `./gradlew assemble<Variant>`, `./gradlew lint<Variant>` |
@@ -289,7 +289,9 @@ PatchDrill detects project shape from repo manifests:
 
 For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for directly changed packages and downstream dependents. When `turbo.json` or `nx.json` is present, it plans native task-runner commands such as `pnpm exec turbo run test --filter=@acme/api` or `npx nx run api:test`. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
 
-For Cargo workspaces, PatchDrill reads `[workspace].members`, crate names, and workspace-internal dependencies, then emits `cargo test -p crate --all-targets` and optional `cargo clippy -p crate --all-targets -- -D warnings` for changed crates and downstream dependent crates.
+For nested Python projects, PatchDrill treats each discovered `pyproject.toml`, `uv.lock`, `requirements.txt`, or `manage.py` package root as its own verification scope, so a monorepo can plan `cd packages/pine-engine && uv run pytest` instead of incorrectly collapsing every Python change into a root command.
+
+For Cargo workspaces, including workspaces nested below a JavaScript or polyglot monorepo root, PatchDrill reads `[workspace].members`, crate names, and workspace-internal dependencies, then emits `cargo test -p crate --all-targets` or `cargo test --manifest-path packages/wasm/Cargo.toml -p crate --all-targets` plus optional clippy plans for changed crates and downstream dependent crates.
 
 For Go workspaces, PatchDrill reads `go.work` `use` entries, module names, and workspace-internal `require` dependencies, then emits `go test ./module/...` and optional `go vet ./module/...` for changed modules and downstream dependent modules.
 

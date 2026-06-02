@@ -16,31 +16,35 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
       if (workspacePlanCount === 0) addNodePlans(plans, signal);
     }
     if (signal.ecosystem === "python" && touchesPython(paths, root, signal)) {
-      if (isDjangoProject(root, signal)) {
-        addDjangoPlans(plans);
+      const signalRoot = signalRootPath(root, signal);
+      const scopedPaths = pathsForSignal(paths, signal);
+      if (isDjangoProject(signalRoot, signal)) {
+        addDjangoPlans(plans, signal);
       } else {
         addPythonPlans(plans, root, paths, signal);
-        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, paths, signal.entrypoint);
+        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, scopedPaths, signal.entrypoint, signal);
       }
     }
-    if (signal.ecosystem === "rust" && touches(paths, [".rs", "Cargo.toml", "Cargo.lock"])) {
+    if (signal.ecosystem === "rust" && touchesRust(paths, signal)) {
       const workspacePlanCount = addCargoWorkspacePlans(plans, paths, signal);
       if (workspacePlanCount === 0) {
         pushUnique(plans, {
-          id: "rust-tests",
-          label: "Rust tests",
-          command: "cargo test --all-targets",
+          id: scopedPlanId("rust-tests", signal),
+          label: scopedPlanLabel("Rust tests", signal),
+          command: cargoCommand(signal, "test", "--all-targets"),
           reason: "Rust source or Cargo metadata changed.",
           ecosystem: "rust",
-          required: true
+          required: true,
+          ...scopedPackagePath(signal)
         });
         pushUnique(plans, {
-          id: "rust-clippy",
-          label: "Rust clippy",
-          command: "cargo clippy --all-targets -- -D warnings",
+          id: scopedPlanId("rust-clippy", signal),
+          label: scopedPlanLabel("Rust clippy", signal),
+          command: cargoCommand(signal, "clippy", "--all-targets -- -D warnings"),
           reason: "Rust changes should pass linting before merge.",
           ecosystem: "rust",
-          required: false
+          required: false,
+          ...scopedPackagePath(signal)
         });
       }
     }
@@ -452,28 +456,77 @@ function readText(root: string, path: string): string {
   }
 }
 
+function signalRootPath(root: string, signal?: ProjectSignal): string {
+  const projectRoot = signalProjectRoot(signal);
+  return projectRoot === "." ? root : join(root, projectRoot);
+}
+
+function signalProjectRoot(signal?: ProjectSignal): string {
+  if (!signal?.manifestPath || !signal.manifestPath.includes("/")) return ".";
+  return parentPath(signal.manifestPath) || ".";
+}
+
+function isRootSignal(signal?: ProjectSignal): boolean {
+  return signalProjectRoot(signal) === ".";
+}
+
+function pathsForSignal(paths: string[], signal?: ProjectSignal): string[] {
+  const projectRoot = signalProjectRoot(signal);
+  if (projectRoot === ".") return paths;
+  return paths
+    .filter((path) => path === projectRoot || path.startsWith(`${projectRoot}/`))
+    .map((path) => (path === projectRoot ? "." : path.slice(projectRoot.length + 1)));
+}
+
+function scopedCommand(signal: ProjectSignal | undefined, command: string): string {
+  const projectRoot = signalProjectRoot(signal);
+  return projectRoot === "." ? command : `cd ${quoteShell(projectRoot)} && ${command}`;
+}
+
+function scopedPlanId(baseId: string, signal?: ProjectSignal): string {
+  const projectRoot = signalProjectRoot(signal);
+  return projectRoot === "." ? baseId : `${baseId}-${slug(projectRoot)}`;
+}
+
+function scopedPlanLabel(label: string, signal?: ProjectSignal): string {
+  const projectRoot = signalProjectRoot(signal);
+  return projectRoot === "." ? label : `${projectRoot} ${label}`;
+}
+
+function scopedPackagePath(signal?: ProjectSignal): { packagePath?: string } {
+  const projectRoot = signalProjectRoot(signal);
+  return projectRoot === "." ? {} : { packagePath: projectRoot };
+}
+
 function addPythonPlans(plans: CommandPlan[], root: string, paths: string[], signal?: ProjectSignal): void {
-  const testTargets = pythonChangedTestTargets(root, paths, signal);
-  const python = pythonToolRunner(root);
+  const signalRoot = signalRootPath(root, signal);
+  const scopedPaths = pathsForSignal(paths, signal);
+  const testTargets = pythonChangedTestTargets(signalRoot, scopedPaths, signal);
+  const python = pythonToolRunner(signalRoot);
   pushUnique(plans, {
-    id: testTargets.length > 0 ? "python-targeted-tests" : "python-tests",
-    label: testTargets.length > 0 ? "Python targeted tests" : "Python tests",
-    command: testTargets.length > 0 ? `${pythonCommand(python, "pytest")} ${testTargets.map(quoteShell).join(" ")}` : pythonCommand(python, "pytest"),
+    id: scopedPlanId(testTargets.length > 0 ? "python-targeted-tests" : "python-tests", signal),
+    label: scopedPlanLabel(testTargets.length > 0 ? "Python targeted tests" : "Python tests", signal),
+    command: scopedCommand(
+      signal,
+      testTargets.length > 0 ? `${pythonCommand(python, "pytest")} ${testTargets.map(quoteShell).join(" ")}` : pythonCommand(python, "pytest")
+    ),
     reason: testTargets.length > 0
       ? "Python source changes have matching changed-test or FastAPI dependency override targets on disk."
       : "Python files or Python project metadata changed.",
     ecosystem: "python",
-    required: true
+    required: true,
+    ...scopedPackagePath(signal)
   });
   pushUnique(plans, {
-    id: "python-compile",
-    label: "Python syntax compile",
-    command: "python -m compileall .",
+    id: scopedPlanId("python-compile", signal),
+    label: scopedPlanLabel("Python syntax compile", signal),
+    command: scopedCommand(signal, "python -m compileall ."),
     reason: "Compile Python files to catch syntax errors without needing project-specific tooling.",
     ecosystem: "python",
-    required: true
+    required: true,
+    ...scopedPackagePath(signal)
   });
-  addPythonStaticAnalysisPlans(plans, root, python);
+  addPythonStaticAnalysisPlans(plans, signalRoot, python, signal);
 }
 
 function addRubyPlans(plans: CommandPlan[], root: string, signal: ProjectSignal): void {
@@ -538,35 +591,38 @@ function pythonCommand(runner: PythonToolRunner, tool: string, args = ""): strin
   return `python -m ${tool}${suffix}`;
 }
 
-function addPythonStaticAnalysisPlans(plans: CommandPlan[], root: string, runner: PythonToolRunner): void {
+function addPythonStaticAnalysisPlans(plans: CommandPlan[], root: string, runner: PythonToolRunner, signal?: ProjectSignal): void {
   if (pythonUsesRuff(root)) {
     pushUnique(plans, {
-      id: "python-ruff",
-      label: "Python Ruff lint",
-      command: pythonCommand(runner, "ruff", "check ."),
+      id: scopedPlanId("python-ruff", signal),
+      label: scopedPlanLabel("Python Ruff lint", signal),
+      command: scopedCommand(signal, pythonCommand(runner, "ruff", "check .")),
       reason: "Python Ruff configuration or dependency metadata was detected.",
       ecosystem: "python",
-      required: false
+      required: false,
+      ...scopedPackagePath(signal)
     });
   }
   if (pythonUsesMypy(root)) {
     pushUnique(plans, {
-      id: "python-mypy",
-      label: "Python mypy types",
-      command: pythonCommand(runner, "mypy", "."),
+      id: scopedPlanId("python-mypy", signal),
+      label: scopedPlanLabel("Python mypy types", signal),
+      command: scopedCommand(signal, pythonCommand(runner, "mypy", ".")),
       reason: "Python mypy configuration or dependency metadata was detected.",
       ecosystem: "python",
-      required: false
+      required: false,
+      ...scopedPackagePath(signal)
     });
   }
   if (pythonUsesPyright(root)) {
     pushUnique(plans, {
-      id: "python-pyright",
-      label: "Python Pyright types",
-      command: pythonCommand(runner, "pyright"),
+      id: scopedPlanId("python-pyright", signal),
+      label: scopedPlanLabel("Python Pyright types", signal),
+      command: scopedCommand(signal, pythonCommand(runner, "pyright")),
       reason: "Python Pyright configuration or dependency metadata was detected.",
       ecosystem: "python",
-      required: false
+      required: false,
+      ...scopedPackagePath(signal)
     });
   }
 }
@@ -824,53 +880,64 @@ function joinPath(...parts: string[]): string {
   return parts.filter(Boolean).join("/");
 }
 
-function addDjangoPlans(plans: CommandPlan[]): void {
+function addDjangoPlans(plans: CommandPlan[], signal?: ProjectSignal): void {
   pushUnique(plans, {
-    id: "django-tests",
-    label: "Django tests",
-    command: "python manage.py test",
+    id: scopedPlanId("django-tests", signal),
+    label: scopedPlanLabel("Django tests", signal),
+    command: scopedCommand(signal, "python manage.py test"),
     reason: "Django app code or framework metadata changed, so the Django test runner should load settings, apps, migrations, and tests.",
     ecosystem: "python",
-    required: true
+    required: true,
+    ...scopedPackagePath(signal)
   });
   pushUnique(plans, {
-    id: "django-check",
-    label: "Django system check",
-    command: "python manage.py check",
+    id: scopedPlanId("django-check", signal),
+    label: scopedPlanLabel("Django system check", signal),
+    command: scopedCommand(signal, "python manage.py check"),
     reason: "Django system checks catch model, settings, URL, and app registry issues before deployment.",
     ecosystem: "python",
-    required: false
+    required: false,
+    ...scopedPackagePath(signal)
   });
   pushUnique(plans, {
-    id: "python-compile",
-    label: "Python syntax compile",
-    command: "python -m compileall .",
+    id: scopedPlanId("python-compile", signal),
+    label: scopedPlanLabel("Python syntax compile", signal),
+    command: scopedCommand(signal, "python -m compileall ."),
     reason: "Compile Python files to catch syntax errors in modules not imported by Django tests.",
     ecosystem: "python",
-    required: true
+    required: true,
+    ...scopedPackagePath(signal)
   });
 }
 
-function addFastApiPlans(plans: CommandPlan[], paths: string[], entrypoint: string): void {
+function addFastApiPlans(plans: CommandPlan[], paths: string[], entrypoint: string, signal?: ProjectSignal): void {
   if (!isPythonEntrypoint(entrypoint)) return;
   pushUnique(plans, {
-    id: "fastapi-import-smoke",
-    label: "FastAPI import smoke",
-    command: `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; target = '${entrypoint}'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)"`,
+    id: scopedPlanId("fastapi-import-smoke", signal),
+    label: scopedPlanLabel("FastAPI import smoke", signal),
+    command: scopedCommand(
+      signal,
+      `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; target = '${entrypoint}'; module, attr = target.split(':', 1); getattr(importlib.import_module(module), attr)"`
+    ),
     reason: "FastAPI app entrypoints should import cleanly so route modules, startup wiring, and dependency setup are not obviously broken.",
     ecosystem: "python",
-    required: false
+    required: false,
+    ...scopedPackagePath(signal)
   });
 
   const modules = fastApiChangedImportModules(paths);
   if (modules.length === 0) return;
   pushUnique(plans, {
-    id: "fastapi-module-import-smoke",
-    label: "FastAPI changed module import smoke",
-    command: `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; targets = [${modules.map((module) => `'${module}'`).join(", ")}]; [importlib.import_module(target) for target in targets]"`,
+    id: scopedPlanId("fastapi-module-import-smoke", signal),
+    label: scopedPlanLabel("FastAPI changed module import smoke", signal),
+    command: scopedCommand(
+      signal,
+      `python -c "import importlib, sys; sys.path[:0] = ['src', '.']; targets = [${modules.map((module) => `'${module}'`).join(", ")}]; [importlib.import_module(target) for target in targets]"`
+    ),
     reason: "Changed FastAPI router or dependency modules should import cleanly before the full app startup path is trusted.",
     ecosystem: "python",
-    required: false
+    required: false,
+    ...scopedPackagePath(signal)
   });
 }
 
@@ -1780,13 +1847,13 @@ function addNodeWorkspacePlans(plans: CommandPlan[], paths: string[], signal: Pr
 }
 
 function addCargoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
-  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesCargoRootMetadata(paths));
+  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesCargoMetadata(paths, signal));
   const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
   const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
-  const rootWideChange = touchesCargoRootMetadata(paths);
+  const rootWideChange = touchesCargoMetadata(paths, signal);
   let added = 0;
   for (const workspacePackage of affectedPackages) {
-    for (const command of rustWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange)) {
+    for (const command of rustWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange, signal)) {
       const before = plans.length;
       pushUnique(plans, command);
       if (plans.length > before) added += 1;
@@ -1847,15 +1914,16 @@ function rustWorkspaceCommands(
   workspacePackage: WorkspacePackage,
   directlyAffected: Set<string>,
   affectedNames: Set<string>,
-  rootWideChange: boolean
+  rootWideChange: boolean,
+  signal: ProjectSignal
 ): CommandPlan[] {
   const packageName = quoteShell(workspacePackage.name);
   const reason = cargoWorkspaceReason(workspacePackage, directlyAffected, affectedNames, rootWideChange);
   return [
     {
-      id: `rust-workspace-${slug(workspacePackage.name)}-tests`,
+      id: scopedPlanId(`rust-workspace-${slug(workspacePackage.name)}-tests`, signal),
       label: `${workspacePackage.name} Rust tests`,
-      command: `cargo test -p ${packageName} --all-targets`,
+      command: cargoCommand(signal, "test", `-p ${packageName} --all-targets`),
       reason,
       ecosystem: "rust",
       required: true,
@@ -1863,9 +1931,9 @@ function rustWorkspaceCommands(
       packagePath: workspacePackage.path
     },
     {
-      id: `rust-workspace-${slug(workspacePackage.name)}-clippy`,
+      id: scopedPlanId(`rust-workspace-${slug(workspacePackage.name)}-clippy`, signal),
       label: `${workspacePackage.name} Rust clippy`,
-      command: `cargo clippy -p ${packageName} --all-targets -- -D warnings`,
+      command: cargoCommand(signal, "clippy", `-p ${packageName} --all-targets -- -D warnings`),
       reason: `${reason} Rust workspace changes should pass linting before merge.`,
       ecosystem: "rust",
       required: false,
@@ -2027,12 +2095,16 @@ function touchesCargoRootMetadata(paths: string[]): boolean {
   return paths.some((path) => path === "Cargo.toml" || path === "Cargo.lock");
 }
 
+function touchesCargoMetadata(paths: string[], signal: ProjectSignal): boolean {
+  return pathsForSignal(paths, signal).some((path) => path === "Cargo.toml" || path === "Cargo.lock");
+}
+
 function touchesGoRootMetadata(paths: string[]): boolean {
   return paths.some((path) => path === "go.work" || path === "go.work.sum");
 }
 
 function rootWideMetadataChange(paths: string[], signal: ProjectSignal): boolean {
-  if (signal.ecosystem === "rust") return touchesCargoRootMetadata(paths);
+  if (signal.ecosystem === "rust") return touchesCargoMetadata(paths, signal);
   if (signal.ecosystem === "go") return touchesGoRootMetadata(paths);
   return touchesRootWorkspaceMetadata(paths);
 }
@@ -2070,6 +2142,11 @@ function goWorkspacePattern(packagePath: string): string {
   return packagePath === "." ? "./..." : `./${packagePath}/...`;
 }
 
+function cargoCommand(signal: ProjectSignal, cargoSubcommand: "test" | "clippy", args: string): string {
+  const manifestArg = isRootSignal(signal) ? "" : ` --manifest-path ${quoteShell(signal.manifestPath)}`;
+  return `cargo ${cargoSubcommand}${manifestArg}${args ? ` ${args}` : ""}`;
+}
+
 function touchesNode(paths: string[]): boolean {
   return paths.some((path) =>
     [
@@ -2097,9 +2174,12 @@ function touchesNode(paths: string[]): boolean {
 }
 
 function touchesPython(paths: string[], root: string, signal?: ProjectSignal): boolean {
-  if (isDjangoProject(root, signal) && paths.some(isDjangoRelevantPath)) return true;
+  const signalRoot = signalRootPath(root, signal);
+  const scopedPaths = pathsForSignal(paths, signal);
+  if (scopedPaths.length === 0) return false;
+  if (isDjangoProject(signalRoot, signal) && scopedPaths.some(isDjangoRelevantPath)) return true;
   return (
-    touches(paths, [
+    touches(scopedPaths, [
       ".py",
       "pyproject.toml",
       "requirements.txt",
@@ -2116,8 +2196,14 @@ function touchesPython(paths: string[], root: string, signal?: ProjectSignal): b
       "mypy.ini",
       ".mypy.ini",
       "pyrightconfig.json"
-    ]) || existsSync(join(root, "pytest.ini"))
+    ]) || existsSync(join(signalRoot, "pytest.ini"))
   );
+}
+
+function touchesRust(paths: string[], signal: ProjectSignal): boolean {
+  const scopedPaths = pathsForSignal(paths, signal);
+  if (scopedPaths.length === 0) return false;
+  return touches(scopedPaths, [".rs", "Cargo.toml", "Cargo.lock"]);
 }
 
 function isDjangoProject(root: string, signal?: ProjectSignal): boolean {

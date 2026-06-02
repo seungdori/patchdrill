@@ -364,6 +364,28 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["python-targeted-tests", "python-compile"]);
   });
 
+  it("scopes Python verification to nested package roots", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "packages", "pine-engine", "pine_runtime"), { recursive: true });
+    mkdirSync(join(root, "packages", "pine-engine", "tests"), { recursive: true });
+    writeFileSync(join(root, "packages", "pine-engine", "uv.lock"), "");
+    writeFileSync(join(root, "packages", "pine-engine", "pine_runtime", "engine_htf.py"), "def run():\n    return True\n");
+    writeFileSync(join(root, "packages", "pine-engine", "tests", "test_engine_htf.py"), "def test_run():\n    assert True\n");
+
+    const commands = planCommands(
+      root,
+      [{ path: "packages/pine-engine/pine_runtime/engine_htf.py", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "python", manifestPath: "packages/pine-engine/pyproject.toml" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "cd packages/pine-engine && uv run pytest tests/test_engine_htf.py",
+      "cd packages/pine-engine && python -m compileall ."
+    ]);
+    expect(commands.map((command) => command.id)).toEqual(["python-targeted-tests-packages-pine-engine", "python-compile-packages-pine-engine"]);
+    expect(commands.map((command) => command.packagePath)).toEqual(["packages/pine-engine", "packages/pine-engine"]);
+  });
+
   it("adds FastAPI dependency module import smoke for changed dependency helpers", () => {
     const commands = planCommands(
       process.cwd(),
@@ -1031,6 +1053,62 @@ describe("planCommands", () => {
     ]);
     expect(commands.map((command) => command.packageName)).toEqual(["core-lib", "core-lib", "api-server", "api-server"]);
     expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["core-lib", "api-server"]);
+  });
+
+  it("targets nested Cargo workspace crates through manifest-path commands", () => {
+    const files: ChangedFile[] = [
+      { path: "packages/pine-wasm/crates/pine-core/src/engine.rs", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "rust",
+        manifestPath: "packages/pine-wasm/Cargo.toml",
+        workspacePackages: [
+          {
+            name: "pine-core",
+            path: "packages/pine-wasm/crates/pine-core",
+            scripts: {}
+          },
+          {
+            name: "pine-native",
+            path: "packages/pine-wasm/crates/pine-native",
+            scripts: {},
+            dependencies: ["pine-core"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "cargo test --manifest-path packages/pine-wasm/Cargo.toml -p pine-core --all-targets",
+      "cargo clippy --manifest-path packages/pine-wasm/Cargo.toml -p pine-core --all-targets -- -D warnings",
+      "cargo test --manifest-path packages/pine-wasm/Cargo.toml -p pine-native --all-targets",
+      "cargo clippy --manifest-path packages/pine-wasm/Cargo.toml -p pine-native --all-targets -- -D warnings"
+    ]);
+    expect(commands.map((command) => command.id)).toEqual([
+      "rust-workspace-pine-core-tests-packages-pine-wasm",
+      "rust-workspace-pine-core-clippy-packages-pine-wasm",
+      "rust-workspace-pine-native-tests-packages-pine-wasm",
+      "rust-workspace-pine-native-clippy-packages-pine-wasm"
+    ]);
+    expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["pine-core", "pine-native"]);
+  });
+
+  it("scopes nested non-workspace Rust verification through manifest-path commands", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "packages/native/src/lib.rs", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "rust", manifestPath: "packages/native/Cargo.toml" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "cargo test --manifest-path packages/native/Cargo.toml --all-targets",
+      "cargo clippy --manifest-path packages/native/Cargo.toml --all-targets -- -D warnings"
+    ]);
+    expect(commands.map((command) => command.id)).toEqual(["rust-tests-packages-native", "rust-clippy-packages-native"]);
+    expect(commands.map((command) => command.packagePath)).toEqual(["packages/native", "packages/native"]);
   });
 
   it("targets affected Go workspace modules and downstream dependents", () => {

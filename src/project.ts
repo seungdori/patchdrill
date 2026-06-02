@@ -3,6 +3,9 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { ProjectSignal, WorkspacePackage } from "./types.js";
 
+const PYTHON_MANIFEST_NAMES = ["pyproject.toml", "uv.lock", "requirements.txt", "setup.py", "setup.cfg", "manage.py"];
+const NESTED_PROJECT_MAX_DEPTH = 5;
+
 export function discoverProjectSignals(root: string): ProjectSignal[] {
   const signals: ProjectSignal[] = [];
   const add = (signal: ProjectSignal) => signals.push(signal);
@@ -20,7 +23,7 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
 
-  const pythonManifestPath = firstExisting(root, ["pyproject.toml", "uv.lock", "requirements.txt", "setup.py", "setup.cfg", "manage.py"]);
+  const pythonManifestPath = firstExisting(root, PYTHON_MANIFEST_NAMES);
   if (pythonManifestPath) {
     const framework = detectPythonFramework(root);
     const entrypoint = detectPythonEntrypoint(root, framework);
@@ -31,14 +34,16 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
       ...(entrypoint ? { entrypoint } : {})
     });
   }
+  for (const signal of discoverNestedPythonSignals(root)) add(signal);
 
   if (exists(root, "Cargo.toml")) {
     add({
       ecosystem: "rust",
       manifestPath: "Cargo.toml",
-      workspacePackages: discoverCargoWorkspacePackages(root)
+      workspacePackages: discoverCargoWorkspacePackages(root, "Cargo.toml")
     });
   }
+  for (const signal of discoverNestedRustSignals(root)) add(signal);
   if (exists(root, "go.mod") || exists(root, "go.work")) {
     add({
       ecosystem: "go",
@@ -382,28 +387,87 @@ function readProjectMetadata(packageRoot: string): { name?: string; targets: str
   }
 }
 
-function discoverCargoWorkspacePackages(root: string): WorkspacePackage[] {
+function discoverNestedPythonSignals(root: string): ProjectSignal[] {
+  const selected = new Map<string, string>();
+  for (const manifestPath of findFilesNamed(root, PYTHON_MANIFEST_NAMES, NESTED_PROJECT_MAX_DEPTH)) {
+    const projectRoot = parentPath(manifestPath) || ".";
+    if (projectRoot === ".") continue;
+    const existing = selected.get(projectRoot);
+    if (!existing || manifestPriority(manifestPath, PYTHON_MANIFEST_NAMES) < manifestPriority(existing, PYTHON_MANIFEST_NAMES)) {
+      selected.set(projectRoot, manifestPath);
+    }
+  }
+
+  return [...selected.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([projectRoot, manifestPath]) => {
+      const packageRoot = join(root, projectRoot);
+      const framework = detectPythonFramework(packageRoot);
+      const entrypoint = detectPythonEntrypoint(packageRoot, framework);
+      return {
+        ecosystem: "python" as const,
+        manifestPath,
+        ...(framework ? { framework } : {}),
+        ...(entrypoint ? { entrypoint } : {})
+      };
+    });
+}
+
+function discoverNestedRustSignals(root: string): ProjectSignal[] {
+  const rootWorkspacePackageRoots = exists(root, "Cargo.toml")
+    ? discoverCargoWorkspacePackages(root, "Cargo.toml").map((workspacePackage) => workspacePackage.path)
+    : [];
+  const manifests = findFilesNamed(root, ["Cargo.toml"], NESTED_PROJECT_MAX_DEPTH).filter((manifestPath) => {
+    const projectRoot = parentPath(manifestPath);
+    if (projectRoot === "") return false;
+    return !rootWorkspacePackageRoots.some((packageRoot) => projectRoot === packageRoot || projectRoot.startsWith(`${packageRoot}/`));
+  });
+  const workspaceManifests = manifests.filter((manifestPath) => readCargoWorkspaceMembers(readText(root, manifestPath)).length > 0);
+  const workspaceRoots = workspaceManifests.map((manifestPath) => parentPath(manifestPath)).sort((a, b) => a.localeCompare(b));
+  const selected = new Set<string>();
+
+  for (const manifestPath of workspaceManifests) selected.add(manifestPath);
+  for (const manifestPath of manifests) {
+    if (selected.has(manifestPath)) continue;
+    const projectRoot = parentPath(manifestPath);
+    if (workspaceRoots.some((workspaceRoot) => projectRoot.startsWith(`${workspaceRoot}/`))) continue;
+    selected.add(manifestPath);
+  }
+
+  return [...selected]
+    .sort((a, b) => a.localeCompare(b))
+    .map((manifestPath) => ({
+      ecosystem: "rust" as const,
+      manifestPath,
+      workspacePackages: discoverCargoWorkspacePackages(root, manifestPath)
+    }));
+}
+
+function discoverCargoWorkspacePackages(root: string, manifestPath: string): WorkspacePackage[] {
   let rootManifest = "";
   try {
-    rootManifest = readFileSync(join(root, "Cargo.toml"), "utf8");
+    rootManifest = readFileSync(join(root, manifestPath), "utf8");
   } catch {
     return [];
   }
   const members = readCargoWorkspaceMembers(rootManifest);
   if (members.length === 0) return [];
   const packages = new Map<string, WorkspacePackage>();
+  const workspaceRoot = parentPath(manifestPath) || ".";
+  const absoluteWorkspaceRoot = workspaceRoot === "." ? root : join(root, workspaceRoot);
 
   for (const pattern of members) {
-    for (const packagePath of expandWorkspacePattern(root, pattern, "Cargo.toml")) {
-      const manifest = readCargoManifest(join(root, packagePath));
+    for (const packagePath of expandWorkspacePattern(absoluteWorkspaceRoot, pattern, "Cargo.toml")) {
+      const repoPackagePath = joinRepoPath(workspaceRoot, packagePath);
+      const manifest = readCargoManifest(join(root, repoPackagePath));
       if (!manifest.name) continue;
       const workspacePackage: WorkspacePackage = {
         name: manifest.name,
-        path: packagePath,
+        path: repoPackagePath,
         scripts: {}
       };
       if (manifest.dependencies.length > 0) workspacePackage.dependencies = manifest.dependencies;
-      packages.set(packagePath, workspacePackage);
+      packages.set(repoPackagePath, workspacePackage);
     }
   }
 
@@ -603,6 +667,35 @@ function stripGoComment(value: string): string {
   return value.replace(/\s*\/\/.*$/, "");
 }
 
+function readText(root: string, path: string): string {
+  try {
+    return readFileSync(join(root, path), "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function manifestPriority(path: string, names: string[]): number {
+  const priority = names.indexOf(fileName(path));
+  return priority >= 0 ? priority : names.length;
+}
+
+function fileName(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash >= 0 ? path.slice(slash + 1) : path;
+}
+
+function parentPath(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash >= 0 ? path.slice(0, slash) : "";
+}
+
+function joinRepoPath(base: string, child: string): string {
+  if (base === "." || !base) return child;
+  if (child === ".") return base;
+  return `${base}/${child}`;
+}
+
 function readPackageDependencyNames(manifest: ReturnType<typeof readPackageJson>): string[] {
   const dependencies = new Set<string>();
   for (const section of [manifest.dependencies, manifest.devDependencies, manifest.peerDependencies, manifest.optionalDependencies]) {
@@ -688,6 +781,27 @@ function findFileWithExtension(root: string, extension: string, maxDepth: number
 
 function findDirectoryWithExtension(root: string, extension: string, maxDepth: number): string | undefined {
   return walkForDirectoryExtensionPath(root, root, extension, maxDepth, 0);
+}
+
+function findFilesNamed(root: string, fileNames: string[], maxDepth: number): string[] {
+  return walkForFileNames(root, root, new Set(fileNames), maxDepth, 0).sort((a, b) => a.localeCompare(b));
+}
+
+function walkForFileNames(root: string, directory: string, fileNames: Set<string>, maxDepth: number, depth: number): string[] {
+  if (depth > maxDepth) return [];
+  try {
+    const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
+    const results: string[] = [];
+    for (const entry of entries) {
+      if (shouldSkipDirectory(entry.name)) continue;
+      const path = join(directory, entry.name);
+      if (entry.isFile() && fileNames.has(entry.name)) results.push(relativePath(root, path));
+      if (entry.isDirectory()) results.push(...walkForFileNames(root, path, fileNames, maxDepth, depth + 1));
+    }
+    return results;
+  } catch {
+    return [];
+  }
 }
 
 function walkForExtension(directory: string, extension: string, maxDepth: number, depth: number): boolean {

@@ -122,6 +122,20 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects nested uv-managed Python projects in monorepos", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    mkdirSync(join(root, "packages", "pine-engine"), { recursive: true });
+    writeFileSync(join(root, "packages", "pine-engine", "pyproject.toml"), "[project]\nname = \"pine-engine\"\ndependencies = [\"pytest\"]\n");
+    writeFileSync(join(root, "packages", "pine-engine", "uv.lock"), "");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      manifestPath: "packages/pine-engine/pyproject.toml"
+    });
+  });
+
   it("detects FastAPI app entrypoints", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);
@@ -135,6 +149,56 @@ describe("discoverProjectSignals", () => {
       framework: "fastapi",
       manifestPath: "requirements.txt"
     });
+  });
+
+  it("detects nested FastAPI app entrypoints relative to the package root", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    mkdirSync(join(root, "packages", "server", "app"), { recursive: true });
+    writeFileSync(join(root, "packages", "server", "pyproject.toml"), "[project]\ndependencies = [\"fastapi>=0.110\"]\n");
+    writeFileSync(join(root, "packages", "server", "app", "main.py"), "from fastapi import FastAPI\napp = FastAPI()\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "python",
+      entrypoint: "app.main:app",
+      framework: "fastapi",
+      manifestPath: "packages/server/pyproject.toml"
+    });
+  });
+
+  it("detects nested Cargo workspaces without promoting member manifests to project roots", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    mkdirSync(join(root, "packages", "pine-wasm", "crates", "pine-core"), { recursive: true });
+    mkdirSync(join(root, "packages", "pine-wasm", "crates", "pine-native"), { recursive: true });
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    writeFileSync(join(root, "packages", "pine-wasm", "Cargo.toml"), "[workspace]\nmembers = [\"crates/pine-core\", \"crates/pine-native\"]\n");
+    writeFileSync(join(root, "packages", "pine-wasm", "crates", "pine-core", "Cargo.toml"), "[package]\nname = \"pine-core\"\n");
+    writeFileSync(
+      join(root, "packages", "pine-wasm", "crates", "pine-native", "Cargo.toml"),
+      "[package]\nname = \"pine-native\"\n[dependencies]\npine-core = { path = \"../pine-core\" }\n"
+    );
+
+    expect(discoverProjectSignals(root).filter((signal) => signal.ecosystem === "rust")).toEqual([
+      {
+        ecosystem: "rust",
+        manifestPath: "packages/pine-wasm/Cargo.toml",
+        workspacePackages: [
+          {
+            name: "pine-core",
+            path: "packages/pine-wasm/crates/pine-core",
+            scripts: {}
+          },
+          {
+            dependencies: ["pine-core"],
+            name: "pine-native",
+            path: "packages/pine-wasm/crates/pine-native",
+            scripts: {}
+          }
+        ]
+      }
+    ]);
   });
 
   it("ignores FastAPI entrypoints with non-importable module paths", () => {
