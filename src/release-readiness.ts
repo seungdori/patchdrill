@@ -1,7 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { checkMarkdownLinks } from "./markdown-links.js";
 import { schemaFileName, schemaNames, type SchemaName } from "./schema.js";
+import { renderStackCoverageMarkdown } from "./stack-coverage.js";
 
 export type ReleaseCheckStatus = "pass" | "warn" | "fail";
 
@@ -84,7 +85,8 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
-    checkBoolean(existsSync(join(root, "docs", "STACK_COVERAGE.md")), "Stack coverage matrix", "docs/STACK_COVERAGE.md is present.", "Add docs/STACK_COVERAGE.md with fixture-backed coverage claims."),
+    checkStackCoverageMatrix(root),
+    checkStackFixtureCorpus(root),
     checkBoolean(
       existsSync(join(root, "examples", "case-studies", "README.md")),
       "Case study examples",
@@ -292,6 +294,96 @@ function checkReadmeProofPackQuickstart(contents: string | undefined): ReleaseCh
   };
 }
 
+function checkStackCoverageMatrix(root: string): ReleaseCheck {
+  const path = join(root, "docs", "STACK_COVERAGE.md");
+  if (!existsSync(path)) {
+    return {
+      status: "fail",
+      title: "Stack coverage matrix",
+      detail: "docs/STACK_COVERAGE.md is missing.",
+      remediation: "Add docs/STACK_COVERAGE.md with fixture-backed coverage claims."
+    };
+  }
+  const actual = readFileSync(path, "utf8");
+  const expected = renderStackCoverageMarkdown();
+  return {
+    status: actual === expected ? "pass" : "fail",
+    title: "Stack coverage matrix",
+    detail:
+      actual === expected
+        ? "docs/STACK_COVERAGE.md is synchronized with the fixture-backed stack coverage source."
+        : "docs/STACK_COVERAGE.md is not synchronized with src/stack-coverage.ts.",
+    ...(actual === expected ? {} : { remediation: "Regenerate docs/STACK_COVERAGE.md from renderStackCoverageMarkdown()." })
+  };
+}
+
+function checkStackFixtureCorpus(root: string): ReleaseCheck {
+  const fixturesRoot = join(root, "fixtures", "stacks");
+  if (!existsSync(fixturesRoot)) {
+    return {
+      status: "fail",
+      title: "Stack fixture corpus",
+      detail: "fixtures/stacks is missing.",
+      remediation: "Add fixture-backed repository shapes under fixtures/stacks before release."
+    };
+  }
+  let fixturePaths: string[] = [];
+  try {
+    fixturePaths = readdirSync(fixturesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(fixturesRoot, entry.name, "fixture.json"))
+      .filter((path) => existsSync(path))
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    fixturePaths = [];
+  }
+  const failures: string[] = [];
+  for (const path of fixturePaths) {
+    const relativePath = path.slice(root.length).replace(/^\//, "");
+    try {
+      validateStackFixture(JSON.parse(readFileSync(path, "utf8")), relativePath, failures);
+    } catch {
+      failures.push(`${relativePath} valid JSON`);
+    }
+  }
+  if (fixturePaths.length < 20) failures.push("at least 20 stack fixtures");
+  return {
+    status: failures.length === 0 ? "pass" : "fail",
+    title: "Stack fixture corpus",
+    detail:
+      failures.length === 0
+        ? `Validated ${fixturePaths.length} stack fixture contract${fixturePaths.length === 1 ? "" : "s"} under fixtures/stacks.`
+        : `Stack fixture corpus is missing ${failures.join(", ")}.`,
+    ...(failures.length > 0 ? { remediation: `Fix ${failures.join(", ")} before release.` } : {})
+  };
+}
+
+function validateStackFixture(value: unknown, path: string, failures: string[]): void {
+  if (!isRecord(value)) {
+    failures.push(`${path} object`);
+    return;
+  }
+  if (typeof value.name !== "string" || !value.name.trim()) failures.push(`${path} name`);
+  if (!isStringArray(value.expectedEcosystems)) failures.push(`${path} expectedEcosystems`);
+  if (!isStringArray(value.expectedCommands)) failures.push(`${path} expectedCommands`);
+  if (!isFixtureFileArray(value.baseFiles)) failures.push(`${path} baseFiles`);
+  if (!isFixtureFileArray(value.changeFiles)) failures.push(`${path} changeFiles`);
+}
+
+function isFixtureFileArray(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (file) =>
+        isRecord(file) &&
+        typeof file.path === "string" &&
+        file.path.trim().length > 0 &&
+        Array.isArray(file.lines) &&
+        file.lines.every((line) => typeof line === "string")
+    )
+  );
+}
+
 function checkSchemaContract(root: string, name: SchemaName, readme: string | undefined, schemaDocs: string | undefined): ReleaseCheck {
   const fileName = schemaFileName(name);
   const relativePath = `schemas/${fileName}`;
@@ -354,6 +446,14 @@ function containsInOrder(contents: string | undefined, needles: string[]): boole
 
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readOptional(root: string, path: string): string | undefined {

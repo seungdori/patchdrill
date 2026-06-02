@@ -30,7 +30,7 @@ Done for the public repository:
 - Generated PR workflow runs inferred required commands with a per-command timeout.
 - README terminal demo asset showing the risk summary and portable report outputs.
 - Package automation script findings for install-time hooks, removed verification scripts, no-op checks, and remote shell pipes.
-- First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
+- First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Docker/Compose, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
 - Example report and release provenance documentation.
 - `patchdrill doctor` for first-run repository readiness diagnosis.
 - `patchdrill release-check` for static npm/GitHub Action release readiness checks.
@@ -89,7 +89,7 @@ node dist/cli.js verify --evidence .patchdrill/release-evidence.json
 npm pack --dry-run
 ```
 
-`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, command-backed evidence verification in CI/action/release workflows, and the pull request template's Proof Pack verification checklist. npm Trusted Publisher configuration still has to be checked in npm account settings.
+`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, command-backed evidence verification in CI/action/release workflows, README and pull request Proof Pack command checklists, synchronized stack-coverage docs, and stack fixture contracts. npm Trusted Publisher configuration still has to be checked in npm account settings.
 
 ## Star Hooks
 
