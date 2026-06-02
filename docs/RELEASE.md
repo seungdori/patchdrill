@@ -18,8 +18,9 @@ patchdrill release-check --format json
 patchdrill schema doctor
 patchdrill schema release-check
 npm run check
+node dist/cli.js scan --evidence .patchdrill/release-evidence.json --summary-markdown .patchdrill/release-summary.md --markdown .patchdrill/release.md --json .patchdrill/release.json --sarif .patchdrill/release.sarif --html .patchdrill/release-dashboard.html --fail-on critical
+node dist/cli.js verify --evidence .patchdrill/release-evidence.json
 npm pack --dry-run
-node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill/release.json --sarif .patchdrill/release.sarif
 ```
 
 3. Create a GitHub Release for the version tag.
@@ -29,6 +30,6 @@ node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill
 
 Use `workflow_dispatch` to run release checks without publishing. Publishing is limited to GitHub Release events.
 
-`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, release workflow provenance settings, README install paths, repository release files, parseable shipped JSON Schemas with matching README/SCHEMAS documentation, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
+`patchdrill release-check` is intentionally local and static. It verifies package metadata, package file allowlisting, launch keywords, action wiring, evidence verification in CI/action/release workflows, release workflow provenance settings, README install paths, repository release files, parseable shipped JSON Schemas with matching README/SCHEMAS documentation, and local Markdown links across README, docs, and examples. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
 
 CI and the release workflow both run `patchdrill release-check --format json` after `npm run check` so launch-readiness regressions fail before package publishing.

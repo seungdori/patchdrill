@@ -31,6 +31,9 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] Release-check output schema");
     expect(rendered).toContain("[PASS] CI readiness dogfood");
     expect(rendered).toContain("[PASS] Release readiness dogfood");
+    expect(rendered).toContain("[PASS] CI evidence verification");
+    expect(rendered).toContain("[PASS] Action evidence verification");
+    expect(rendered).toContain("[PASS] Release Proof Pack smoke");
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[PASS] Markdown local links");

@@ -60,6 +60,24 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "release.yml runs patchdrill release-check --format json before publishing.",
       "Run patchdrill release-check --format json in the release workflow before npm publish."
     ),
+    checkBoolean(
+      Boolean(containsInOrder(ci, ["Run PatchDrill", "verify --evidence patchdrill-evidence.json", "actions/upload-artifact"])),
+      "CI evidence verification",
+      "CI verifies the generated PatchDrill evidence manifest before uploading Proof Pack artifacts.",
+      "Run patchdrill verify --evidence patchdrill-evidence.json after CI scan artifacts are generated and before artifact upload."
+    ),
+    checkBoolean(
+      Boolean(containsInOrder(action, ["Refresh evidence manifest", 'verify --evidence "$PATCHDRILL_EVIDENCE"', "Export report paths"])),
+      "Action evidence verification",
+      "The composite action verifies refreshed evidence manifests before exporting artifact paths.",
+      "Verify the evidence manifest inside action.yml before reporting output paths."
+    ),
+    checkBoolean(
+      Boolean(containsInOrder(releaseWorkflow, ["release-evidence.json", "verify --evidence .patchdrill/release-evidence.json", "npm pack --dry-run"])),
+      "Release Proof Pack smoke",
+      "release.yml generates and verifies a release Proof Pack smoke bundle before npm packaging.",
+      "Generate a release Proof Pack with scan --evidence and verify it before npm pack --dry-run."
+    ),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
@@ -253,6 +271,17 @@ function schemaCheckTitle(name: SchemaName): string {
   if (name === "doctor") return "Doctor output schema";
   if (name === "release-check") return "Release-check output schema";
   return `${name[0]?.toUpperCase() ?? ""}${name.slice(1)} schema`;
+}
+
+function containsInOrder(contents: string | undefined, needles: string[]): boolean {
+  if (!contents) return false;
+  let cursor = 0;
+  for (const needle of needles) {
+    const index = contents.indexOf(needle, cursor);
+    if (index < 0) return false;
+    cursor = index + needle.length;
+  }
+  return true;
 }
 
 function readStringArray(value: unknown): string[] {

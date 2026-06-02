@@ -206,7 +206,10 @@ Check whether this repository is ready for npm/GitHub Action release:
 
 ```bash
 patchdrill release-check
+patchdrill release-check --format json
 ```
+
+The release workflow also generates a local Proof Pack smoke bundle and verifies its evidence manifest before `npm pack --dry-run`.
 
 For automation:
 

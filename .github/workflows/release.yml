@@ -30,6 +30,17 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: node dist/cli.js release-check --format json
+      - name: Verify release Proof Pack smoke
+        run: |
+          node dist/cli.js scan \
+            --evidence .patchdrill/release-evidence.json \
+            --summary-markdown .patchdrill/release-summary.md \
+            --markdown .patchdrill/release.md \
+            --json .patchdrill/release.json \
+            --sarif .patchdrill/release.sarif \
+            --html .patchdrill/release-dashboard.html \
+            --fail-on critical
+          node dist/cli.js verify --evidence .patchdrill/release-evidence.json
       - run: npm pack --dry-run
       - name: Publish to npm with provenance
         if: github.event_name == 'release'
