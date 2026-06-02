@@ -14,8 +14,18 @@ export interface DoctorCheck {
   remediation?: string;
 }
 
+export interface DoctorSummary {
+  status: "pass" | "warn";
+  ok: boolean;
+  passCount: number;
+  warnCount: number;
+  infoCount: number;
+  projectSignalCount: number;
+}
+
 export interface DoctorReport {
   root: string;
+  summary: DoctorSummary;
   projectSignals: ProjectSignal[];
   checks: DoctorCheck[];
   suggestedCommands: string[];
@@ -88,9 +98,11 @@ export function inspectDoctor(root: string): DoctorReport {
   );
 
   checks.push(...nodeScriptChecks(projectSignals));
+  const summary = summarizeDoctor(projectSignals, checks);
 
   return {
     root,
+    summary,
     projectSignals,
     checks,
     suggestedCommands: suggestedCommands(projectSignals, Boolean(loadedPolicy.path))
@@ -101,6 +113,9 @@ export function renderDoctor(report: DoctorReport): string {
   const lines: string[] = [];
   lines.push("PatchDrill Doctor");
   lines.push(`Root: ${report.root}`);
+  lines.push(
+    `Status: ${report.summary.status.toUpperCase()} (${report.summary.passCount} pass, ${report.summary.warnCount} warn, ${report.summary.infoCount} info, ${report.summary.projectSignalCount} project signals)`
+  );
   lines.push("");
   lines.push("Project signals:");
   if (report.projectSignals.length === 0) {
@@ -122,6 +137,19 @@ export function renderDoctor(report: DoctorReport): string {
     lines.push(`- ${command}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+function summarizeDoctor(projectSignals: ProjectSignal[], checks: DoctorCheck[]): DoctorSummary {
+  const warnCount = checks.filter((check) => check.status === "warn").length;
+  const summary = {
+    status: warnCount > 0 ? ("warn" as const) : ("pass" as const),
+    ok: warnCount === 0,
+    passCount: checks.filter((check) => check.status === "pass").length,
+    warnCount,
+    infoCount: checks.filter((check) => check.status === "info").length,
+    projectSignalCount: projectSignals.length
+  };
+  return summary;
 }
 
 function nodeScriptChecks(signals: ProjectSignal[]): DoctorCheck[] {

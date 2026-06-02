@@ -10,6 +10,14 @@ export interface ReleaseCheck {
   remediation?: string;
 }
 
+export interface ReleaseReadinessSummary {
+  status: "pass" | "fail";
+  ok: boolean;
+  passCount: number;
+  warnCount: number;
+  failCount: number;
+}
+
 export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const pkg = readPackageJson(root);
   const releaseWorkflow = readOptional(root, ".github/workflows/release.yml");
@@ -30,6 +38,13 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(Boolean(releaseWorkflow?.includes("id-token: write")), "Release OIDC", "release.yml grants id-token: write for trusted publishing.", "Enable id-token: write in the release workflow."),
     checkBoolean(Boolean(releaseWorkflow?.includes("npm publish --access public --provenance")), "npm provenance publish", "release.yml publishes with npm provenance.", "Publish with npm publish --access public --provenance."),
     checkBoolean(Boolean(ci?.includes("npm pack --dry-run")), "Package dry-run CI", "CI verifies package contents with npm pack --dry-run.", "Add npm pack --dry-run to CI."),
+    checkBoolean(Boolean(ci?.includes("release-check --format json")), "CI readiness dogfood", "CI runs patchdrill release-check --format json.", "Run patchdrill release-check --format json in CI after npm run check."),
+    checkBoolean(
+      Boolean(releaseWorkflow?.includes("release-check --format json")),
+      "Release readiness dogfood",
+      "release.yml runs patchdrill release-check --format json before publishing.",
+      "Run patchdrill release-check --format json in the release workflow before npm publish."
+    ),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
@@ -53,18 +68,31 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
 }
 
 export function releaseReadinessHasFailures(checks: ReleaseCheck[]): boolean {
-  return checks.some((check) => check.status === "fail");
+  return summarizeReleaseReadiness(checks).failCount > 0;
 }
 
 export function renderReleaseReadiness(checks: ReleaseCheck[]): string {
-  const failures = checks.filter((check) => check.status === "fail").length;
-  const warnings = checks.filter((check) => check.status === "warn").length;
-  const lines = [`PatchDrill Release Check - ${failures === 0 ? "PASS" : "FAIL"} (${failures} blocker${failures === 1 ? "" : "s"}, ${warnings} warning${warnings === 1 ? "" : "s"})`, ""];
+  const summary = summarizeReleaseReadiness(checks);
+  const lines = [
+    `PatchDrill Release Check - ${summary.status.toUpperCase()} (${summary.failCount} blocker${summary.failCount === 1 ? "" : "s"}, ${summary.warnCount} warning${summary.warnCount === 1 ? "" : "s"}, ${summary.passCount} pass)`,
+    ""
+  ];
   for (const check of checks) {
     lines.push(`- [${check.status.toUpperCase()}] ${check.title}: ${check.detail}`);
     if (check.remediation) lines.push(`  Next: ${check.remediation}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+export function summarizeReleaseReadiness(checks: ReleaseCheck[]): ReleaseReadinessSummary {
+  const failCount = checks.filter((check) => check.status === "fail").length;
+  return {
+    status: failCount > 0 ? "fail" : "pass",
+    ok: failCount === 0,
+    passCount: checks.filter((check) => check.status === "pass").length,
+    warnCount: checks.filter((check) => check.status === "warn").length,
+    failCount
+  };
 }
 
 function checkBoolean(ok: boolean, title: string, detail: string, remediation: string): ReleaseCheck {

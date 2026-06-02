@@ -90,4 +90,15 @@ describe("composite action", () => {
     const verifyStep = action.runs?.steps?.find((step) => step.name === "Verify evidence manifest");
     expect(verifyStep?.run).toContain('verify --evidence "$PATCHDRILL_EVIDENCE"');
   });
+
+  it("dogfoods release readiness in CI and release workflows", () => {
+    const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+    const release = readFileSync(".github/workflows/release.yml", "utf8");
+
+    expect(ci).toContain("node dist/cli.js release-check --format json");
+    expect(release).toContain("node dist/cli.js release-check --format json");
+    expect(ci.indexOf("npm run check")).toBeLessThan(ci.indexOf("release-check --format json"));
+    expect(release.indexOf("npm run check")).toBeLessThan(release.indexOf("release-check --format json"));
+    expect(release.indexOf("release-check --format json")).toBeLessThan(release.indexOf("npm pack --dry-run"));
+  });
 });

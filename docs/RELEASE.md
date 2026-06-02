@@ -28,3 +28,5 @@ node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill
 Use `workflow_dispatch` to run release checks without publishing. Publishing is limited to GitHub Release events.
 
 `patchdrill release-check` is intentionally local and static. It verifies package metadata, action wiring, release workflow provenance settings, README install paths, and repository release files. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.
+
+CI and the release workflow both run `patchdrill release-check --format json` after `npm run check` so launch-readiness regressions fail before package publishing.

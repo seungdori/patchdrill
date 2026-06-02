@@ -7,7 +7,7 @@ import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManif
 import { gitRoot } from "./git.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
 import { inspectDoctor, renderDoctor } from "./doctor.js";
-import { checkReleaseReadiness, releaseReadinessHasFailures, renderReleaseReadiness } from "./release-readiness.js";
+import { checkReleaseReadiness, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -314,12 +314,13 @@ function verifyCommand(parsed: ParsedArgs): void {
 export function releaseCheckCommand(parsed: ParsedArgs = { command: "release-check", flags: {}, positionals: [] }): void {
   const root = gitRoot(process.cwd());
   const checks = checkReleaseReadiness(root);
+  const summary = summarizeReleaseReadiness(checks);
   if (readOutputFormat(parsed) === "json") {
-    console.log(JSON.stringify({ ok: !releaseReadinessHasFailures(checks), checks }, null, 2));
+    console.log(JSON.stringify({ ok: summary.ok, summary, checks }, null, 2));
   } else {
     console.log(renderReleaseReadiness(checks).trimEnd());
   }
-  if (releaseReadinessHasFailures(checks)) {
+  if (!summary.ok) {
     process.exitCode = 1;
   }
 }

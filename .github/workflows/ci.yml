@@ -24,6 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: node dist/cli.js release-check --format json
       - name: Resolve PatchDrill base
         id: patchdrill-base
         shell: bash

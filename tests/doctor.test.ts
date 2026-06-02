@@ -27,8 +27,10 @@ describe("doctor", () => {
     const report = inspectDoctor(root);
     const rendered = renderDoctor(report);
 
+    expect(report.summary).toMatchObject({ status: "pass", ok: true, projectSignalCount: 1 });
     expect(report.projectSignals.map((signal) => signal.ecosystem)).toEqual(["node"]);
     expect(rendered).toContain("PatchDrill Doctor");
+    expect(rendered).toContain("Status: PASS");
     expect(rendered).toContain("[PASS] Project detection");
     expect(rendered).toContain("[PASS] Policy file");
     expect(rendered).toContain("Found test.");
@@ -43,6 +45,7 @@ describe("doctor", () => {
 
     const rendered = renderDoctor(inspectDoctor(root));
 
+    expect(rendered).toContain("Status: WARN");
     expect(rendered).toContain("[WARN] Policy file");
     expect(rendered).toContain("No package scripts were found");
     expect(rendered).toContain("patchdrill init --policy");

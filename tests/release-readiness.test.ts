@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkReleaseReadiness, releaseReadinessHasFailures, renderReleaseReadiness } from "../src/release-readiness.js";
+import { checkReleaseReadiness, releaseReadinessHasFailures, renderReleaseReadiness, summarizeReleaseReadiness } from "../src/release-readiness.js";
 
 const tempDirs: string[] = [];
 
@@ -16,10 +16,14 @@ describe("release readiness", () => {
   it("keeps the repository release path free of local blockers", () => {
     const checks = checkReleaseReadiness(process.cwd());
     const rendered = renderReleaseReadiness(checks);
+    const summary = summarizeReleaseReadiness(checks);
 
     expect(releaseReadinessHasFailures(checks)).toBe(false);
+    expect(summary).toMatchObject({ status: "pass", ok: true, failCount: 0, warnCount: 1 });
     expect(rendered).toContain("PatchDrill Release Check - PASS");
     expect(rendered).toContain("[PASS] npm provenance publish");
+    expect(rendered).toContain("[PASS] CI readiness dogfood");
+    expect(rendered).toContain("[PASS] Release readiness dogfood");
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[WARN] npm Trusted Publisher");

@@ -34,6 +34,7 @@ Done for the public repository:
 - Example report and release provenance documentation.
 - `patchdrill doctor` for first-run repository readiness diagnosis.
 - `patchdrill release-check` for static npm/GitHub Action release readiness checks.
+- CI and release workflows dogfood `patchdrill release-check --format json`.
 - Public case-study and stack-coverage docs for launch evaluation.
 
 Still needed for launch distribution:

@@ -169,11 +169,14 @@ describe("cli", () => {
     doctorCommand(parseArgs(["doctor", "--format", "json"]));
     releaseCheckCommand(parseArgs(["release-check", "--format", "json"]));
 
-    const doctorPayload = JSON.parse(String(log.mock.calls[0]?.[0])) as { projectSignals: unknown[]; checks: unknown[] };
-    const releasePayload = JSON.parse(String(log.mock.calls[1]?.[0])) as { ok: boolean; checks: unknown[] };
+    const doctorPayload = JSON.parse(String(log.mock.calls[0]?.[0])) as { summary: { ok: boolean; projectSignalCount: number }; projectSignals: unknown[]; checks: unknown[] };
+    const releasePayload = JSON.parse(String(log.mock.calls[1]?.[0])) as { ok: boolean; summary: { ok: boolean; failCount: number }; checks: unknown[] };
+    expect(typeof doctorPayload.summary.ok).toBe("boolean");
+    expect(doctorPayload.summary.projectSignalCount).toBe(doctorPayload.projectSignals.length);
     expect(doctorPayload.projectSignals.length).toBeGreaterThan(0);
     expect(doctorPayload.checks.length).toBeGreaterThan(0);
     expect(releasePayload.ok).toBe(true);
+    expect(releasePayload.summary).toMatchObject({ ok: true, failCount: 0 });
     expect(releasePayload.checks.length).toBeGreaterThan(0);
   });
 

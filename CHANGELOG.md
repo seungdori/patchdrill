@@ -114,5 +114,6 @@
 - Added `patchdrill doctor` for first-run repository readiness diagnosis.
 - Added `patchdrill release-check` for local npm and GitHub Action release readiness checks.
 - Added JSON output for `patchdrill doctor --format json` and `patchdrill release-check --format json`.
+- Added readiness summaries to doctor/release JSON and dogfooded release-check in CI and release workflows.
 - Added launch case studies and a fixture-backed stack coverage matrix.
 - Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.
