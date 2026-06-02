@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkMarkdownLinks } from "./markdown-links.js";
+import { schemaFileName, schemaNames, type SchemaName } from "./schema.js";
 
 export type ReleaseCheckStatus = "pass" | "warn" | "fail";
 
@@ -45,8 +46,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(pkg?.scripts?.prepack === "npm run check", "Prepack script", "prepack runs the full local verification suite.", "Set scripts.prepack to npm run check."),
     checkPackageFiles(packageFiles),
     checkKeywords(keywords),
-    checkSchemaContract(root, "Doctor output schema", "patchdrill-doctor.schema.json", "doctor"),
-    checkSchemaContract(root, "Release-check output schema", "patchdrill-release-check.schema.json", "release-check"),
+    ...checkSchemaContracts(root, readme, readOptional(root, "docs/SCHEMAS.md")),
     checkBoolean(existsSync(join(root, "package-lock.json")), "npm lockfile", "package-lock.json is present for reproducible action installs.", "Commit package-lock.json."),
     checkBoolean(Boolean(action?.includes("runs:\n  using: composite")), "Composite action", "action.yml declares a composite action.", "Keep action.yml as a composite action."),
     checkBoolean(Boolean(action?.includes("node \"$GITHUB_ACTION_PATH/dist/cli.js\"")), "Action local build path", "action.yml runs the checked-out dist/cli.js.", "Run the built CLI from the checked-out action source."),
@@ -202,23 +202,57 @@ function checkKeywords(keywords: string[]): ReleaseCheck {
   };
 }
 
-function checkSchemaContract(root: string, title: string, fileName: string, schemaName: string): ReleaseCheck {
-  const schemaPath = join(root, "schemas", fileName);
-  const schemaSource = readOptional(root, "src/schema.ts") ?? "";
-  const schemaDocs = readOptional(root, "docs/SCHEMAS.md") ?? "";
+function checkSchemaContracts(root: string, readme: string | undefined, schemaDocs: string | undefined): ReleaseCheck[] {
+  return schemaNames.map((name) => checkSchemaContract(root, name, readme, schemaDocs));
+}
+
+function checkSchemaContract(root: string, name: SchemaName, readme: string | undefined, schemaDocs: string | undefined): ReleaseCheck {
+  const fileName = schemaFileName(name);
+  const relativePath = `schemas/${fileName}`;
+  const schemaPath = join(root, relativePath);
   const missing: string[] = [];
-  if (!existsSync(schemaPath)) missing.push(`schemas/${fileName}`);
-  if (!schemaSource.includes(`"${schemaName}"`)) missing.push(`src/schema.ts entry ${schemaName}`);
-  if (!schemaDocs.includes(fileName)) missing.push(`docs/SCHEMAS.md reference ${fileName}`);
+  const parsed = readSchemaJson(schemaPath, missing, relativePath);
+  if (parsed) {
+    if (parsed.$schema !== "https://json-schema.org/draft/2020-12/schema") missing.push(`${relativePath} draft 2020-12 marker`);
+    if (parsed.$id !== `https://patchdrill.dev/schemas/${fileName}`) missing.push(`${relativePath} $id`);
+    if (typeof parsed.title !== "string" || !parsed.title.trim()) missing.push(`${relativePath} title`);
+    if (parsed.type !== "object") missing.push(`${relativePath} object root type`);
+  }
+  if (!readme?.includes(`patchdrill schema ${name}`)) missing.push(`README schema command ${name}`);
+  if (!schemaDocs?.includes(`patchdrill schema ${name}`)) missing.push(`docs/SCHEMAS.md command ${name}`);
+  if (!schemaDocs?.includes(fileName)) missing.push(`docs/SCHEMAS.md reference ${fileName}`);
   return {
     status: missing.length === 0 ? "pass" : "fail",
-    title,
+    title: schemaCheckTitle(name),
     detail:
       missing.length === 0
-        ? `${schemaName} is shipped, exposed by patchdrill schema, and documented for automation consumers.`
-        : `${schemaName} schema contract is missing ${missing.join(", ")}.`,
+        ? `${fileName} is valid draft 2020-12 JSON, exposed by patchdrill schema ${name}, and documented for automation consumers.`
+        : `${name} schema contract is missing ${missing.join(", ")}.`,
     ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} before release.` } : {})
   };
+}
+
+function readSchemaJson(
+  path: string,
+  failures: string[],
+  label: string
+): { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown } | undefined {
+  if (!existsSync(path)) {
+    failures.push(`${label} file`);
+    return undefined;
+  }
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as { $schema?: unknown; $id?: unknown; title?: unknown; type?: unknown };
+  } catch {
+    failures.push(`${label} valid JSON`);
+    return undefined;
+  }
+}
+
+function schemaCheckTitle(name: SchemaName): string {
+  if (name === "doctor") return "Doctor output schema";
+  if (name === "release-check") return "Release-check output schema";
+  return `${name[0]?.toUpperCase() ?? ""}${name.slice(1)} schema`;
 }
 
 function readStringArray(value: unknown): string[] {

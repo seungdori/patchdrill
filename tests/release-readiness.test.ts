@@ -24,6 +24,9 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] npm provenance publish");
     expect(rendered).toContain("[PASS] Package file allowlist");
     expect(rendered).toContain("[PASS] Package discoverability keywords");
+    expect(rendered).toContain("[PASS] Policy schema");
+    expect(rendered).toContain("[PASS] Report schema");
+    expect(rendered).toContain("[PASS] Evidence schema");
     expect(rendered).toContain("[PASS] Doctor output schema");
     expect(rendered).toContain("[PASS] Release-check output schema");
     expect(rendered).toContain("[PASS] CI readiness dogfood");
@@ -43,6 +46,7 @@ describe("release readiness", () => {
 
     expect(releaseReadinessHasFailures(checks)).toBe(true);
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Package name");
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Policy schema");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("npm provenance publish");
   });
 });

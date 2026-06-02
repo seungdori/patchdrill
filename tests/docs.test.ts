@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createDemoReport } from "../src/demo.js";
 import { checkMarkdownLinks } from "../src/markdown-links.js";
 import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "../src/report.js";
+import { schemaFileName, schemaNames } from "../src/schema.js";
 
 describe("documentation examples", () => {
   it("keeps the example report risk and confidence scores consistent", () => {
@@ -41,16 +42,13 @@ describe("documentation examples", () => {
   });
 
   it("documents every public JSON Schema file", () => {
+    const readme = readFileSync("README.md", "utf8");
     const schemaDocs = readFileSync("docs/SCHEMAS.md", "utf8");
 
-    for (const schema of [
-      "patchdrill-policy.schema.json",
-      "patchdrill-report.schema.json",
-      "patchdrill-evidence.schema.json",
-      "patchdrill-doctor.schema.json",
-      "patchdrill-release-check.schema.json"
-    ]) {
-      expect(schemaDocs).toContain(schema);
+    for (const name of schemaNames) {
+      expect(readme).toContain(`patchdrill schema ${name}`);
+      expect(schemaDocs).toContain(`patchdrill schema ${name}`);
+      expect(schemaDocs).toContain(schemaFileName(name));
     }
   });
 

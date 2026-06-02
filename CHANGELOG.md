@@ -118,5 +118,6 @@
 - Added readiness summaries to doctor/release JSON and dogfooded release-check in CI and release workflows.
 - Added local Markdown link verification to release readiness and documentation tests.
 - Added package file allowlist and launch keyword checks to release readiness.
+- Hardened release readiness so shipped schemas must parse, expose matching `$id` values, and appear in README/SCHEMAS documentation.
 - Added launch case studies and a fixture-backed stack coverage matrix.
 - Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.

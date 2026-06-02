@@ -46,4 +46,4 @@ Use `schemas/patchdrill-doctor.schema.json` for onboarding bots and repository b
 
 ## Release-Check Schema
 
-Use `schemas/patchdrill-release-check.schema.json` for release automation that consumes `patchdrill release-check --format json`. The report includes `schemaVersion: "1"`, a top-level `ok` flag, summary counts, and local release-readiness checks for package metadata, action wiring, provenance workflow settings, launch docs, shipped schema contracts, and Markdown links.
+Use `schemas/patchdrill-release-check.schema.json` for release automation that consumes `patchdrill release-check --format json`. The report includes `schemaVersion: "1"`, a top-level `ok` flag, summary counts, and local release-readiness checks for package metadata, action wiring, provenance workflow settings, launch docs, parseable shipped schema contracts with matching README/SCHEMAS documentation, and Markdown links.

@@ -2,15 +2,23 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 import { inspectDoctor } from "../src/doctor.js";
 import { checkReleaseReadiness, createReleaseReadinessReport } from "../src/release-readiness.js";
-import { isSchemaName, readSchema, schemaNames } from "../src/schema.js";
+import { isSchemaName, listSchemas, readSchema, schemaFileName, schemaNames } from "../src/schema.js";
 
 describe("schemas", () => {
   it("exposes public schemas using JSON Schema draft 2020-12", () => {
     expect(schemaNames).toEqual(["policy", "report", "evidence", "doctor", "release-check"]);
+    expect(listSchemas().map(({ name, fileName }) => [name, fileName])).toEqual([
+      ["policy", "patchdrill-policy.schema.json"],
+      ["report", "patchdrill-report.schema.json"],
+      ["evidence", "patchdrill-evidence.schema.json"],
+      ["doctor", "patchdrill-doctor.schema.json"],
+      ["release-check", "patchdrill-release-check.schema.json"]
+    ]);
 
     for (const name of schemaNames) {
-      const schema = JSON.parse(readSchema(name)) as { $schema?: string; $defs?: Record<string, unknown> };
+      const schema = JSON.parse(readSchema(name)) as { $schema?: string; $id?: string; $defs?: Record<string, unknown> };
       expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+      expect(schema.$id).toBe(`https://patchdrill.dev/schemas/${schemaFileName(name)}`);
       expect(schema.$defs).toBeDefined();
     }
   });

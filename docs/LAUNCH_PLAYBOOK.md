@@ -35,7 +35,7 @@ Done for the public repository:
 - `patchdrill doctor` for first-run repository readiness diagnosis.
 - `patchdrill release-check` for static npm/GitHub Action release readiness checks.
 - CI and release workflows dogfood `patchdrill release-check --format json`.
-- JSON Schemas for `patchdrill doctor --format json` and `patchdrill release-check --format json`.
+- JSON Schemas for policy, report, evidence, doctor, and release-check automation contracts.
 - Public case-study and stack-coverage docs for launch evaluation.
 - Release readiness checks local Markdown links across README, docs, and examples.
 - Release readiness checks package file allowlisting and launch-discovery keywords.
@@ -79,7 +79,7 @@ npm run check
 npm pack --dry-run
 ```
 
-`release-check` verifies local repository readiness, including the shipped JSON Schemas for readiness automation output. npm Trusted Publisher configuration still has to be checked in npm account settings.
+`release-check` verifies local repository readiness, including parseable shipped JSON Schemas and matching README/SCHEMAS documentation for every public schema command. npm Trusted Publisher configuration still has to be checked in npm account settings.
 
 ## Star Hooks
 

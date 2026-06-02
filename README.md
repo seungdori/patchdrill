@@ -256,6 +256,7 @@ Export JSON Schemas for editors and bots:
 ```bash
 patchdrill schema policy > patchdrill-policy.schema.json
 patchdrill schema report > patchdrill-report.schema.json
+patchdrill schema evidence > patchdrill-evidence.schema.json
 patchdrill schema doctor > patchdrill-doctor.schema.json
 patchdrill schema release-check > patchdrill-release-check.schema.json
 ```
