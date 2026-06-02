@@ -68,6 +68,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => isGradleBuildFile(candidate.path))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGradleDependencies(pair.before);
+    const after = parseGradleDependencies(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parseComposerJson(pair.before);
@@ -526,6 +533,29 @@ function parseMavenPomDependencies(value: string | undefined): Map<string, Manif
   }
   const directDependencies = withoutBuild.replace(/<dependencyManagement\b[\s\S]*?<\/dependencyManagement>/gi, "");
   readMavenDependencyBlocks(packages, directDependencies, "dependencies");
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseGradleDependencies(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  for (const block of readGradleBlocks(value, "dependencies")) {
+    for (const rawLine of block.split(/\r?\n/)) {
+      const line = stripGradleComment(rawLine).trim();
+      if (!line) continue;
+      const parsed = parseGradleDependencyLine(line);
+      if (!parsed) continue;
+      const dependencyType = gradleDependencyType(parsed.configuration);
+      const key = `${dependencyType}:${parsed.configuration}:${parsed.name.toLowerCase()}`;
+      packages.set(key, {
+        name: parsed.name,
+        key,
+        spec: parsed.version,
+        packagePath: parsed.configuration,
+        dependencyType
+      });
+    }
+  }
   return packages.size > 0 ? packages : undefined;
 }
 
@@ -1005,6 +1035,88 @@ function mavenDependencyType(scope: string, optional: string): DependencyChange[
   if (optional.trim().toLowerCase() === "true") return "optionalDependencies";
   if (scope.trim().toLowerCase() === "test") return "devDependencies";
   return "dependencies";
+}
+
+function isGradleBuildFile(path: string): boolean {
+  const fileName = path.split("/").at(-1) ?? path;
+  return fileName === "build.gradle" || fileName === "build.gradle.kts";
+}
+
+function readGradleBlocks(value: string, blockName: string): string[] {
+  const blocks: string[] = [];
+  const pattern = new RegExp(`\\b${blockName}\\s*\\{`, "g");
+  for (const match of value.matchAll(pattern)) {
+    const openBrace = (match.index ?? 0) + match[0].lastIndexOf("{");
+    let depth = 0;
+    let quote: string | undefined;
+    for (let index = openBrace; index < value.length; index += 1) {
+      const char = value[index];
+      const previous = value[index - 1];
+      if ((char === '"' || char === "'") && previous !== "\\") {
+        quote = quote === char ? undefined : quote ?? char;
+        continue;
+      }
+      if (quote) continue;
+      if (char === "{") depth += 1;
+      if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          blocks.push(value.slice(openBrace + 1, index));
+          break;
+        }
+      }
+    }
+  }
+  return blocks;
+}
+
+function stripGradleComment(line: string): string {
+  let quote: string | undefined;
+  for (let index = 0; index < line.length - 1; index += 1) {
+    const char = line[index];
+    const previous = line[index - 1];
+    if ((char === '"' || char === "'") && previous !== "\\") {
+      quote = quote === char ? undefined : quote ?? char;
+      continue;
+    }
+    if (!quote && char === "/" && line[index + 1] === "/") return line.slice(0, index);
+  }
+  return line;
+}
+
+function parseGradleDependencyLine(line: string): { configuration: string; name: string; version: string } | undefined {
+  const stringMatch = /^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(\s*)?(?:platform\s*)?(?:\(\s*)?["']([^"']+)["']/.exec(line);
+  if (stringMatch?.[1] && stringMatch[2]) {
+    const coordinate = parseGradleCoordinate(stringMatch[2]);
+    return coordinate ? { configuration: stringMatch[1], ...coordinate } : undefined;
+  }
+
+  const mapMatch = /^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(\s*)?(.+)$/.exec(line);
+  if (!mapMatch?.[1] || !mapMatch[2]) return undefined;
+  const group = readGradleMapAttribute(mapMatch[2], "group");
+  const name = readGradleMapAttribute(mapMatch[2], "name");
+  const version = readGradleMapAttribute(mapMatch[2], "version");
+  if (!group || !name || !version) return undefined;
+  return { configuration: mapMatch[1], name: `${group}:${name}`, version };
+}
+
+function parseGradleCoordinate(value: string): { name: string; version: string } | undefined {
+  const parts = value.split(":");
+  if (parts.length < 3) return undefined;
+  const group = parts[0];
+  const artifact = parts[1];
+  const version = parts.slice(2).join(":");
+  if (!group || !artifact || !version) return undefined;
+  return { name: `${group}:${artifact}`, version };
+}
+
+function readGradleMapAttribute(value: string, name: string): string | undefined {
+  const match = new RegExp(`\\b${name}\\s*:\\s*["']([^"']+)["']`).exec(value);
+  return match?.[1];
+}
+
+function gradleDependencyType(configuration: string): DependencyChange["dependencyType"] {
+  return configuration.toLowerCase().includes("test") ? "devDependencies" : "dependencies";
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {

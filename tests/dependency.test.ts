@@ -614,6 +614,163 @@ pytest = "^8.1.0"
     ]);
   });
 
+  it("reports Gradle Groovy dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-gradle-groovy-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGradleBuild(
+      root,
+      "build.gradle",
+      `
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation 'com.google.guava:guava:32.1.0-jre'
+  implementation group: 'org.legacy', name: 'oldlib', version: '1.0.0'
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
+}
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGradleBuild(
+      root,
+      "build.gradle",
+      `
+plugins {
+  id 'java'
+}
+
+dependencies {
+  implementation 'com.google.guava:guava:33.0.0-jre'
+  implementation 'org.slf4j:slf4j-api:2.0.9'
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+}
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "build.gradle", status: "modified", additions: 5, deletions: 5, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "build.gradle",
+        packageName: "com.google.guava:guava",
+        packagePath: "implementation",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "32.1.0-jre",
+        after: "33.0.0-jre"
+      },
+      {
+        file: "build.gradle",
+        packageName: "org.legacy:oldlib",
+        packagePath: "implementation",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "1.0.0"
+      },
+      {
+        file: "build.gradle",
+        packageName: "org.slf4j:slf4j-api",
+        packagePath: "implementation",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "2.0.9"
+      },
+      {
+        file: "build.gradle",
+        packageName: "org.junit.jupiter:junit-jupiter",
+        packagePath: "testImplementation",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "5.9.0",
+        after: "5.10.0"
+      }
+    ]);
+  });
+
+  it("reports Gradle Kotlin dependency additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-gradle-kotlin-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGradleBuild(
+      root,
+      "build.gradle.kts",
+      `
+plugins {
+  kotlin("jvm") version "2.0.0"
+}
+
+dependencies {
+  implementation("io.ktor:ktor-server-core:2.3.7")
+  testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
+}
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGradleBuild(
+      root,
+      "build.gradle.kts",
+      `
+plugins {
+  kotlin("jvm") version "2.0.0"
+}
+
+dependencies {
+  implementation("io.ktor:ktor-server-core:2.3.8")
+  implementation("ch.qos.logback:logback-classic:1.5.6")
+  testImplementation("io.kotest:kotest-runner-junit5:5.9.0")
+}
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "build.gradle.kts", status: "modified", additions: 4, deletions: 3, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "build.gradle.kts",
+        packageName: "ch.qos.logback:logback-classic",
+        packagePath: "implementation",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "1.5.6"
+      },
+      {
+        file: "build.gradle.kts",
+        packageName: "io.ktor:ktor-server-core",
+        packagePath: "implementation",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "2.3.7",
+        after: "2.3.8"
+      },
+      {
+        file: "build.gradle.kts",
+        packageName: "io.kotest:kotest-runner-junit5",
+        packagePath: "testImplementation",
+        dependencyType: "devDependencies",
+        changeType: "updated",
+        before: "5.8.0",
+        after: "5.9.0"
+      }
+    ]);
+  });
+
   it("reports npm package-lock additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-lock-"));
     tempDirs.push(root);
@@ -1875,6 +2032,10 @@ function writeCargoToml(root: string, contents: string): void {
 
 function writePomXml(root: string, contents: string): void {
   writeFileSync(join(root, "pom.xml"), contents.trimStart());
+}
+
+function writeGradleBuild(root: string, fileName: "build.gradle" | "build.gradle.kts", contents: string): void {
+  writeFileSync(join(root, fileName), contents.trimStart());
 }
 
 function writePoetryLock(root: string, contents: string): void {

@@ -653,6 +653,8 @@ function isDependencyManifest(path: string): boolean {
     fileName === "go.mod" ||
     fileName === "Cargo.toml" ||
     fileName === "pom.xml" ||
+    fileName === "build.gradle" ||
+    fileName === "build.gradle.kts" ||
     /^requirements([-.].*)?\.txt$/i.test(fileName) ||
     /^.*[-.]requirements\.txt$/i.test(fileName) ||
     /\.(csproj|fsproj|vbproj)$/i.test(fileName) ||

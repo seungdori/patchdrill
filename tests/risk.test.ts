@@ -759,6 +759,31 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags Gradle build files as dependency manifests", () => {
+    const assessment = assessRisk(
+      [
+        { path: "build.gradle", status: "modified", additions: 3, deletions: 2, binary: false },
+        { path: "app/build.gradle.kts", status: "modified", additions: 3, deletions: 2, binary: false }
+      ],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "build.gradle"
+      })
+    );
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "app/build.gradle.kts"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

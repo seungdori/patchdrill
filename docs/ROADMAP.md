@@ -36,6 +36,7 @@
 - `Cargo.toml` dependency diff summaries.
 - `Cargo.lock` dependency diff summaries.
 - Maven `pom.xml` dependency diff summaries.
+- Gradle `build.gradle` and `build.gradle.kts` dependency diff summaries.
 - `requirements.txt` dependency diff summaries.
 - `poetry.lock` dependency diff summaries.
 - `uv.lock` dependency diff summaries.
