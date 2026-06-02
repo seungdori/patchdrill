@@ -31,165 +31,64 @@ interface CargoTableDependency {
   values: string[];
 }
 
+interface DependencyAnalyzer {
+  matches: (path: string) => boolean;
+  analyze: (file: string, before: string | undefined, after: string | undefined) => DependencyChange[];
+}
+
+const dependencyAnalyzers: DependencyAnalyzer[] = [
+  createDependencyAnalyzer((path) => path.endsWith("package.json"), parsePackageJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer(isRequirementsFile, parseRequirements, diffRequirementPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("pyproject.toml"), parsePyprojectDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer(isDotnetDependencyManifest, parseDotnetDependencyManifest, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("pom.xml"), parseMavenPomDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer(isGradleBuildFile, parseGradleDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer(isGradleVersionCatalog, parseGradleVersionCatalog, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("composer.json"), parseComposerJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer((path) => path.endsWith("Gemfile"), parseGemfile, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("go.mod"), parseGoMod, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("Cargo.toml"), parseCargoToml, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("package-lock.json"), parsePackageLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("pnpm-lock.yaml"), parsePnpmLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("yarn.lock"), parseYarnLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("bun.lock"), parseBunLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("go.sum"), parseGoSum, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("Cargo.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("poetry.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("uv.lock"), parseUvLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("Pipfile.lock"), parsePipfileLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("Gemfile.lock"), parseGemfileLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer((path) => path.endsWith("composer.lock"), parseComposerLock, diffLockPackages, () => new Map())
+];
+
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
   const changes: DependencyChange[] = [];
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package.json"))) {
+  for (const file of changedFiles) {
+    const analyzer = dependencyAnalyzers.find((candidate) => candidate.matches(file.path));
+    if (!analyzer) continue;
     const pair = readFilePair(options, file.path);
-    const before = parsePackageJson(pair.before);
-    const after = parsePackageJson(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffPackageJson(file.path, before ?? {}, after ?? {}));
-  }
-  for (const file of changedFiles.filter((candidate) => isRequirementsFile(candidate.path))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseRequirements(pair.before);
-    const after = parseRequirements(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffRequirementPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pyproject.toml"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parsePyprojectDependencies(pair.before);
-    const after = parsePyprojectDependencies(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => isDotnetDependencyManifest(candidate.path))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseDotnetDependencyManifest(pair.before);
-    const after = parseDotnetDependencyManifest(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pom.xml"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseMavenPomDependencies(pair.before);
-    const after = parseMavenPomDependencies(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => isGradleBuildFile(candidate.path))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGradleDependencies(pair.before);
-    const after = parseGradleDependencies(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => isGradleVersionCatalog(candidate.path))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGradleVersionCatalog(pair.before);
-    const after = parseGradleVersionCatalog(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.json"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseComposerJson(pair.before);
-    const after = parseComposerJson(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffPackageJson(file.path, before ?? {}, after ?? {}));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Gemfile"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGemfile(pair.before);
-    const after = parseGemfile(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("go.mod"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGoMod(pair.before);
-    const after = parseGoMod(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Cargo.toml"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseCargoToml(pair.before);
-    const after = parseCargoToml(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("package-lock.json"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parsePackageLock(pair.before);
-    const after = parsePackageLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("pnpm-lock.yaml"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parsePnpmLock(pair.before);
-    const after = parsePnpmLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("yarn.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseYarnLock(pair.before);
-    const after = parseYarnLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("bun.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseBunLock(pair.before);
-    const after = parseBunLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("go.sum"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGoSum(pair.before);
-    const after = parseGoSum(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Cargo.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseTomlPackageLock(pair.before);
-    const after = parseTomlPackageLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("poetry.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseTomlPackageLock(pair.before);
-    const after = parseTomlPackageLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("uv.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseUvLock(pair.before);
-    const after = parseUvLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Pipfile.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parsePipfileLock(pair.before);
-    const after = parsePipfileLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("Gemfile.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseGemfileLock(pair.before);
-    const after = parseGemfileLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffNameVersionLockPackages(file.path, before ?? new Map(), after ?? new Map()));
-  }
-  for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.lock"))) {
-    const pair = readFilePair(options, file.path);
-    const before = parseComposerLock(pair.before);
-    const after = parseComposerLock(pair.after);
-    if (!before && !after) continue;
-    changes.push(...diffLockPackages(file.path, before ?? new Map(), after ?? new Map()));
+    changes.push(...analyzer.analyze(file.path, pair.before, pair.after));
   }
   return changes.sort((a, b) =>
     `${a.file}:${a.dependencyType}:${a.packageName}:${a.packagePath ?? ""}`.localeCompare(`${b.file}:${b.dependencyType}:${b.packageName}:${b.packagePath ?? ""}`)
   );
+}
+
+function createDependencyAnalyzer<T>(
+  matches: (path: string) => boolean,
+  parse: (value: string | undefined) => T | undefined,
+  diff: (file: string, before: T, after: T) => DependencyChange[],
+  empty: () => T
+): DependencyAnalyzer {
+  return {
+    matches,
+    analyze: (file, beforeContent, afterContent) => {
+      const before = parse(beforeContent);
+      const after = parse(afterContent);
+      if (!before && !after) return [];
+      return diff(file, before ?? empty(), after ?? empty());
+    }
+  };
 }
 
 function diffPackageJson(file: string, before: PackageJson, after: PackageJson): DependencyChange[] {

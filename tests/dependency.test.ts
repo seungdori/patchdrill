@@ -54,6 +54,51 @@ describe("analyzeDependencyChanges", () => {
     ]);
   });
 
+  it("dispatches mixed dependency files through format analyzers", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-mixed-deps-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writePackage(root, { dependencies: { react: "^18.2.0" } });
+    writeRequirements(root, "requests==2.31.0\n");
+    writeFileSync(join(root, "README.md"), "# demo\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writePackage(root, { dependencies: { react: "^19.0.0" } });
+    writeRequirements(root, "requests==2.32.0\n");
+    writeFileSync(join(root, "README.md"), "# demo\n\nDocs only.\n");
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [
+        { path: "README.md", status: "modified", additions: 2, deletions: 0, binary: false },
+        { path: "package.json", status: "modified", additions: 1, deletions: 1, binary: false },
+        { path: "requirements.txt", status: "modified", additions: 1, deletions: 1, binary: false }
+      ]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "package.json",
+        packageName: "react",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "^18.2.0",
+        after: "^19.0.0"
+      },
+      {
+        file: "requirements.txt",
+        packageName: "requests",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "==2.31.0",
+        after: "==2.32.0"
+      }
+    ]);
+  });
+
   it("reports requirements.txt dependency additions, removals, and updates", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-requirements-"));
     tempDirs.push(root);
