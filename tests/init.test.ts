@@ -46,6 +46,15 @@ describe("init", () => {
     expect(guide).toContain("`scan` does not mutate the repository");
   });
 
+  it("does not claim a policy file exists when init runs without policy generation", () => {
+    const guide = onboardingGuideTemplate({ policyPack: "regulated", policyCreated: false });
+
+    expect(guide).toContain("No policy file was generated.");
+    expect(guide).toContain("patchdrill init --policy");
+    expect(guide).toContain("patchdrill init --policy-pack regulated");
+    expect(guide).not.toContain("Review `.patchdrill.yml` before enforcing");
+  });
+
   it("writes the workflow to the standard GitHub Actions path", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-init-"));
     tempDirs.push(root);

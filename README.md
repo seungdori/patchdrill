@@ -148,6 +148,12 @@ Diagnose what PatchDrill can infer from your repository before changing CI:
 patchdrill doctor
 ```
 
+For automation:
+
+```bash
+patchdrill doctor --format json
+```
+
 Analyze uncommitted work:
 
 ```bash
@@ -200,6 +206,12 @@ Check whether this repository is ready for npm/GitHub Action release:
 
 ```bash
 patchdrill release-check
+```
+
+For automation:
+
+```bash
+patchdrill release-check --format json
 ```
 
 Regenerate an evidence manifest after final artifact post-processing:
@@ -276,11 +288,11 @@ patchdrill init --policy-pack regulated
 patchdrill scan [options]
 patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
 patchdrill demo [--scenario <name>] [--output <directory>]
-patchdrill doctor
+patchdrill doctor [--format text|json]
 patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
-patchdrill release-check
+patchdrill release-check [--format text|json]
 patchdrill schema [policy|report|evidence] [--output <path>]
 patchdrill verify --evidence <patchdrill-evidence.json>
 ```
@@ -311,6 +323,7 @@ Options:
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--scenario <name>` | Demo scenario for `patchdrill demo`: `review-ready`, `risky-agent-pr`. |
+| `--format <format>` | Output format for `doctor` and `release-check`: `text`, `json`. |
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema/dashboard file or demo artifact directory. |
 

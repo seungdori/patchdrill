@@ -20,6 +20,8 @@ describe("release readiness", () => {
     expect(releaseReadinessHasFailures(checks)).toBe(false);
     expect(rendered).toContain("PatchDrill Release Check - PASS");
     expect(rendered).toContain("[PASS] npm provenance publish");
+    expect(rendered).toContain("[PASS] Case studies");
+    expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[WARN] npm Trusted Publisher");
   });
 

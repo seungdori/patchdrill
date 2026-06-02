@@ -14,6 +14,7 @@ Configure the npm package as a trusted publisher for this repository and the `Re
 ```bash
 patchdrill doctor
 patchdrill release-check
+patchdrill release-check --format json
 npm run check
 npm pack --dry-run
 node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill/release.json --sarif .patchdrill/release.sarif

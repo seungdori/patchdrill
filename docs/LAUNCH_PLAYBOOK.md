@@ -70,6 +70,7 @@ Run this before creating the first public release:
 ```bash
 patchdrill doctor
 patchdrill release-check
+patchdrill release-check --format json
 npm run check
 npm pack --dry-run
 ```

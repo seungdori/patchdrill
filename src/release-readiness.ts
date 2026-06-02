@@ -32,6 +32,14 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(Boolean(ci?.includes("npm pack --dry-run")), "Package dry-run CI", "CI verifies package contents with npm pack --dry-run.", "Add npm pack --dry-run to CI."),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
+    checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
+    checkBoolean(existsSync(join(root, "docs", "STACK_COVERAGE.md")), "Stack coverage matrix", "docs/STACK_COVERAGE.md is present.", "Add docs/STACK_COVERAGE.md with fixture-backed coverage claims."),
+    checkBoolean(
+      existsSync(join(root, "examples", "case-studies", "README.md")),
+      "Case study examples",
+      "examples/case-studies/README.md points readers to concrete demo artifacts.",
+      "Add examples/case-studies/README.md with demo artifact links."
+    ),
     checkBoolean(existsSync(join(root, "CHANGELOG.md")), "Changelog", "CHANGELOG.md is present.", "Add CHANGELOG.md before release."),
     checkBoolean(existsSync(join(root, "LICENSE")), "License", "LICENSE is present.", "Add a license before release."),
     checkBoolean(existsSync(join(root, "SECURITY.md")), "Security policy", "SECURITY.md is present.", "Add SECURITY.md before release."),

@@ -113,5 +113,6 @@
 - Added nested Go module and workspace detection with scoped `go test` and `go vet` plans.
 - Added `patchdrill doctor` for first-run repository readiness diagnosis.
 - Added `patchdrill release-check` for local npm and GitHub Action release readiness checks.
+- Added JSON output for `patchdrill doctor --format json` and `patchdrill release-check --format json`.
 - Added launch case studies and a fixture-backed stack coverage matrix.
 - Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.

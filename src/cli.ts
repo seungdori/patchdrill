@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "doctor") {
-    doctorCommand();
+    doctorCommand(parsed);
     return;
   }
   if (command === "evidence") {
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "release-check") {
-    releaseCheckCommand();
+    releaseCheckCommand(parsed);
     return;
   }
   if (command === "verify") {
@@ -193,9 +193,14 @@ export function demoCommand(parsed: ParsedArgs): void {
   console.log(`- ${files.html}`);
 }
 
-export function doctorCommand(): void {
+export function doctorCommand(parsed: ParsedArgs = { command: "doctor", flags: {}, positionals: [] }): void {
   const root = gitRoot(process.cwd());
-  console.log(renderDoctor(inspectDoctor(root)).trimEnd());
+  const report = inspectDoctor(root);
+  if (readOutputFormat(parsed) === "json") {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  console.log(renderDoctor(report).trimEnd());
 }
 
 export function evidenceCommand(parsed: ParsedArgs): void {
@@ -227,13 +232,14 @@ function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
   const policyPack = readPolicyPack(flagString(parsed, "policy-pack"));
   const force = flagBoolean(parsed, "force");
+  const policyRequested = flagBoolean(parsed, "policy") || parsed.flags["policy-pack"] !== undefined;
   const path = writeGitHubWorkflow(root, force);
   console.log(`Created ${path}`);
-  if (flagBoolean(parsed, "policy") || parsed.flags["policy-pack"]) {
+  if (policyRequested) {
     const policyPath = writePolicyFile(root, force, policyPack);
     console.log(`Created ${policyPath}`);
   }
-  const guidePath = writeOnboardingGuide(root, force, policyPack);
+  const guidePath = writeOnboardingGuide(root, force, { policyPack, policyCreated: policyRequested });
   console.log(`Created ${guidePath}`);
 }
 
@@ -305,10 +311,14 @@ function verifyCommand(parsed: ParsedArgs): void {
   }
 }
 
-export function releaseCheckCommand(): void {
+export function releaseCheckCommand(parsed: ParsedArgs = { command: "release-check", flags: {}, positionals: [] }): void {
   const root = gitRoot(process.cwd());
   const checks = checkReleaseReadiness(root);
-  console.log(renderReleaseReadiness(checks).trimEnd());
+  if (readOutputFormat(parsed) === "json") {
+    console.log(JSON.stringify({ ok: !releaseReadinessHasFailures(checks), checks }, null, 2));
+  } else {
+    console.log(renderReleaseReadiness(checks).trimEnd());
+  }
   if (releaseReadinessHasFailures(checks)) {
     process.exitCode = 1;
   }
@@ -435,6 +445,7 @@ function takesValue(flag: string): boolean {
     "command-timeout-ms",
     "policy-pack",
     "scenario",
+    "format",
     "output"
   ].includes(flag);
 }
@@ -505,6 +516,14 @@ function readPolicyPack(value: string | boolean | undefined): PolicyPackName {
   return value;
 }
 
+function readOutputFormat(parsed: ParsedArgs): "text" | "json" {
+  const format = flagString(parsed, "format") ?? "text";
+  if (format !== "text" && format !== "json") {
+    throw new Error(`Invalid output format "${format}". Expected text or json.`);
+  }
+  return format;
+}
+
 function optionalEvidenceArtifact(kind: EvidenceArtifactKind, path: string | undefined): RenderedEvidenceArtifact[] {
   return path ? [{ kind, path, contents: readFileSync(path, "utf8") }] : [];
 }
@@ -535,11 +554,11 @@ Usage:
   patchdrill scan [options]
   patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
   patchdrill demo [--scenario <name>] [--output <directory>]
-  patchdrill doctor
+  patchdrill doctor [--format text|json]
   patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
-  patchdrill release-check
+  patchdrill release-check [--format text|json]
   patchdrill schema [policy|report|evidence] [--output <path>]
   patchdrill verify --evidence <patchdrill-evidence.json>
 
@@ -572,6 +591,7 @@ Options:
   --policy-pack <name>
                       Starter policy pack for init --policy: ${policyPackNames.join(", ")}
   --scenario <name>   Demo scenario: ${demoScenarioNames.join(", ")}
+  --format <format>   Output format for doctor and release-check: text, json
   --list              List schemas when used with schema
   --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version

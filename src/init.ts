@@ -4,6 +4,11 @@ import { join } from "node:path";
 export const policyPackNames = ["default", "regulated", "agentic"] as const;
 export type PolicyPackName = (typeof policyPackNames)[number];
 
+export interface OnboardingGuideOptions {
+  policyPack?: PolicyPackName;
+  policyCreated?: boolean;
+}
+
 export function isPolicyPackName(value: string): value is PolicyPackName {
   return (policyPackNames as readonly string[]).includes(value);
 }
@@ -28,14 +33,14 @@ export function writePolicyFile(root: string, force = false, pack: PolicyPackNam
   return policyPath;
 }
 
-export function writeOnboardingGuide(root: string, force = false, pack: PolicyPackName = "default"): string {
+export function writeOnboardingGuide(root: string, force = false, options: PolicyPackName | OnboardingGuideOptions = "default"): string {
   const guideDir = join(root, ".github");
   const guidePath = join(guideDir, "patchdrill-onboarding.md");
   if (existsSync(guidePath) && !force) {
     throw new Error(`${guidePath} already exists. Re-run with --force to overwrite.`);
   }
   mkdirSync(guideDir, { recursive: true });
-  writeFileSync(guidePath, onboardingGuideTemplate(pack), "utf8");
+  writeFileSync(guidePath, onboardingGuideTemplate(options), "utf8");
   return guidePath;
 }
 
@@ -95,7 +100,16 @@ jobs:
 `;
 }
 
-export function onboardingGuideTemplate(pack: PolicyPackName = "default"): string {
+export function onboardingGuideTemplate(options: PolicyPackName | OnboardingGuideOptions = "default"): string {
+  const { policyPack, policyCreated } = normalizeOnboardingGuideOptions(options);
+  const policySection = policyCreated
+    ? `Starter policy pack: \`${policyPack}\`.
+
+Review \`.patchdrill.yml\` before enforcing the gate on protected branches. Keep required commands conservative and reviewable.`
+    : `No policy file was generated.
+
+Run \`patchdrill init --policy\` or \`patchdrill init --policy-pack ${policyPack}\` when the repository is ready for policy-as-code.`;
+
   return `# PatchDrill Onboarding
 
 This repository is wired for deterministic patch evidence.
@@ -129,10 +143,18 @@ patchdrill verify --evidence patchdrill-evidence.json
 
 ## Policy Pack
 
-Starter policy pack: \`${pack}\`.
-
-Review \`.patchdrill.yml\` before enforcing the gate on protected branches. Keep required commands conservative and reviewable.
+${policySection}
 `;
+}
+
+function normalizeOnboardingGuideOptions(options: PolicyPackName | OnboardingGuideOptions): Required<OnboardingGuideOptions> {
+  if (typeof options === "string") {
+    return { policyPack: options, policyCreated: true };
+  }
+  return {
+    policyPack: options.policyPack ?? "default",
+    policyCreated: options.policyCreated ?? false
+  };
 }
 
 export function policyTemplate(pack: PolicyPackName = "default"): string {

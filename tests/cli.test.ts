@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, demoCommand, evidenceCommand, parseArgs, renderExplainText } from "../src/cli.js";
+import { dashboardCommand, demoCommand, doctorCommand, evidenceCommand, parseArgs, releaseCheckCommand, renderExplainText } from "../src/cli.js";
 import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
@@ -69,9 +69,19 @@ describe("cli", () => {
       flags: {},
       positionals: []
     });
+    expect(parseArgs(["doctor", "--format", "json"])).toEqual({
+      command: "doctor",
+      flags: { format: "json" },
+      positionals: []
+    });
     expect(parseArgs(["release-check"])).toEqual({
       command: "release-check",
       flags: {},
+      positionals: []
+    });
+    expect(parseArgs(["release-check", "--format=json"])).toEqual({
+      command: "release-check",
+      flags: { format: "json" },
       positionals: []
     });
     expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
@@ -151,6 +161,20 @@ describe("cli", () => {
     expect(text).toContain("Proof Pack artifacts are meant for CI gates, bots, auditors, reviewers, and model-assisted review.");
     expect(text).toContain("patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo");
     expect(text).toContain("patchdrill scan --base origin/main --run");
+  });
+
+  it("prints JSON for doctor and release-check automation", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    doctorCommand(parseArgs(["doctor", "--format", "json"]));
+    releaseCheckCommand(parseArgs(["release-check", "--format", "json"]));
+
+    const doctorPayload = JSON.parse(String(log.mock.calls[0]?.[0])) as { projectSignals: unknown[]; checks: unknown[] };
+    const releasePayload = JSON.parse(String(log.mock.calls[1]?.[0])) as { ok: boolean; checks: unknown[] };
+    expect(doctorPayload.projectSignals.length).toBeGreaterThan(0);
+    expect(doctorPayload.checks.length).toBeGreaterThan(0);
+    expect(releasePayload.ok).toBe(true);
+    expect(releasePayload.checks.length).toBeGreaterThan(0);
   });
 
   it("writes an evidence manifest from saved report artifacts", () => {
