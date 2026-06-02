@@ -71,15 +71,21 @@ function emptyPolicy(): PatchPolicy {
 function normalizePolicy(value: unknown): PatchPolicy {
   if (!isRecord(value)) return emptyPolicy();
   assertKnownKeys("policy", value, policyKeys);
+  if (value.ignoredPaths !== undefined && value.ignore !== undefined) {
+    throw new Error("Invalid PatchDrill policy: specify either ignoredPaths or ignore, not both.");
+  }
   const failOn = value.failOn === undefined ? undefined : readRequiredSeverity(value.failOn, "failOn");
   const maxRisk = value.maxRisk === undefined ? undefined : readRequiredRisk(value.maxRisk, "maxRisk");
+  const requiredCommands = readCommands(value.requiredCommands, true);
+  const optionalCommands = readCommands(value.optionalCommands, false);
+  assertUniquePolicyCommands(requiredCommands, optionalCommands);
   return {
     ignoredPaths: readStringArray(value.ignoredPaths ?? value.ignore, "ignoredPaths"),
     ...(failOn ? { failOn } : {}),
     ...(maxRisk !== undefined ? { maxRisk } : {}),
     rules: readRules(value.rules),
-    requiredCommands: readCommands(value.requiredCommands, true),
-    optionalCommands: readCommands(value.optionalCommands, false)
+    requiredCommands,
+    optionalCommands
   };
 }
 
@@ -94,6 +100,9 @@ function readRules(value: unknown): PolicyRule[] {
     const id = readRequiredString(item.id, `${field}.id`);
     const title = readRequiredString(item.title, `${field}.title`);
     const severity = readRequiredSeverity(item.severity, `${field}.severity`);
+    if (item.path !== undefined && item.paths !== undefined) {
+      throw new Error(`Invalid PatchDrill policy at ${field}: specify either path or paths, not both.`);
+    }
     const path = item.path ?? item.paths;
     const tags = readStringArray(item.tags, `${field}.tags`);
     rules.push({
@@ -130,6 +139,30 @@ function readCommands(value: unknown, required: boolean): CommandPlan[] {
     });
   }
   return commands;
+}
+
+function assertUniquePolicyCommands(requiredCommands: CommandPlan[], optionalCommands: CommandPlan[]): void {
+  const seenIds = new Map<string, string>();
+  const seenCommands = new Map<string, string>();
+  const visit = (commands: CommandPlan[], section: "requiredCommands" | "optionalCommands") => {
+    for (const [index, command] of commands.entries()) {
+      const field = `${section}[${index}]`;
+      const previousId = seenIds.get(command.id);
+      if (previousId) {
+        throw new Error(`Invalid PatchDrill policy at ${field}.id: duplicate command id "${command.id}" already used at ${previousId}.`);
+      }
+      seenIds.set(command.id, `${field}.id`);
+
+      const previousCommand = seenCommands.get(command.command);
+      if (previousCommand) {
+        throw new Error(`Invalid PatchDrill policy at ${field}.command: duplicate command "${command.command}" already used at ${previousCommand}.`);
+      }
+      seenCommands.set(command.command, `${field}.command`);
+    }
+  };
+
+  visit(requiredCommands, "requiredCommands");
+  visit(optionalCommands, "optionalCommands");
 }
 
 function assertKnownKeys(field: string, value: Record<string, unknown>, allowed: Set<string>): void {

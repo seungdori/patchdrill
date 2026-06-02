@@ -134,6 +134,7 @@
 - Explicit boolean CLI flag values so `--run=false` and related safety flags are not treated as enabled.
 - GitHub Action boolean inputs now share the CLI boolean vocabulary for execution, annotations, summaries, and PR comments.
 - Command-plan normalization so policy-required checks can promote matching inferred optional checks.
+- Policy loader fail-fast checks for duplicate command IDs, duplicate command strings, and conflicting aliases.
 - Missing-evidence risk findings when required verification commands were planned but not run.
 - Dependency proof-gap findings for manifest-only dependency changes and lockfile-only resolution drift.
 - Repository hygiene for default generated report artifacts after local scans.

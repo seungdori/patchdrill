@@ -93,6 +93,77 @@ rules:
     expect(() => loadPolicy(root)).toThrow(/rules\[0\]\.title/);
   });
 
+  it("fails fast when ignored path aliases conflict", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-conflicting-ignore-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+ignoredPaths:
+  - generated/**
+ignore:
+  - dist/**
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/either ignoredPaths or ignore/);
+  });
+
+  it("fails fast when rule path aliases conflict", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-conflicting-rule-path-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+rules:
+  - id: review
+    title: Review required
+    severity: high
+    path: src/**
+    paths:
+      - services/**
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/rules\[0\]: specify either path or paths/);
+  });
+
+  it("fails fast on duplicate policy command ids", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-duplicate-command-id-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+requiredCommands:
+  - id: verify
+    command: npm test
+optionalCommands:
+  - id: verify
+    command: npm run lint
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/duplicate command id "verify"/);
+  });
+
+  it("fails fast on duplicate policy command strings", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-policy-duplicate-command-"));
+    tempDirs.push(root);
+    writeFileSync(
+      join(root, ".patchdrill.yml"),
+      `
+requiredCommands:
+  - id: required-test
+    command: npm test
+optionalCommands:
+  - id: optional-test
+    command: npm test
+`
+    );
+
+    expect(() => loadPolicy(root)).toThrow(/duplicate command "npm test"/);
+  });
+
   it("promotes inferred optional commands when policy requires the same command", () => {
     const existing: CommandPlan[] = [
       {

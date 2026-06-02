@@ -6,7 +6,7 @@ PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` fr
 patchdrill scan --config security/patchdrill.yml
 ```
 
-Policy files are validated when loaded. Invalid severities, unknown fields, malformed command entries, and malformed rules fail the scan instead of being silently ignored.
+Policy files are validated when loaded. Invalid severities, unknown fields, malformed command entries, duplicate command IDs or command strings, conflicting aliases, and malformed rules fail the scan instead of being silently ignored.
 
 Create a starter policy:
 
@@ -75,6 +75,8 @@ rules:
 | `rules` | Path-based findings with custom severity, weight, remediation, and tags. |
 
 Policy commands are merged with inferred commands by command string and ID. If a policy `requiredCommands` entry matches an inferred optional command, PatchDrill promotes the merged command to required so repo policy cannot be weakened by a generic detector.
+
+Within a policy file, command IDs and command strings must be unique across `requiredCommands` and `optionalCommands`. Use either `ignoredPaths` or `ignore`, not both; use either `path` or `paths` in each rule, not both.
 
 ## Glob Support
 

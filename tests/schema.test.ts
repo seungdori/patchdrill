@@ -327,6 +327,24 @@ describe("schemas", () => {
     expectValid("report", report);
     expectValid("evidence", evidence);
   });
+
+  it("rejects policy alias conflicts in schema validation", () => {
+    expectInvalid("policy", {
+      ignoredPaths: ["generated/**"],
+      ignore: ["dist/**"]
+    });
+    expectInvalid("policy", {
+      rules: [
+        {
+          id: "review",
+          title: "Review required",
+          severity: "high",
+          path: "src/**",
+          paths: ["services/**"]
+        }
+      ]
+    });
+  });
 });
 
 function expectValid(name: "policy" | "report" | "evidence", value: unknown): void {
@@ -335,4 +353,10 @@ function expectValid(name: "policy" | "report" | "evidence", value: unknown): vo
   if (!validate(value)) {
     throw new Error(JSON.stringify(validate.errors, null, 2));
   }
+}
+
+function expectInvalid(name: "policy" | "report" | "evidence", value: unknown): void {
+  const ajv = new Ajv2020({ allErrors: true, strict: false, validateFormats: false });
+  const validate = ajv.compile(JSON.parse(readSchema(name)));
+  expect(validate(value)).toBe(false);
 }

@@ -5,15 +5,24 @@
   "description": "Policy-as-code configuration for PatchDrill.",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "not": {
+        "required": ["ignoredPaths", "ignore"]
+      }
+    }
+  ],
   "properties": {
     "$schema": {
       "type": "string"
     },
     "ignoredPaths": {
-      "$ref": "#/$defs/stringArray"
+      "$ref": "#/$defs/stringArray",
+      "description": "Glob patterns removed from changed-file and added-line analysis. Do not combine with the legacy ignore alias."
     },
     "ignore": {
-      "$ref": "#/$defs/stringArray"
+      "$ref": "#/$defs/stringArray",
+      "description": "Legacy alias for ignoredPaths. Do not combine with ignoredPaths."
     },
     "failOn": {
       "$ref": "#/$defs/severity"
@@ -25,6 +34,7 @@
     },
     "requiredCommands": {
       "type": "array",
+      "description": "Commands PatchDrill runs when --run is set. Command ids and command strings must be unique across requiredCommands and optionalCommands.",
       "items": {
         "$ref": "#/$defs/policyCommand"
       },
@@ -32,6 +42,7 @@
     },
     "optionalCommands": {
       "type": "array",
+      "description": "Commands shown in the report and run only when both --run and --run-optional are set. Command ids and command strings must be unique across requiredCommands and optionalCommands.",
       "items": {
         "$ref": "#/$defs/policyCommand"
       },
@@ -107,6 +118,13 @@
     "policyRule": {
       "type": "object",
       "additionalProperties": false,
+      "allOf": [
+        {
+          "not": {
+            "required": ["path", "paths"]
+          }
+        }
+      ],
       "required": ["id", "title", "severity"],
       "properties": {
         "id": {
@@ -121,10 +139,12 @@
           "$ref": "#/$defs/severity"
         },
         "path": {
-          "$ref": "#/$defs/pathPattern"
+          "$ref": "#/$defs/pathPattern",
+          "description": "Path glob or globs for this rule. Do not combine with paths."
         },
         "paths": {
-          "$ref": "#/$defs/pathPattern"
+          "$ref": "#/$defs/pathPattern",
+          "description": "Alias for path. Do not combine with path."
         },
         "detail": {
           "type": "string"
