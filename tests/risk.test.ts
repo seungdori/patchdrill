@@ -784,6 +784,21 @@ describe("assessRisk", () => {
     );
   });
 
+  it("flags Gradle version catalogs as dependency manifests", () => {
+    const assessment = assessRisk(
+      [{ path: "gradle/libs.versions.toml", status: "modified", additions: 3, deletions: 2, binary: false }],
+      []
+    );
+
+    expect(assessment.findings).toContainEqual(
+      expect.objectContaining({
+        ruleId: "file.dependency-manifest",
+        severity: "medium",
+        file: "gradle/libs.versions.toml"
+      })
+    );
+  });
+
   it("flags uv.lock as a dependency lockfile", () => {
     const assessment = assessRisk(
       [{ path: "uv.lock", status: "modified", additions: 4, deletions: 3, binary: false }],

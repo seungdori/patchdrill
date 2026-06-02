@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -767,6 +767,102 @@ dependencies {
         changeType: "updated",
         before: "5.8.0",
         after: "5.9.0"
+      }
+    ]);
+  });
+
+  it("reports Gradle version catalog additions, removals, and updates", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-gradle-catalog-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeGradleVersionCatalog(
+      root,
+      `
+[versions]
+guava = "32.1.0-jre"
+junit = "5.9.0"
+spring = "3.3.0"
+
+[libraries]
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+legacy = "org.legacy:oldlib:1.0.0"
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring" }
+`
+    );
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    writeGradleVersionCatalog(
+      root,
+      `
+[versions]
+guava = "33.0.0-jre"
+junit = "5.10.0"
+spring = "3.4.0"
+
+[libraries]
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+slf4j = { module = "org.slf4j:slf4j-api", version = "2.0.9" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring" }
+`
+    );
+
+    const changes = analyzeDependencyChanges(
+      { cwd: root },
+      [{ path: "gradle/libs.versions.toml", status: "modified", additions: 8, deletions: 8, binary: false }]
+    );
+
+    expect(changes).toEqual([
+      {
+        file: "gradle/libs.versions.toml",
+        packageName: "com.google.guava:guava",
+        packagePath: "libraries.guava",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "32.1.0-jre",
+        after: "33.0.0-jre"
+      },
+      {
+        file: "gradle/libs.versions.toml",
+        packageName: "org.junit.jupiter:junit-jupiter",
+        packagePath: "libraries.junit-jupiter",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "5.9.0",
+        after: "5.10.0"
+      },
+      {
+        file: "gradle/libs.versions.toml",
+        packageName: "org.legacy:oldlib",
+        packagePath: "libraries.legacy",
+        dependencyType: "dependencies",
+        changeType: "removed",
+        before: "1.0.0"
+      },
+      {
+        file: "gradle/libs.versions.toml",
+        packageName: "org.slf4j:slf4j-api",
+        packagePath: "libraries.slf4j",
+        dependencyType: "dependencies",
+        changeType: "added",
+        after: "2.0.9"
+      },
+      {
+        file: "gradle/libs.versions.toml",
+        packageName: "org.springframework.boot",
+        packagePath: "plugins.spring-boot",
+        dependencyType: "dependencies",
+        changeType: "updated",
+        before: "3.3.0",
+        after: "3.4.0"
       }
     ]);
   });
@@ -2036,6 +2132,11 @@ function writePomXml(root: string, contents: string): void {
 
 function writeGradleBuild(root: string, fileName: "build.gradle" | "build.gradle.kts", contents: string): void {
   writeFileSync(join(root, fileName), contents.trimStart());
+}
+
+function writeGradleVersionCatalog(root: string, contents: string): void {
+  mkdirSync(join(root, "gradle"), { recursive: true });
+  writeFileSync(join(root, "gradle", "libs.versions.toml"), contents.trimStart());
 }
 
 function writePoetryLock(root: string, contents: string): void {

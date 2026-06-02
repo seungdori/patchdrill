@@ -75,6 +75,13 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
     if (!before && !after) continue;
     changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
   }
+  for (const file of changedFiles.filter((candidate) => isGradleVersionCatalog(candidate.path))) {
+    const pair = readFilePair(options, file.path);
+    const before = parseGradleVersionCatalog(pair.before);
+    const after = parseGradleVersionCatalog(pair.after);
+    if (!before && !after) continue;
+    changes.push(...diffManifestDependencies(file.path, before ?? new Map(), after ?? new Map()));
+  }
   for (const file of changedFiles.filter((candidate) => candidate.path.endsWith("composer.json"))) {
     const pair = readFilePair(options, file.path);
     const before = parseComposerJson(pair.before);
@@ -556,6 +563,35 @@ function parseGradleDependencies(value: string | undefined): Map<string, Manifes
       });
     }
   }
+  return packages.size > 0 ? packages : undefined;
+}
+
+function parseGradleVersionCatalog(value: string | undefined): Map<string, ManifestDependency> | undefined {
+  if (!value) return undefined;
+  const packages = new Map<string, ManifestDependency>();
+  const versions = new Map<string, string>();
+  const entries: Array<{ section: "libraries" | "plugins"; alias: string; value: string }> = [];
+  let section = "";
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const trimmed = stripTomlComment(rawLine).trim();
+    if (!trimmed) continue;
+    const sectionMatch = /^\[([A-Za-z0-9_.-]+)\]$/.exec(trimmed);
+    if (sectionMatch?.[1]) {
+      section = sectionMatch[1];
+      continue;
+    }
+    const item = readTomlKeyValue(trimmed);
+    if (!item) continue;
+    const alias = unquoteTomlScalar(item.key);
+    if (section === "versions") {
+      versions.set(alias, unquoteTomlScalar(item.value));
+    } else if (section === "libraries" || section === "plugins") {
+      entries.push({ section, alias, value: item.value });
+    }
+  }
+
+  for (const entry of entries) addGradleVersionCatalogEntry(packages, versions, entry.section, entry.alias, entry.value);
   return packages.size > 0 ? packages : undefined;
 }
 
@@ -1042,6 +1078,11 @@ function isGradleBuildFile(path: string): boolean {
   return fileName === "build.gradle" || fileName === "build.gradle.kts";
 }
 
+function isGradleVersionCatalog(path: string): boolean {
+  const fileName = path.split("/").at(-1) ?? path;
+  return fileName === "libs.versions.toml";
+}
+
 function readGradleBlocks(value: string, blockName: string): string[] {
   const blocks: string[] = [];
   const pattern = new RegExp(`\\b${blockName}\\s*\\{`, "g");
@@ -1117,6 +1158,61 @@ function readGradleMapAttribute(value: string, name: string): string | undefined
 
 function gradleDependencyType(configuration: string): DependencyChange["dependencyType"] {
   return configuration.toLowerCase().includes("test") ? "devDependencies" : "dependencies";
+}
+
+function addGradleVersionCatalogEntry(
+  packages: Map<string, ManifestDependency>,
+  versions: Map<string, string>,
+  section: "libraries" | "plugins",
+  alias: string,
+  rawValue: string
+): void {
+  const parsed = section === "libraries" ? parseGradleCatalogLibrary(rawValue, versions) : parseGradleCatalogPlugin(rawValue, versions);
+  if (!parsed) return;
+  const packagePath = `${section}.${alias}`;
+  const key = `dependencies:${packagePath}:${parsed.name.toLowerCase()}`;
+  packages.set(key, {
+    name: parsed.name,
+    key,
+    spec: parsed.version,
+    packagePath,
+    dependencyType: "dependencies"
+  });
+}
+
+function parseGradleCatalogLibrary(value: string, versions: Map<string, string>): { name: string; version: string } | undefined {
+  const trimmed = stripTomlComment(value).trim();
+  const stringCoordinate = /^["']([^"']+)["']$/.exec(trimmed)?.[1];
+  if (stringCoordinate) return parseGradleCoordinate(stringCoordinate);
+  if (!trimmed.startsWith("{")) return undefined;
+  const module = readTomlInlineStringAttribute(trimmed, "module");
+  const group = readTomlInlineStringAttribute(trimmed, "group");
+  const name = readTomlInlineStringAttribute(trimmed, "name");
+  const version = readTomlInlineVersion(trimmed, versions);
+  if (module && version) return { name: module, version };
+  if (group && name && version) return { name: `${group}:${name}`, version };
+  return undefined;
+}
+
+function parseGradleCatalogPlugin(value: string, versions: Map<string, string>): { name: string; version: string } | undefined {
+  const trimmed = stripTomlComment(value).trim();
+  if (!trimmed.startsWith("{")) return undefined;
+  const id = readTomlInlineStringAttribute(trimmed, "id");
+  const version = readTomlInlineVersion(trimmed, versions);
+  return id && version ? { name: id, version } : undefined;
+}
+
+function readTomlInlineVersion(value: string, versions: Map<string, string>): string | undefined {
+  const version = readTomlInlineStringAttribute(value, "version");
+  if (version) return version;
+  const versionRef = readTomlInlineStringAttribute(value, "version.ref");
+  return versionRef ? versions.get(versionRef) : undefined;
+}
+
+function readTomlInlineStringAttribute(value: string, name: string): string | undefined {
+  const escapedName = name.replace(/\./g, "\\.");
+  const match = new RegExp(`\\b${escapedName}\\s*=\\s*("[^"]*"|'[^']*'|[^,}]+)`).exec(value);
+  return match?.[1] ? unquoteTomlScalar(match[1].trim()) : undefined;
 }
 
 function readXmlAttribute(attributes: string, name: string): string | undefined {
