@@ -26,6 +26,7 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] Release readiness dogfood");
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
+    expect(rendered).toContain("[PASS] Markdown local links");
     expect(rendered).toContain("[WARN] npm Trusted Publisher");
   });
 

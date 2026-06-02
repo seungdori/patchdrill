@@ -36,6 +36,7 @@ Done for the public repository:
 - `patchdrill release-check` for static npm/GitHub Action release readiness checks.
 - CI and release workflows dogfood `patchdrill release-check --format json`.
 - Public case-study and stack-coverage docs for launch evaluation.
+- Release readiness checks local Markdown links across README, docs, and examples.
 
 Still needed for launch distribution:
 

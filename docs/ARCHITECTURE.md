@@ -12,12 +12,13 @@ PatchDrill is split into deterministic modules:
 | `src/project.ts` | Discovers ecosystem signals, nested project roots, package managers, task runners, solution filters, Xcode containers, and workspace dependency graphs from manifests. |
 | `src/dependency.ts` | Extracts package.json, pyproject.toml, requirements.txt, NuGet PackageReference/PackageVersion, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm, pnpm, Yarn, Bun, Go, Cargo, Poetry, uv, Pipfile, Bundler, and Composer dependency additions, removals, and version updates through a parser/diff analyzer registry. |
 | `src/doctor.ts` | Renders first-run repository readiness diagnostics without mutating the repository or running verification commands. |
+| `src/markdown-links.ts` | Checks public README, docs, and example Markdown local links so launch documentation cannot drift silently. |
 | `src/package-scripts.ts` | Extracts package.json script additions, removals, and updates so risk scoring can distinguish dependency intent from executable package automation changes. |
 | `src/evidence.ts` | Renders and verifies Proof Pack evidence manifests with tool version, report metadata, artifact, and command-output digests. |
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
-| `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, and public release docs. |
+| `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, public release docs, and local Markdown links. |
 | `src/report-contract.ts` | Verifies JSON report self-consistency, including summary counts derived from changed files, command plans, and command results. |
 | `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
 | `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkMarkdownLinks } from "./markdown-links.js";
 
 export type ReleaseCheckStatus = "pass" | "warn" | "fail";
 
@@ -24,6 +25,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const action = readOptional(root, "action.yml");
   const readme = readOptional(root, "README.md");
   const ci = readOptional(root, ".github/workflows/ci.yml");
+  const markdownLinks = checkMarkdownLinks(root);
 
   return [
     checkBoolean(Boolean(pkg), "package.json", "package.json is present.", "Add package.json before publishing."),
@@ -54,6 +56,14 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "Case study examples",
       "examples/case-studies/README.md points readers to concrete demo artifacts.",
       "Add examples/case-studies/README.md with demo artifact links."
+    ),
+    checkBoolean(
+      markdownLinks.summary.failureCount === 0,
+      "Markdown local links",
+      `Checked ${markdownLinks.summary.linkCount} local link${markdownLinks.summary.linkCount === 1 ? "" : "s"} across ${markdownLinks.summary.fileCount} Markdown file${markdownLinks.summary.fileCount === 1 ? "" : "s"}.`,
+      markdownLinks.failures[0]
+        ? `Fix ${markdownLinks.failures[0].file}:${markdownLinks.failures[0].line} -> ${markdownLinks.failures[0].target}: ${markdownLinks.failures[0].reason}`
+        : "Fix broken local Markdown links before release."
     ),
     checkBoolean(existsSync(join(root, "CHANGELOG.md")), "Changelog", "CHANGELOG.md is present.", "Add CHANGELOG.md before release."),
     checkBoolean(existsSync(join(root, "LICENSE")), "License", "LICENSE is present.", "Add a license before release."),

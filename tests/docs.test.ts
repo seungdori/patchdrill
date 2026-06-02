@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createDemoReport } from "../src/demo.js";
+import { checkMarkdownLinks } from "../src/markdown-links.js";
 import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "../src/report.js";
 
 describe("documentation examples", () => {
@@ -37,6 +38,10 @@ describe("documentation examples", () => {
     const missing = [...new Set(ruleIds)].filter((ruleId) => !catalog.includes(`\`${ruleId}\``));
 
     expect(missing).toEqual([]);
+  });
+
+  it("keeps public Markdown local links valid", () => {
+    expect(checkMarkdownLinks(process.cwd()).failures).toEqual([]);
   });
 
   it("keeps committed demo artifacts synchronized with the demo renderer", () => {
