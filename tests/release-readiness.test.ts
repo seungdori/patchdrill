@@ -22,6 +22,8 @@ describe("release readiness", () => {
     expect(summary).toMatchObject({ status: "pass", ok: true, failCount: 0, warnCount: 1 });
     expect(rendered).toContain("PatchDrill Release Check - PASS");
     expect(rendered).toContain("[PASS] npm provenance publish");
+    expect(rendered).toContain("[PASS] Package file allowlist");
+    expect(rendered).toContain("[PASS] Package discoverability keywords");
     expect(rendered).toContain("[PASS] CI readiness dogfood");
     expect(rendered).toContain("[PASS] Release readiness dogfood");
     expect(rendered).toContain("[PASS] Case studies");

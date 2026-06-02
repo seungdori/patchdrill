@@ -26,6 +26,8 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const readme = readOptional(root, "README.md");
   const ci = readOptional(root, ".github/workflows/ci.yml");
   const markdownLinks = checkMarkdownLinks(root);
+  const packageFiles = readStringArray(pkg?.files);
+  const keywords = readStringArray(pkg?.keywords);
 
   return [
     checkBoolean(Boolean(pkg), "package.json", "package.json is present.", "Add package.json before publishing."),
@@ -34,6 +36,8 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkBoolean(pkg?.bin?.patchdrill === "./dist/cli.js", "CLI bin", `bin.patchdrill is ${pkg?.bin?.patchdrill ?? "missing"}.`, "Point bin.patchdrill at ./dist/cli.js."),
     checkBoolean(pkg?.scripts?.prepare === "npm run build", "Prepare script", "prepare builds the TypeScript CLI for git installs.", "Set scripts.prepare to npm run build."),
     checkBoolean(pkg?.scripts?.prepack === "npm run check", "Prepack script", "prepack runs the full local verification suite.", "Set scripts.prepack to npm run check."),
+    checkPackageFiles(packageFiles),
+    checkKeywords(keywords),
     checkBoolean(existsSync(join(root, "package-lock.json")), "npm lockfile", "package-lock.json is present for reproducible action installs.", "Commit package-lock.json."),
     checkBoolean(Boolean(action?.includes("runs:\n  using: composite")), "Composite action", "action.yml declares a composite action.", "Keep action.yml as a composite action."),
     checkBoolean(Boolean(action?.includes("node \"$GITHUB_ACTION_PATH/dist/cli.js\"")), "Action local build path", "action.yml runs the checked-out dist/cli.js.", "Run the built CLI from the checked-out action source."),
@@ -120,6 +124,8 @@ function readPackageJson(root: string):
       version?: string;
       bin?: Record<string, string>;
       scripts?: Record<string, string>;
+      files?: unknown;
+      keywords?: unknown;
     }
   | undefined {
   try {
@@ -128,10 +134,57 @@ function readPackageJson(root: string):
       version?: string;
       bin?: Record<string, string>;
       scripts?: Record<string, string>;
+      files?: unknown;
+      keywords?: unknown;
     };
   } catch {
     return undefined;
   }
+}
+
+function checkPackageFiles(files: string[]): ReleaseCheck {
+  const required = [
+    "dist",
+    "schemas",
+    "docs",
+    "examples",
+    "fixtures",
+    ".patchdrill.yml",
+    "README.md",
+    "LICENSE",
+    "action.yml",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ];
+  const missing = required.filter((entry) => !files.includes(entry));
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title: "Package file allowlist",
+    detail:
+      missing.length === 0
+        ? "package.json files includes the CLI build, schemas, docs, examples, fixtures, action metadata, and release docs."
+        : `package.json files is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} to package.json files before release.` } : {})
+  };
+}
+
+function checkKeywords(keywords: string[]): ReleaseCheck {
+  const required = ["ai-coding", "code-review", "sarif", "github-actions", "supply-chain"];
+  const missing = required.filter((keyword) => !keywords.includes(keyword));
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title: "Package discoverability keywords",
+    detail:
+      missing.length === 0
+        ? `package.json keywords include launch-critical discovery terms: ${required.join(", ")}.`
+        : `package.json keywords is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} to package.json keywords.` } : {})
+  };
+}
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function readOptional(root: string, path: string): string | undefined {

@@ -37,6 +37,7 @@ Done for the public repository:
 - CI and release workflows dogfood `patchdrill release-check --format json`.
 - Public case-study and stack-coverage docs for launch evaluation.
 - Release readiness checks local Markdown links across README, docs, and examples.
+- Release readiness checks package file allowlisting and launch-discovery keywords.
 
 Still needed for launch distribution:
 

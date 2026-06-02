@@ -11,6 +11,10 @@ describe("package metadata", () => {
     expect(pkg.bin?.patchdrill).toBe("./dist/cli.js");
     expect(pkg.scripts?.prepare).toBe("npm run build");
     expect(pkg.scripts?.prepack).toBe("npm run check");
+    expect(pkg.files).toEqual(
+      expect.arrayContaining(["dist", "schemas", "docs", "examples", "fixtures", ".patchdrill.yml", "README.md", "LICENSE", "action.yml", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md"])
+    );
+    expect(pkg.keywords).toEqual(expect.arrayContaining(["ai-coding", "code-review", "sarif", "github-actions", "supply-chain"]));
   });
 
   it("keeps default generated report artifacts out of git", () => {
