@@ -6,119 +6,121 @@ export interface PlannerOptions {
   changedSince?: string;
 }
 
+interface PlannerContext {
+  root: string;
+  paths: string[];
+  options: PlannerOptions;
+}
+
+interface SignalPlanner {
+  ecosystem: ProjectSignal["ecosystem"];
+  applies: (signal: ProjectSignal, context: PlannerContext) => boolean;
+  addPlans: (plans: CommandPlan[], signal: ProjectSignal, context: PlannerContext) => void;
+}
+
+const signalPlanners: SignalPlanner[] = [
+  {
+    ecosystem: "node",
+    applies: (_signal, context) => touchesNode(context.paths),
+    addPlans: (plans, signal, context) => {
+      const workspacePlanCount = addNodeWorkspacePlans(plans, context.paths, signal);
+      if (workspacePlanCount === 0) addNodePlans(plans, signal);
+    }
+  },
+  {
+    ecosystem: "python",
+    applies: (signal, context) => touchesPython(context.paths, context.root, signal),
+    addPlans: addPythonSignalPlans
+  },
+  {
+    ecosystem: "rust",
+    applies: (signal, context) => touchesRust(context.paths, signal),
+    addPlans: addRustSignalPlans
+  },
+  {
+    ecosystem: "go",
+    applies: (signal, context) => touchesGo(context.paths, signal),
+    addPlans: (plans, signal, context) => {
+      const workspacePlanCount = addGoWorkspacePlans(plans, context.paths, signal);
+      if (workspacePlanCount === 0) addGoPlans(plans, signal);
+    }
+  },
+  {
+    ecosystem: "java",
+    applies: (_signal, context) => touchesJava(context.paths, context.root),
+    addPlans: (plans, signal, context) => addJavaPlans(plans, context.root, signal)
+  },
+  {
+    ecosystem: "android",
+    applies: (_signal, context) => touchesAndroid(context.paths),
+    addPlans: (plans, _signal, context) => addAndroidPlans(plans, context.root, context.paths)
+  },
+  {
+    ecosystem: "ruby",
+    applies: (_signal, context) => touches(context.paths, [".rb", "Gemfile", "Gemfile.lock"]),
+    addPlans: (plans, signal, context) => addRubyPlans(plans, context.root, signal)
+  },
+  {
+    ecosystem: "php",
+    applies: (_signal, context) => touches(context.paths, [".php", "composer.json", "composer.lock"]),
+    addPlans: (plans, signal, context) => addPhpPlans(plans, context.root, context.paths, signal)
+  },
+  {
+    ecosystem: "dotnet",
+    applies: (_signal, context) => touchesDotnet(context.paths),
+    addPlans: (plans, signal, context) => addDotnetPlans(plans, context.root, context.paths, signal)
+  },
+  {
+    ecosystem: "swift",
+    applies: (_signal, context) => touches(context.paths, [".swift", "Package.swift", "Package.resolved"]),
+    addPlans: addSwiftPlans
+  },
+  {
+    ecosystem: "xcode",
+    applies: (_signal, context) => touchesXcode(context.paths),
+    addPlans: (plans, signal, context) => addXcodePlans(plans, context.root, context.paths, signal)
+  },
+  {
+    ecosystem: "terraform",
+    applies: (_signal, context) => context.paths.some((path) => path.endsWith(".tf") || path.endsWith(".tfvars")),
+    addPlans: addTerraformPlans
+  },
+  {
+    ecosystem: "docker",
+    applies: (_signal, context) => context.paths.some((path) => /(^|\/)(Dockerfile|compose\.ya?ml|docker-compose\.ya?ml)$/.test(path)),
+    addPlans: addDockerPlans
+  },
+  {
+    ecosystem: "kubernetes",
+    applies: (_signal, context) => touchesKubernetes(context.paths),
+    addPlans: (plans, _signal, context) => addKubernetesPlans(plans, context.root, context.paths)
+  },
+  {
+    ecosystem: "bazel",
+    applies: (_signal, context) => touchesBazel(context.paths),
+    addPlans: (plans, _signal, context) => addBazelPlans(plans, context.root, context.paths)
+  },
+  {
+    ecosystem: "buck",
+    applies: (_signal, context) => touchesBuck(context.paths),
+    addPlans: (plans, _signal, context) => addBuckPlans(plans, context.root, context.paths)
+  },
+  {
+    ecosystem: "pants",
+    applies: (_signal, context) => touchesPants(context.paths),
+    addPlans: (plans, _signal, context) => addPantsPlans(plans, context.root, context.options.changedSince ?? "HEAD")
+  }
+];
+
 export function planCommands(root: string, changedFiles: ChangedFile[], signals: ProjectSignal[], options: PlannerOptions = {}): CommandPlan[] {
   const plans: CommandPlan[] = [];
   const paths = changedFiles.map((file) => file.path);
+  const context: PlannerContext = { root, paths, options };
 
   for (const signal of signals) {
-    if (signal.ecosystem === "node" && touchesNode(paths)) {
-      const workspacePlanCount = addNodeWorkspacePlans(plans, paths, signal);
-      if (workspacePlanCount === 0) addNodePlans(plans, signal);
-    }
-    if (signal.ecosystem === "python" && touchesPython(paths, root, signal)) {
-      const signalRoot = signalRootPath(root, signal);
-      const scopedPaths = pathsForSignal(paths, signal);
-      if (isDjangoProject(signalRoot, signal)) {
-        addDjangoPlans(plans, signal);
-      } else {
-        addPythonPlans(plans, root, paths, signal);
-        if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, scopedPaths, signal.entrypoint, signal);
-      }
-    }
-    if (signal.ecosystem === "rust" && touchesRust(paths, signal)) {
-      const workspacePlanCount = addCargoWorkspacePlans(plans, paths, signal);
-      if (workspacePlanCount === 0) {
-        pushUnique(plans, {
-          id: scopedPlanId("rust-tests", signal),
-          label: scopedPlanLabel("Rust tests", signal),
-          command: cargoCommand(signal, "test", "--all-targets"),
-          reason: "Rust source or Cargo metadata changed.",
-          ecosystem: "rust",
-          required: true,
-          ...scopedPackagePath(signal)
-        });
-        pushUnique(plans, {
-          id: scopedPlanId("rust-clippy", signal),
-          label: scopedPlanLabel("Rust clippy", signal),
-          command: cargoCommand(signal, "clippy", "--all-targets -- -D warnings"),
-          reason: "Rust changes should pass linting before merge.",
-          ecosystem: "rust",
-          required: false,
-          ...scopedPackagePath(signal)
-        });
-      }
-    }
-    if (signal.ecosystem === "go" && touchesGo(paths, signal)) {
-      const workspacePlanCount = addGoWorkspacePlans(plans, paths, signal);
-      if (workspacePlanCount === 0) addGoPlans(plans, signal);
-    }
-    if (signal.ecosystem === "java" && touchesJava(paths, root)) {
-      addJavaPlans(plans, root, signal);
-    }
-    if (signal.ecosystem === "android" && touchesAndroid(paths)) {
-      addAndroidPlans(plans, root, paths);
-    }
-    if (signal.ecosystem === "ruby" && touches(paths, [".rb", "Gemfile", "Gemfile.lock"])) {
-      addRubyPlans(plans, root, signal);
-    }
-    if (signal.ecosystem === "php" && touches(paths, [".php", "composer.json", "composer.lock"])) {
-      addPhpPlans(plans, root, paths, signal);
-    }
-    if (signal.ecosystem === "dotnet" && touchesDotnet(paths)) {
-      addDotnetPlans(plans, root, paths, signal);
-    }
-    if (signal.ecosystem === "swift" && touches(paths, [".swift", "Package.swift", "Package.resolved"])) {
-      pushUnique(plans, {
-        id: "swift-tests",
-        label: "Swift tests",
-        command: "swift test",
-        reason: "Swift package source or package metadata changed.",
-        ecosystem: "swift",
-        required: true
-      });
-      pushUnique(plans, {
-        id: "swift-build",
-        label: "Swift build",
-        command: "swift build",
-        reason: "Swift packages should still build after source or dependency changes.",
-        ecosystem: "swift",
-        required: false
-      });
-    }
-    if (signal.ecosystem === "xcode" && touchesXcode(paths)) {
-      addXcodePlans(plans, root, paths, signal);
-    }
-    if (signal.ecosystem === "terraform" && paths.some((path) => path.endsWith(".tf") || path.endsWith(".tfvars"))) {
-      pushUnique(plans, {
-        id: "terraform-validate",
-        label: "Terraform validate",
-        command: "terraform fmt -check && terraform validate",
-        reason: "Terraform configuration changed.",
-        ecosystem: "terraform",
-        required: true
-      });
-    }
-    if (signal.ecosystem === "docker" && paths.some((path) => /(^|\/)(Dockerfile|compose\.ya?ml|docker-compose\.ya?ml)$/.test(path))) {
-      pushUnique(plans, {
-        id: "docker-build-check",
-        label: "Docker build check",
-        command: "docker build .",
-        reason: "Container build files changed.",
-        ecosystem: "docker",
-        required: false
-      });
-    }
-    if (signal.ecosystem === "kubernetes" && touchesKubernetes(paths)) {
-      addKubernetesPlans(plans, root, paths);
-    }
-    if (signal.ecosystem === "bazel" && touchesBazel(paths)) {
-      addBazelPlans(plans, root, paths);
-    }
-    if (signal.ecosystem === "buck" && touchesBuck(paths)) {
-      addBuckPlans(plans, root, paths);
-    }
-    if (signal.ecosystem === "pants" && touchesPants(paths)) {
-      addPantsPlans(plans, root, options.changedSince ?? "HEAD");
+    for (const planner of signalPlanners) {
+      if (signal.ecosystem !== planner.ecosystem || !planner.applies(signal, context)) continue;
+      planner.addPlans(plans, signal, context);
     }
   }
 
@@ -134,6 +136,81 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   }
 
   return plans;
+}
+
+function addPythonSignalPlans(plans: CommandPlan[], signal: ProjectSignal, context: PlannerContext): void {
+  const signalRoot = signalRootPath(context.root, signal);
+  const scopedPaths = pathsForSignal(context.paths, signal);
+  if (isDjangoProject(signalRoot, signal)) {
+    addDjangoPlans(plans, signal);
+    return;
+  }
+  addPythonPlans(plans, context.root, context.paths, signal);
+  if (signal.framework === "fastapi" && signal.entrypoint) addFastApiPlans(plans, scopedPaths, signal.entrypoint, signal);
+}
+
+function addRustSignalPlans(plans: CommandPlan[], signal: ProjectSignal, context: PlannerContext): void {
+  const workspacePlanCount = addCargoWorkspacePlans(plans, context.paths, signal);
+  if (workspacePlanCount > 0) return;
+  pushUnique(plans, {
+    id: scopedPlanId("rust-tests", signal),
+    label: scopedPlanLabel("Rust tests", signal),
+    command: cargoCommand(signal, "test", "--all-targets"),
+    reason: "Rust source or Cargo metadata changed.",
+    ecosystem: "rust",
+    required: true,
+    ...scopedPackagePath(signal)
+  });
+  pushUnique(plans, {
+    id: scopedPlanId("rust-clippy", signal),
+    label: scopedPlanLabel("Rust clippy", signal),
+    command: cargoCommand(signal, "clippy", "--all-targets -- -D warnings"),
+    reason: "Rust changes should pass linting before merge.",
+    ecosystem: "rust",
+    required: false,
+    ...scopedPackagePath(signal)
+  });
+}
+
+function addSwiftPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "swift-tests",
+    label: "Swift tests",
+    command: "swift test",
+    reason: "Swift package source or package metadata changed.",
+    ecosystem: "swift",
+    required: true
+  });
+  pushUnique(plans, {
+    id: "swift-build",
+    label: "Swift build",
+    command: "swift build",
+    reason: "Swift packages should still build after source or dependency changes.",
+    ecosystem: "swift",
+    required: false
+  });
+}
+
+function addTerraformPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "terraform-validate",
+    label: "Terraform validate",
+    command: "terraform fmt -check && terraform validate",
+    reason: "Terraform configuration changed.",
+    ecosystem: "terraform",
+    required: true
+  });
+}
+
+function addDockerPlans(plans: CommandPlan[]): void {
+  pushUnique(plans, {
+    id: "docker-build-check",
+    label: "Docker build check",
+    command: "docker build .",
+    reason: "Container build files changed.",
+    ecosystem: "docker",
+    required: false
+  });
 }
 
 interface DotnetProject {

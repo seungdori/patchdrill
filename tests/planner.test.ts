@@ -67,6 +67,32 @@ describe("planCommands", () => {
     expect(commands.filter((command) => command.required).map((command) => command.id)).toEqual(["node-typecheck", "node-test", "node-build"]);
   });
 
+  it("dispatches matching project signals through planner handlers", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [
+        { path: "src/index.ts", status: "modified", additions: 10, deletions: 2, binary: false },
+        { path: "infra/main.tf", status: "modified", additions: 2, deletions: 1, binary: false }
+      ],
+      [
+        {
+          ecosystem: "node",
+          manifestPath: "package.json",
+          packageManager: "npm",
+          scripts: {
+            test: "vitest run",
+            build: "vite build"
+          }
+        },
+        { ecosystem: "terraform", manifestPath: "*.tf" },
+        { ecosystem: "docker", manifestPath: "Dockerfile" }
+      ]
+    );
+
+    expect(commands.map((command) => command.id)).toEqual(["node-test", "node-build", "terraform-validate"]);
+    expect(commands.map((command) => command.ecosystem)).toEqual(["node", "node", "terraform"]);
+  });
+
   it("adds Terraform validation for tf files", () => {
     const commands = planCommands(
       process.cwd(),
