@@ -80,6 +80,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "Generate a release Proof Pack with scan --run --evidence and verify it before npm pack --dry-run."
     ),
     checkPullRequestTemplate(pullRequestTemplate),
+    checkReadmeProofPackQuickstart(readme),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
@@ -256,6 +257,36 @@ function checkPullRequestTemplate(contents: string | undefined): ReleaseCheck {
       ? {
           remediation:
             "Update .github/pull_request_template.md with scan --run --evidence, summary, Markdown, JSON, SARIF, HTML, verify, package dry-run, and compatibility notes."
+        }
+      : {})
+  };
+}
+
+function checkReadmeProofPackQuickstart(contents: string | undefined): ReleaseCheck {
+  const required = [
+    "npx --yes github:seungdori/patchdrill scan --base origin/main --run",
+    "--evidence patchdrill-evidence.json",
+    "--summary-markdown patchdrill-summary.md",
+    "--markdown patchdrill-report.md",
+    "--json patchdrill-report.json",
+    "--sarif patchdrill.sarif",
+    "--html patchdrill-dashboard.html",
+    "npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json",
+    "patchdrill scan --base origin/main --run",
+    "patchdrill verify --evidence patchdrill-evidence.json"
+  ];
+  const missing = required.filter((needle) => !contents?.includes(needle));
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title: "README Proof Pack quickstart",
+    detail:
+      missing.length === 0
+        ? "README first-run and Quickstart commands generate and verify evidence-backed Proof Packs."
+        : `README Proof Pack quickstart is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0
+      ? {
+          remediation:
+            "Update README first-run and Quickstart examples with scan --run --evidence, summary, Markdown, JSON, SARIF, HTML, and verify commands."
         }
       : {})
   };

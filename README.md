@@ -27,12 +27,15 @@ PatchDrill should show a privileged workflow boundary, secret-looking content, p
 
 ```bash
 npx --yes github:seungdori/patchdrill scan --base origin/main --run \
+  --evidence patchdrill-evidence.json \
+  --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
   --html patchdrill-dashboard.html \
   --fail-on high \
   --max-risk 69
+npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json
 ```
 
 ## Why Star It
@@ -178,16 +181,17 @@ Include optional checks such as browser/e2e and static-analysis plans:
 patchdrill scan --base origin/main --run --run-optional
 ```
 
-Write reports:
+Write and verify a Proof Pack:
 
 ```bash
-patchdrill scan --base origin/main \
+patchdrill scan --base origin/main --run \
   --evidence patchdrill-evidence.json \
   --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
   --json patchdrill-report.json \
   --sarif patchdrill.sarif \
   --html patchdrill-dashboard.html
+patchdrill verify --evidence patchdrill-evidence.json
 ```
 
 Create a static dashboard from a saved JSON report:

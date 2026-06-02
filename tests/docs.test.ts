@@ -64,16 +64,18 @@ describe("documentation examples", () => {
   });
 
   it("keeps public Proof Pack workflow examples complete", () => {
+    const readme = readFileSync("README.md", "utf8");
     const dashboardDocs = readFileSync("docs/DASHBOARD.md", "utf8");
     const sarifDocs = readFileSync("docs/SARIF.md", "utf8");
     const prCommentDocs = readFileSync("docs/PR_COMMENTS.md", "utf8");
 
-    for (const docs of [dashboardDocs, sarifDocs]) {
+    for (const docs of [readme, dashboardDocs, sarifDocs]) {
       expect(docs).toContain("--evidence patchdrill-evidence.json");
       expect(docs).toContain("--summary-markdown patchdrill-summary.md");
       expect(docs).toContain("--html patchdrill-dashboard.html");
       expect(docs).toContain("patchdrill verify --evidence patchdrill-evidence.json");
     }
+    expect(readme).toContain("npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json");
     expect(prCommentDocs).toContain("id: patchdrill");
     expect(prCommentDocs).toContain("evidence: patchdrill-evidence.json");
     expect(prCommentDocs).toContain("html: patchdrill-dashboard.html");

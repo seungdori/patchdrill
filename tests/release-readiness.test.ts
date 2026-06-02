@@ -35,6 +35,7 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] Action evidence verification");
     expect(rendered).toContain("[PASS] Release Proof Pack smoke");
     expect(rendered).toContain("[PASS] Pull request Proof Pack template");
+    expect(rendered).toContain("[PASS] README Proof Pack quickstart");
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[PASS] Markdown local links");
@@ -52,6 +53,7 @@ describe("release readiness", () => {
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Package name");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Policy schema");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Pull request Proof Pack template");
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("README Proof Pack quickstart");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("npm provenance publish");
   });
 });
