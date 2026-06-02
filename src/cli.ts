@@ -224,7 +224,9 @@ export function explainCommand(): void {
 }
 
 export function renderExplainText(): string {
-  return `PatchDrill is not an AI PR reviewer.
+  return `PatchDrill is the deterministic proof layer between code review and CI.
+
+PatchDrill is not an AI PR reviewer.
 
 AI reviewers answer: "Does this diff look right?"
 PatchDrill answers: "What deterministic proof should exist before merge?"
@@ -234,13 +236,13 @@ What PatchDrill does:
 2. Detects repository ecosystems, workspaces, owners, dependencies, package scripts, and workflow trust boundaries.
 3. Infers required and optional verification commands from the patch.
 4. Scores risk with human-readable findings where every score increase maps to a report row.
-5. Emits Markdown, JSON, SARIF, static HTML, PR-comment summaries, and verifiable evidence manifests.
+5. Emits a Proof Pack: Markdown, JSON, SARIF, static HTML, PR-comment summaries, and verifiable evidence manifests.
 
 What makes it different:
 - No model call is required; the same diff produces the same plan and findings.
 - scan does not mutate the repository or run commands unless --run is set.
 - --run executes inferred required checks; --run-optional explicitly opts into optional checks.
-- JSON/SARIF/HTML/evidence artifacts are meant for CI gates, bots, auditors, and reviewers.
+- Proof Pack artifacts are meant for CI gates, bots, auditors, reviewers, and model-assisted review.
 - You can run PatchDrill before handing the report to a human or a frontier model.
 
 Try it without a repository:
@@ -470,7 +472,7 @@ function readVersion(): string {
 }
 
 function printHelp(): void {
-  console.log(`PatchDrill - evidence-first verification for AI-era patches
+  console.log(`PatchDrill - deterministic proof layer for AI-era patches
 
 Usage:
   patchdrill scan [options]
@@ -487,7 +489,7 @@ Options:
   --head <ref>        Head ref when using --base, default HEAD
   --config <path>     Read policy from .patchdrill.yml/json or a specific path
   --baseline <path>   Compare against a previous PatchDrill JSON report
-  --evidence <path>   Write an audit evidence manifest during scan/evidence, or select one for verify
+  --evidence <path>   Write a Proof Pack evidence manifest during scan/evidence, or select one for verify
   --run               Execute required inferred verification commands
   --run-optional      With --run, also execute optional verification commands
   --github-annotations

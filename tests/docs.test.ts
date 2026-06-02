@@ -19,6 +19,26 @@ describe("documentation examples", () => {
     expect(existsSync("docs/assets/patchdrill-demo.svg")).toBe(true);
   });
 
+  it("keeps the README focused on the proof-layer product boundary", () => {
+    const readme = readFileSync("README.md", "utf8");
+
+    expect(readme).toContain("deterministic proof layer between code review and CI");
+    expect(readme).toContain("AI PR reviewer");
+    expect(readme).toContain("Traditional CI");
+    expect(readme).toContain("Proof Pack");
+    expect(readme).toContain("[docs/PROOF_PACKS.md](docs/PROOF_PACKS.md)");
+    expect(readme).toContain("[docs/RULE_CATALOG.md](docs/RULE_CATALOG.md)");
+  });
+
+  it("keeps the public rule catalog aligned with built-in static risk rules", () => {
+    const riskSource = readFileSync("src/risk.ts", "utf8");
+    const catalog = readFileSync("docs/RULE_CATALOG.md", "utf8");
+    const ruleIds = [...riskSource.matchAll(/ruleId: "([^"]+)"/g)].map((match) => match[1]);
+    const missing = [...new Set(ruleIds)].filter((ruleId) => !catalog.includes(`\`${ruleId}\``));
+
+    expect(missing).toEqual([]);
+  });
+
   it("keeps committed demo artifacts synchronized with the demo renderer", () => {
     const report = createDemoReport();
 

@@ -1,8 +1,10 @@
 # PatchDrill
 
-PatchDrill is a local-first CI drill for proving that AI-generated and human patches are safe before merge.
+PatchDrill is the deterministic proof layer between code review and CI for AI-generated and human patches.
 
-AI coding agents made code cheap. Trust is still expensive. PatchDrill turns a git diff into a concrete verification plan, runs the required checks when asked, and emits Markdown, JSON, SARIF, HTML, and audit evidence that reviewers and CI systems can inspect.
+AI PR reviewers answer: "Does this diff look right?" Traditional CI answers: "Did the commands we already configured pass?" PatchDrill answers the missing question: "What proof should exist for this diff before merge?"
+
+It reads a git diff, maps changed files to ecosystems, owners, dependency changes, workflow trust boundaries, risk rules, and verification commands, then emits a portable Proof Pack that reviewers, bots, auditors, and frontier models can inspect without trusting a model judgment.
 
 ![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)
 
@@ -18,11 +20,12 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 
 ## Why Star It
 
+- Makes AI-era PRs reviewable without asking another model to be the source of truth.
+- Builds a Proof Pack for each patch: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
+- Works locally first and in CI later. `scan` never mutates the repository, and commands only run when `--run` is set.
+- Flags the review surfaces that routinely hide regressions: auth, billing, migrations, secrets, CI workflow supply chain, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but not run.
+- Infers reviewable commands from the patch instead of only running root-level defaults.
 - Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, Ruby, Rails, RSpec, PHP, Composer, Laravel, dotnet, ASP.NET Core, Swift, Xcode, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
-- No LLM required. The core is deterministic, offline, and reviewable.
-- Built for AI-era PRs: highlights auth, billing, migrations, secrets, CI, workflow supply-chain and trust-boundary risk, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but not run.
-- Useful locally and in CI. The same command prints a reviewer-friendly report and can fail a pull request.
-- Emits portable evidence: Markdown for humans, JSON for bots, SARIF for GitHub code scanning, a self-contained HTML dashboard, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus nested Python projects, nested Cargo and Go workspaces, Turborepo, and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
@@ -42,13 +45,28 @@ PatchDrill answers four questions every reviewer asks:
 
 PatchDrill is not another AI code reviewer. It does not ask a model whether a diff "looks good." It builds deterministic evidence:
 
-| If you need... | Use... |
-| --- | --- |
-| Broad reasoning, refactor suggestions, and design feedback | A frontier model or AI PR reviewer |
-| A repeatable CI gate with risk findings, required commands, JSON/SARIF output, and policy thresholds | PatchDrill |
-| Both | Run PatchDrill first, then give the report to a model or human reviewer |
+| Layer | Primary question | Deterministic? | Runs commands? | Output |
+| --- | --- | --- | --- | --- |
+| AI PR reviewer | Does this diff look right? | No | Usually no | Comments, suggestions, design feedback |
+| Traditional CI | Did preconfigured checks pass? | Yes | Yes | Logs and pass/fail status |
+| SAST/SCA scanner | Does this match a known security or dependency rule? | Yes | Sometimes | Alerts and vulnerability findings |
+| Review automation | Did configured review automation fire? | Yes | Sometimes | PR comments and annotations |
+| PatchDrill | What proof should exist for this diff? | Yes | Only with `--run` | Proof Pack, risk findings, command plan, policy gate |
 
-The boundary is intentional: models are good at judgment, while PatchDrill is good at producing the same reviewable safety evidence for the same patch every time.
+The boundary is intentional: models are good at judgment, while PatchDrill is good at producing the same reviewable safety evidence for the same patch every time. Run PatchDrill first, then hand the Proof Pack to a human reviewer, CI gate, audit trail, or frontier model.
+
+## Proof Pack
+
+A Proof Pack is the portable evidence bundle generated for a patch:
+
+- Compact Markdown summary for PR comments and step summaries.
+- Full Markdown report for human review.
+- JSON report for bots, dashboards, and policy gates.
+- SARIF report for GitHub code scanning.
+- Self-contained HTML dashboard, including optional trend history.
+- Evidence manifest that records report, artifact, and command-output digests.
+
+See [docs/EVIDENCE.md](docs/EVIDENCE.md) for manifest verification and [docs/PROOF_PACKS.md](docs/PROOF_PACKS.md) for how to use Proof Packs in review workflows.
 
 Print the boundary and suggested first commands from the CLI:
 
@@ -241,7 +259,7 @@ Options:
 | `--head <ref>` | Head ref when using `--base`, default `HEAD`. |
 | `--config <path>` | Read policy from `.patchdrill.yml/json` or a specific path. |
 | `--baseline <path>` | Compare against a previous PatchDrill JSON report. |
-| `--evidence <path>` | Write an audit evidence manifest during `scan`/`evidence`, or select one for `verify`. |
+| `--evidence <path>` | Write a Proof Pack evidence manifest during `scan`/`evidence`, or select one for `verify`. |
 | `--run` | Execute required inferred verification commands. |
 | `--run-optional` | With `--run`, also execute optional verification commands. |
 | `--github-annotations` | Emit GitHub Actions log annotations for findings. |
@@ -322,6 +340,8 @@ The current deterministic rules look for:
 - Custom policy rules from `.patchdrill.yml`.
 
 The risk model is intentionally explainable. Every score increase is represented as a finding in the report.
+
+See [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md) for the built-in rule IDs and what each one means.
 
 ## Policy-As-Code
 
@@ -416,13 +436,16 @@ jobs:
 ## Example Report
 
 See [examples/report.md](examples/report.md).
+For Proof Pack review workflows, see [docs/PROOF_PACKS.md](docs/PROOF_PACKS.md).
 For code scanning integration, see [docs/SARIF.md](docs/SARIF.md).
 For repository security posture, see [docs/SECURITY_POSTURE.md](docs/SECURITY_POSTURE.md).
 For pull request comments, see [docs/PR_COMMENTS.md](docs/PR_COMMENTS.md).
 For static HTML dashboards, see [docs/DASHBOARD.md](docs/DASHBOARD.md).
+For evidence manifest verification, see [docs/EVIDENCE.md](docs/EVIDENCE.md).
 For machine-readable schemas, see [docs/SCHEMAS.md](docs/SCHEMAS.md).
 For owner hints, see [docs/CODEOWNERS.md](docs/CODEOWNERS.md).
 For risk deltas, see [docs/BASELINES.md](docs/BASELINES.md).
+For the built-in risk rules, see [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md).
 
 ## Release Provenance
 
@@ -439,7 +462,7 @@ PatchDrill also summarizes `package.json` script additions, removals, and update
 ## Design Principles
 
 - Deterministic first. No model call is required to get a useful answer.
-- Evidence over vibes. A reviewer should see the exact commands and findings.
+- Proof Packs over vibes. A reviewer should see the exact commands, findings, artifacts, and digests.
 - Local by default. Source code stays in your checkout.
 - Conservative scoring. PatchDrill would rather ask for proof than silently bless a risky patch.
 - Extensible later. The rule engine is small enough for contributors to add ecosystems and policies.

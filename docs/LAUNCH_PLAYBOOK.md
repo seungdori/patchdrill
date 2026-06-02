@@ -1,22 +1,24 @@
 # Launch Playbook
 
-PatchDrill is designed for developers who already use AI coding agents and want a concrete answer to "what proves this patch?"
+PatchDrill is designed for developers who already use AI coding agents and want a concrete, repeatable answer to "what proves this patch?"
 
 ## Positioning
 
 One-liner:
 
-> PatchDrill is a deterministic safety radar for AI-generated and human patches.
+> PatchDrill is the deterministic proof layer between code review and CI for AI-generated and human patches.
 
 Short pitch:
 
-> AI agents can write code quickly, but reviewers still need evidence. PatchDrill reads a git diff, infers what should be tested, flags risky areas, and writes Markdown, JSON, SARIF, and HTML proof artifacts for local review or CI.
+> AI agents can write code quickly, but reviewers still need evidence. PatchDrill reads a git diff, infers what should be tested, flags risky areas, and writes a portable Proof Pack for local review, CI, audit trails, and model-assisted review.
 
 Comparison:
 
 - AI PR reviewers judge whether a patch looks right.
 - Traditional CI runs commands that were already configured.
-- PatchDrill turns the patch itself into a repeatable verification plan, risk report, and policy gate.
+- SAST/SCA scanners match known code, dependency, and vulnerability rules.
+- Review automation posts configured comments and annotations.
+- PatchDrill turns the patch itself into a repeatable verification plan, risk report, policy gate, and Proof Pack.
 
 ## Launch Checklist
 
@@ -24,7 +26,7 @@ Done for the public repository:
 
 - Public GitHub repository with CodeQL, OpenSSF Scorecard, Dependabot, issue forms, pull request template, and repository topics.
 - Self-contained GitHub Action that builds from the checked-out action source before running PatchDrill.
-- SARIF output, Markdown output, JSON output, static HTML dashboard output, and PR comment upsert mode.
+- Proof Pack outputs: SARIF, Markdown, JSON, compact PR summary, static HTML dashboard, and verifiable evidence manifest.
 - Generated PR workflow runs inferred required commands with a per-command timeout.
 - README terminal demo asset showing the risk summary and portable report outputs.
 - Package automation script findings for install-time hooks, removed verification scripts, no-op checks, and remote shell pipes.
@@ -54,14 +56,14 @@ Show:
 - Missing test-change finding.
 - Inferred commands from `package.json`.
 - Package script findings when a patch changes install hooks or weakens test scripts.
-- Report artifact.
+- Proof Pack artifact bundle.
 - SARIF upload in GitHub code scanning.
 - `.patchdrill.yml` policy rule that requires owner review for a sensitive path.
 
 ## Star Hooks
 
 - "No LLM required."
-- "Evidence over vibes."
+- "Proof Packs over vibes."
 - "Not another AI reviewer. A deterministic safety gate."
 - "Works before your CI bill grows."
 - "Review the plan before running commands."

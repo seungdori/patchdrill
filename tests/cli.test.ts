@@ -123,10 +123,13 @@ describe("cli", () => {
   it("explains the product boundary against AI PR reviewers", () => {
     const text = renderExplainText();
 
+    expect(text).toContain("PatchDrill is the deterministic proof layer between code review and CI.");
     expect(text).toContain("PatchDrill is not an AI PR reviewer.");
     expect(text).toContain("What deterministic proof should exist before merge?");
+    expect(text).toContain("Emits a Proof Pack");
     expect(text).toContain("No model call is required");
     expect(text).toContain("scan does not mutate the repository or run commands unless --run is set");
+    expect(text).toContain("Proof Pack artifacts are meant for CI gates, bots, auditors, reviewers, and model-assisted review.");
     expect(text).toContain("patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo");
     expect(text).toContain("patchdrill scan --base origin/main --run");
   });

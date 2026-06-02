@@ -1,6 +1,8 @@
-# Evidence Manifest
+# Proof Packs and Evidence Manifests
 
-PatchDrill can write a JSON evidence manifest for CI artifact storage and audit trails:
+A Proof Pack is the portable evidence bundle PatchDrill creates for a patch. It can contain a compact Markdown summary, full Markdown report, JSON report, SARIF report, self-contained HTML dashboard, and a JSON evidence manifest.
+
+The evidence manifest is the verifiable index for that bundle. It records artifact metadata and command-output digests so a reviewer or CI system can later prove which files belonged to the same scan:
 
 ```bash
 patchdrill scan --base origin/main --run \
@@ -43,4 +45,4 @@ patchdrill evidence \
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-This keeps the default scanner local-only and deterministic while giving CI systems one small file that can prove which evidence artifacts belonged to a run.
+This keeps the default scanner local-only and deterministic while giving CI systems one small file that can prove which Proof Pack artifacts belonged to a run.

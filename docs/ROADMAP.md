@@ -4,6 +4,8 @@
 
 - Expand first-party fixtures toward the full top 20 open-source stacks.
 - Expand native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck workspaces.
+- Add anonymized real-repository Proof Pack case studies for common AI-agent PR failures.
+- Split large planner and dependency modules into ecosystem-focused adapters without changing the public report schema.
 
 ## Later
 
@@ -12,6 +14,7 @@
 - Optional LLM summarization that can only summarize deterministic findings.
 - Rule confidence calibration from anonymized fixture corpora.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
+- `patchdrill doctor` for explaining weak project detection, missing scripts, and why a command was or was not inferred.
 
 ## Completed In 0.1.x
 

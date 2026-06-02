@@ -1,7 +1,7 @@
 {
   "name": "patchdrill",
   "version": "0.1.0",
-  "description": "A local-first CI drill for proving AI-generated and human patches are safe before merge.",
+  "description": "A deterministic proof layer for verifying AI-generated and human patches before merge.",
   "type": "module",
   "bin": {
     "patchdrill": "./dist/cli.js"
