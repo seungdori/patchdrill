@@ -38,6 +38,19 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("detects nested Docker and Compose projects", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    mkdirSync(join(root, "services", "api"), { recursive: true });
+    writeFileSync(join(root, "services", "api", "Dockerfile"), "FROM node:22-alpine\n");
+    writeFileSync(join(root, "services", "api", "compose.yaml"), "services:\n  api:\n    build: .\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "docker",
+      manifestPath: "services/api/Dockerfile"
+    });
+  });
+
   it("detects Bazel workspaces", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

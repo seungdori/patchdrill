@@ -108,6 +108,23 @@ describe("planCommands", () => {
     );
   });
 
+  it("adds Dockerfile build and Compose config checks", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [
+        { path: "services/api/Dockerfile", status: "modified", additions: 3, deletions: 1, binary: false },
+        { path: "services/api/compose.yaml", status: "modified", additions: 5, deletions: 1, binary: false }
+      ],
+      [{ ecosystem: "docker", manifestPath: "services/api/Dockerfile" }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "docker build services/api",
+      "docker compose -f services/api/compose.yaml config"
+    ]);
+    expect(commands.map((command) => command.required)).toEqual([false, false]);
+  });
+
   it("adds Kubernetes manifest dry-run checks", () => {
     const commands = planCommands(
       process.cwd(),

@@ -89,7 +89,7 @@ const signalPlanners: SignalPlanner[] = [
   {
     ecosystem: "docker",
     applies: (_signal, context) => context.paths.some((path) => /(^|\/)(Dockerfile|compose\.ya?ml|docker-compose\.ya?ml)$/.test(path)),
-    addPlans: addDockerPlans
+    addPlans: (plans, _signal, context) => addDockerPlans(plans, context.paths)
   },
   {
     ecosystem: "kubernetes",
@@ -207,15 +207,32 @@ function addTerraformPlans(plans: CommandPlan[]): void {
   });
 }
 
-function addDockerPlans(plans: CommandPlan[]): void {
-  pushUnique(plans, {
-    id: "docker-build-check",
-    label: "Docker build check",
-    command: "docker build .",
-    reason: "Container build files changed.",
-    ecosystem: "docker",
-    required: false
-  });
+function addDockerPlans(plans: CommandPlan[], paths: string[]): void {
+  const dockerBuildContexts = new Set(paths.filter(isDockerfilePath).map((path) => parentPath(path) || "."));
+  for (const contextPath of dockerBuildContexts) {
+    pushUnique(plans, {
+      id: contextPath === "." ? "docker-build-check" : `docker-build-check-${slug(contextPath)}`,
+      label: contextPath === "." ? "Docker build check" : `${contextPath} Docker build check`,
+      command: `docker build ${quoteShell(contextPath)}`,
+      reason:
+        contextPath === "."
+          ? "Dockerfile changed, so the root container build should still work."
+          : `Dockerfile changed under ${contextPath}, so that container build context should still work.`,
+      ecosystem: "docker",
+      required: false
+    });
+  }
+
+  for (const composePath of paths.filter(isDockerComposePath)) {
+    pushUnique(plans, {
+      id: `docker-compose-config-${slug(composePath)}`,
+      label: `${composePath} Compose config`,
+      command: `docker compose -f ${quoteShell(composePath)} config`,
+      reason: `${composePath} changed, so the composed service graph should render before merge.`,
+      ecosystem: "docker",
+      required: false
+    });
+  }
 }
 
 interface DotnetProject {
@@ -2376,6 +2393,14 @@ function touchesPants(paths: string[]): boolean {
 
 function touchesKubernetes(paths: string[]): boolean {
   return paths.some(isKubernetesPath);
+}
+
+function isDockerfilePath(path: string): boolean {
+  return /(^|\/)Dockerfile$/.test(path);
+}
+
+function isDockerComposePath(path: string): boolean {
+  return /(^|\/)(compose\.ya?ml|docker-compose\.ya?ml)$/.test(path);
 }
 
 function touchesBazel(paths: string[]): boolean {

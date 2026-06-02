@@ -11,6 +11,10 @@ describe("stack coverage", () => {
 
   it("covers the planner and dependency registries at a launch-documentation level", () => {
     expect(stackCoverage.length).toBeGreaterThanOrEqual(10);
+    const infraCoverage = stackCoverage.find((entry) => entry.stack === "Terraform, Docker, Kubernetes, Helm, Kustomize");
+
+    expect(infraCoverage?.commandPlans).toContain("docker build");
+    expect(infraCoverage?.commandPlans).toContain("docker compose config");
     expect(supportedPlannerEcosystems()).toEqual([
       "android",
       "bazel",

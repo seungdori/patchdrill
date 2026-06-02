@@ -1,0 +1,17 @@
+{
+  "name": "docker-compose",
+  "expectedEcosystems": ["docker"],
+  "expectedCommands": ["docker compose -f compose.yaml config"],
+  "baseFiles": [
+    {
+      "path": "compose.yaml",
+      "lines": ["services:", "  api:", "    image: node:22-alpine", "    command: node server.js"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "compose.yaml",
+      "lines": ["services:", "  api:", "    image: node:22-alpine", "    command: node server.js", "    restart: unless-stopped"]
+    }
+  ]
+}

@@ -63,7 +63,7 @@ export const stackCoverage: StackCoverageEntry[] = [
   {
     stack: "Terraform, Docker, Kubernetes, Helm, Kustomize",
     detects: "Terraform files, Dockerfile/compose files, Kubernetes manifests, Helm charts, Kustomize overlays",
-    commandPlans: "terraform fmt/validate, docker compose config, kubectl/helm/kustomize validation",
+    commandPlans: "terraform fmt/validate, docker build, docker compose config, kubectl/helm/kustomize validation",
     proofSignals: "infra review findings and deployment-manifest proof requirements"
   },
   {

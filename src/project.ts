@@ -100,10 +100,11 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
   if (exists(root, "Package.swift")) add({ ecosystem: "swift", manifestPath: "Package.swift" });
   const xcodeManifestPath = findXcodeManifestPath(root);
   if (xcodeManifestPath) add({ ecosystem: "xcode", manifestPath: xcodeManifestPath });
-  if (exists(root, "Dockerfile") || exists(root, "compose.yaml") || exists(root, "docker-compose.yml")) {
+  const dockerManifestPath = findDockerManifestPath(root);
+  if (dockerManifestPath) {
     add({
       ecosystem: "docker",
-      manifestPath: firstExisting(root, ["Dockerfile", "compose.yaml", "docker-compose.yml"]) ?? "docker"
+      manifestPath: dockerManifestPath
     });
   }
   if (exists(root, "pants.toml")) add({ ecosystem: "pants", manifestPath: "pants.toml" });
@@ -298,6 +299,17 @@ function findAndroidManifestPath(root: string): string | undefined {
 
 function findXcodeManifestPath(root: string): string | undefined {
   return findDirectoryWithExtension(root, ".xcworkspace", 3) ?? findDirectoryWithExtension(root, ".xcodeproj", 3);
+}
+
+function findDockerManifestPath(root: string): string | undefined {
+  const candidates = ["Dockerfile", "compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"];
+  const direct = firstExisting(root, candidates);
+  if (direct) return direct;
+  for (const candidate of candidates) {
+    const match = findFilesNamed(root, [candidate], 4)[0];
+    if (match) return match;
+  }
+  return undefined;
 }
 
 function androidManifestMentions(root: string, path: string): boolean {

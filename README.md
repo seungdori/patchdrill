@@ -49,7 +49,7 @@ npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
 - Understands Node, Cargo, Go, and Pants workspaces, plus nested Python projects, nested Cargo and Go workspaces, Turborepo, and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
-- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Kubernetes/Helm/Kustomize, Java/Maven/Gradle, Spring Boot Maven/Gradle, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
+- Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Docker/Compose, Kubernetes/Helm/Kustomize, Java/Maven/Gradle, Spring Boot Maven/Gradle, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
 - Explains package.json, pyproject.toml, requirements.txt, NuGet PackageReference and central PackageVersion files, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, uv.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Flags dependency proof gaps such as manifest-only dependency changes or lockfile-only resolution drift.
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
@@ -357,7 +357,7 @@ PatchDrill detects project shape from repo manifests:
 | Swift | `Package.swift`, `Package.resolved`, `*.swift` | `swift test`, `swift build` |
 | Xcode | `.xcworkspace`, `.xcodeproj`, shared `.xcscheme`, `.xctestplan`, Apple app source/resources, scheme target platforms | `xcodebuild -workspace App.xcworkspace -scheme App -testPlan AppTests test`, `xcodebuild -project App.xcodeproj -scheme App -destination generic/platform=iOS build`, `xcodebuild -project App.xcodeproj -scheme App -showdestinations` |
 | Terraform | `*.tf`, `*.tfvars` | `terraform fmt -check && terraform validate` |
-| Docker | `Dockerfile`, Compose files | `docker build .` |
+| Docker | `Dockerfile`, Compose files | `docker build .`, `docker compose -f compose.yaml config` |
 | Kubernetes | `Chart.yaml`, `kustomization.yaml`, `k8s/`, `kubernetes/`, `manifests/` | `helm lint .`, `kubectl kustomize .`, `kubectl apply --dry-run=client -f k8s` |
 | Bazel | `MODULE.bazel`, `WORKSPACE`, `BUILD.bazel`, `.bazelrc` | `bazel test //path/...`, `bazel build //path/...`, `bazel query 'rdeps(//..., set(//path/...))'`, optional downstream `tests(rdeps(...))` promotion, graph-wide fallback for root metadata |
 | Buck2 | `.buckconfig`, `BUCK`, `BUCK.v2` | `buck2 test //path/...`, `buck2 build //path/...`, `buck2 uquery 'rdeps(//..., set(//path/...))'`, optional downstream `testsof(rdeps(...))` promotion, graph-wide fallback for root metadata |

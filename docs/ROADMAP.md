@@ -66,7 +66,7 @@
 - Organization policy packs for regulated and agentic-code teams.
 - Cargo workspace task plans for affected crates and downstream dependents.
 - Go workspace task plans for affected modules and downstream dependents.
-- First-party stack fixture harness covering Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Pants, Cargo, and Go services.
+- First-party stack fixture harness covering Node/Turborepo, Next.js, Python, Rails, PHP/Composer, Terraform, Docker/Compose, Pants, Cargo, and Go services.
 - Native Pants changed-target task plans.
 - Language-aware source-to-test matching for risk scoring.
 - Static HTML dashboard generation from scan output and saved JSON reports.
