@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSummaryMarkdown, shouldFail } from "../src/report.js";
+import { renderGitHubAnnotations as renderGitHubAnnotationsDirect } from "../src/report-annotations.js";
+import { renderHtml as renderHtmlDashboard } from "../src/report-html.js";
 import type { PatchReport } from "../src/types.js";
 
 describe("report", () => {
@@ -195,6 +197,12 @@ describe("report", () => {
     expect(html).toContain("feature");
   });
 
+  it("keeps the report HTML re-export equivalent to the dashboard renderer", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 0 });
+
+    expect(renderHtml(report)).toBe(renderHtmlDashboard(report));
+  });
+
   it("renders Markdown and HTML without trailing whitespace", () => {
     const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 0 });
     const markdown = renderMarkdown(report);
@@ -265,6 +273,12 @@ describe("report", () => {
         ""
       ].join("\n")
     );
+  });
+
+  it("keeps the report annotation re-export equivalent to the annotation renderer", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 72, failedCommandCount: 0 });
+
+    expect(renderGitHubAnnotations(report)).toBe(renderGitHubAnnotationsDirect(report));
   });
 });
 

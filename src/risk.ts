@@ -279,13 +279,33 @@ const severityWeights: Record<Severity, number> = {
   critical: 35
 };
 
+class RiskAccumulator {
+  private score = 0;
+  private readonly values: RiskFinding[] = [];
+
+  add(weight: number, finding: RiskFinding): void {
+    this.score += weight;
+    this.values.push(finding);
+  }
+
+  addWeighted(finding: RiskFinding): void {
+    this.add(severityWeights[finding.severity], finding);
+  }
+
+  get risk(): number {
+    return this.score;
+  }
+
+  get findings(): RiskFinding[] {
+    return this.values;
+  }
+}
+
 export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandResult[], options: RiskOptions = {}): RiskAssessment {
-  const findings: RiskFinding[] = [];
-  let risk = 0;
+  const accumulator = new RiskAccumulator();
 
   if (changedFiles.length > 0) {
-    risk += 10;
-    findings.push({
+    accumulator.add(10, {
       ruleId: "patch.changed-files",
       severity: "info",
       title: "Patch changes repository files",
@@ -302,8 +322,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
   for (const file of changedFiles) {
     if (SECRET_PATTERNS.some((pattern) => pattern.test(file.path))) {
-      risk += 40;
-      findings.push({
+      accumulator.add(40, {
         ruleId: "file.secret-bearing",
         severity: "critical",
         title: "Possible secret-bearing file changed",
@@ -314,8 +333,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (!isDocumentationFile(file.path) && !isTestFile(file.path) && HIGH_IMPACT_PATTERNS.some((pattern) => pattern.test(file.path))) {
-      risk += 18;
-      findings.push({
+      accumulator.add(18, {
         ruleId: "file.high-impact-area",
         severity: "high",
         title: "High-impact product area changed",
@@ -326,8 +344,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (isAgentControlFile(file.path)) {
-      risk += 18;
-      findings.push({
+      accumulator.add(18, {
         ruleId: "agent.control-file",
         severity: "high",
         title: "Agent instruction surface changed",
@@ -338,8 +355,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (isMcpConfigFile(file.path)) {
-      risk += 30;
-      findings.push({
+      accumulator.add(30, {
         ruleId: "agent.mcp-config",
         severity: "critical",
         title: "MCP or agent tool configuration changed",
@@ -350,8 +366,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (INFRA_PATTERNS.some((pattern) => pattern.test(file.path))) {
-      risk += 14;
-      findings.push({
+      accumulator.add(14, {
         ruleId: "file.infrastructure",
         severity: "medium",
         title: "Infrastructure or CI behavior changed",
@@ -362,8 +377,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (LOCKFILES.some((lockfile) => file.path.endsWith(lockfile))) {
-      risk += 12;
-      findings.push({
+      accumulator.add(12, {
         ruleId: "file.lockfile",
         severity: "medium",
         title: "Dependency lockfile changed",
@@ -374,8 +388,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (file.binary && isBinaryBunLockfile(file.path)) {
-      risk += 14;
-      findings.push({
+      accumulator.add(14, {
         ruleId: "file.bun-lockb",
         severity: "medium",
         title: "Binary Bun lockfile changed",
@@ -386,8 +399,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (isDependencyManifest(file.path)) {
-      risk += 12;
-      findings.push({
+      accumulator.add(12, {
         ruleId: "file.dependency-manifest",
         severity: "medium",
         title: "Dependency manifest changed",
@@ -398,8 +410,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (file.status === "deleted") {
-      risk += 8;
-      findings.push({
+      accumulator.add(8, {
         ruleId: "file.deleted",
         severity: "low",
         title: "File deleted",
@@ -408,8 +419,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       });
     }
     if (file.binary && !isBinaryBunLockfile(file.path)) {
-      risk += 10;
-      findings.push({
+      accumulator.add(10, {
         ruleId: "file.binary",
         severity: "medium",
         title: "Binary file changed",
@@ -424,8 +434,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
   for (const line of options.addedLines ?? []) {
     for (const secretPattern of ADDED_SECRET_PATTERNS) {
       if (!secretPattern.pattern.test(line.content)) continue;
-      risk += 45;
-      findings.push({
+      accumulator.add(45, {
         ruleId: secretPattern.ruleId,
         severity: "critical",
         title: secretPattern.title,
@@ -440,8 +449,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
     if (PROMPT_INJECTION_PATTERNS.some((pattern) => pattern.test(line.content))) {
       const agentVisible = isAgentVisibleFile(line.file);
-      risk += agentVisible ? 24 : 12;
-      findings.push({
+      accumulator.add(agentVisible ? 24 : 12, {
         ruleId: "agent.prompt-injection",
         severity: agentVisible ? "high" : "medium",
         title: "Prompt-injection instruction added",
@@ -456,8 +464,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
 
     if ((isAgentVisibleFile(line.file) || isAgentControlFile(line.file)) && AGENT_TOOL_ABUSE_PATTERNS.some((pattern) => pattern.test(line.content))) {
-      risk += 22;
-      findings.push({
+      accumulator.add(22, {
         ruleId: "agent.tool-abuse-instruction",
         severity: "high",
         title: "Agent tool-abuse instruction added",
@@ -472,8 +479,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     if (line.file.startsWith(".github/workflows/")) {
       for (const workflowRule of WORKFLOW_ADDED_LINE_RULES) {
         if (!workflowRule.matches(line.content)) continue;
-        risk += severityWeights[workflowRule.severity];
-        findings.push({
+        accumulator.addWeighted({
           ruleId: workflowRule.ruleId,
           severity: workflowRule.severity,
           title: workflowRule.title,
@@ -488,30 +494,25 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
   }
 
   for (const finding of workflowContextFindings(options.addedLines ?? [], options.workflowFiles ?? [])) {
-    risk += severityWeights[finding.severity];
-    findings.push(finding);
+    accumulator.addWeighted(finding);
   }
 
   for (const finding of packageScriptFindings(options.packageScriptChanges ?? [])) {
-    risk += severityWeights[finding.severity];
-    findings.push(finding);
+    accumulator.addWeighted(finding);
   }
 
   for (const finding of dependencyProofFindings(changedFiles, options.dependencyChanges ?? [])) {
-    risk += severityWeights[finding.severity];
-    findings.push(finding);
+    accumulator.addWeighted(finding);
   }
 
   for (const finding of missingRequiredVerificationFindings(changedFiles, options.commandPlan ?? [], commandResults)) {
-    risk += severityWeights[finding.severity];
-    findings.push(finding);
+    accumulator.addWeighted(finding);
   }
 
   for (const rule of options.policy?.rules ?? []) {
     for (const file of changedFiles) {
       if (!matchesPolicyRule(file.path, rule)) continue;
-      risk += rule.weight ?? severityWeights[rule.severity];
-      findings.push({
+      accumulator.add(rule.weight ?? severityWeights[rule.severity], {
         ruleId: `policy.${rule.id}`,
         severity: rule.severity,
         title: rule.title,
@@ -524,8 +525,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
   }
 
   if (totalAdditions + totalDeletions > 2000) {
-    risk += 24;
-    findings.push({
+    accumulator.add(24, {
       ruleId: "patch.large",
       severity: "high",
       title: "Large patch",
@@ -533,8 +533,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       remediation: "Split unrelated changes or attach a clear verification report."
     });
   } else if (totalAdditions + totalDeletions > 500) {
-    risk += 12;
-    findings.push({
+    accumulator.add(12, {
       ruleId: "patch.medium",
       severity: "medium",
       title: "Medium-sized patch",
@@ -545,8 +544,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
   const untestedSourceFiles = changedSourceFiles.filter((file) => !hasMatchingChangedTest(file.path, changedTestPaths));
   if (untestedSourceFiles.length > 0) {
     const examples = untestedSourceFiles.slice(0, 5).map((file) => file.path);
-    risk += 16;
-    findings.push({
+    accumulator.add(16, {
       ruleId: "test.source-without-test-change",
       severity: "medium",
       title: "Source changed without matching test changes",
@@ -557,8 +555,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
 
   for (const result of commandResults) {
     if (result.exitCode !== 0) {
-      risk += 30;
-      findings.push({
+      accumulator.add(30, {
         ruleId: "command.failed",
         severity: "critical",
         title: "Verification command failed",
@@ -568,8 +565,8 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
     }
   }
 
-  const dedupedFindings = dedupeFindings(findings);
-  const riskScore = clamp(risk, 0, 100);
+  const dedupedFindings = dedupeFindings(accumulator.findings);
+  const riskScore = clamp(accumulator.risk, 0, 100);
   const confidenceScore = 100 - riskScore;
   const status: PatchStatus = commandResults.some((result) => result.exitCode !== 0)
     ? "fail"

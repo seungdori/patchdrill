@@ -15,7 +15,10 @@ PatchDrill is split into deterministic modules:
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
-| `src/report.ts` | Renders Markdown, SARIF, and evaluates fail thresholds. |
+| `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
+| `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |
+| `src/report-html.ts` | Renders the self-contained Proof Pack HTML dashboard and run-trend view. |
+| `src/report-sarif.ts` | Renders SARIF 2.1.0 output and stable finding fingerprints for GitHub code scanning. |
 | `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
 | `src/cli.ts` | Parses arguments and handles user output. |
