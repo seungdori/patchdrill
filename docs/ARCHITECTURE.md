@@ -16,6 +16,7 @@ PatchDrill is split into deterministic modules:
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
+| `src/report-contract.ts` | Verifies JSON report self-consistency, including summary counts derived from changed files, command plans, and command results. |
 | `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
 | `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |
 | `src/report-html.ts` | Renders the self-contained Proof Pack HTML dashboard and run-trend view. |
@@ -52,6 +53,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
 
 - Dependency formats register a matcher, parser, diff function, and empty snapshot in `src/dependency.ts`, so adding a manifest or lockfile format does not grow the scan orchestrator.
 - Verification command adapters add plans through `src/command-plan.ts`, so duplicate detector and policy commands are normalized before running or scoring evidence gaps.
+- Report contract checks live in `src/report-contract.ts`, so evidence verification can reject a JSON report whose summary counts no longer match its payload.
 - Project and workspace detection lives in `src/project.ts`; command planning consumes those signals through the handler registry in `src/planner.ts`.
 - Risk scoring stays explainable: every score increase in `src/risk.ts` must produce a human-readable finding and a stable rule ID documented in [RULE_CATALOG.md](RULE_CATALOG.md).
 

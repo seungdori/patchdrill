@@ -31,7 +31,7 @@ Verify a saved manifest against its artifacts:
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest and verifies that the manifest summary, report counts, command result metadata, and command-output digests still match the JSON report.
+Verification checks that recorded artifact SHA-256 values and byte lengths still match the files on disk. When a JSON report artifact is present, PatchDrill also cross-checks it against the manifest's report digest, verifies that the manifest summary, report counts, command result metadata, and command-output digests still match the JSON report, and rejects JSON reports whose summary counts no longer match their changed files, command plan, or command results.
 
 Regenerate a manifest after post-processing final artifacts, such as re-rendering a dashboard with trend history:
 

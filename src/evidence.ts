@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { runGit } from "./git.js";
+import { reportContractFailures } from "./report-contract.js";
 import type { CommandResult, PatchReport, PatchSummary } from "./types.js";
 
 export type EvidenceArtifactKind = "summary-markdown" | "markdown" | "json" | "sarif" | "html";
@@ -286,6 +287,7 @@ function verifyReportContract(manifest: Partial<EvidenceManifest>, artifact: { p
   if (manifest.head !== report.head) failures.push("Manifest head does not match the JSON report.");
   if (manifest.tool?.reportSchemaVersion !== report.schemaVersion) failures.push("Manifest tool.reportSchemaVersion does not match the JSON report.");
   if (!samePatchSummary(manifest.summary, report.summary)) failures.push("Manifest summary does not match the JSON report summary.");
+  failures.push(...reportContractFailures(report));
   if (!isReportDigest(manifest.report)) {
     failures.push("Manifest report metadata is invalid.");
     return false;

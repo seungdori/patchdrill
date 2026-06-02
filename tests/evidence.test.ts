@@ -129,6 +129,33 @@ describe("evidence manifest", () => {
     expect(result.failures).toContain("Manifest command result count does not match the JSON report.");
   });
 
+  it("fails verification when JSON report summary drifts from report payload counts", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
+    tempDirs.push(root);
+    const report = exampleReport();
+    report.summary.changedFileCount = 99;
+    report.summary.additions = 99;
+    report.summary.requiredCommandCount = 0;
+    report.summary.failedCommandCount = 1;
+    const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+    writeFileSync(join(root, "patchdrill-report.json"), reportJson, "utf8");
+    writeFileSync(
+      join(root, "patchdrill-evidence.json"),
+      renderEvidenceManifest(report, [{ kind: "json", path: "patchdrill-report.json", contents: reportJson }], root, reportJson),
+      "utf8"
+    );
+
+    const result = verifyEvidenceManifest("patchdrill-evidence.json", root);
+
+    expect(result.ok).toBe(false);
+    expect(result.checkedReportArtifact).toBe(true);
+    expect(result.checkedReportContract).toBe(false);
+    expect(result.failures).toContain("JSON report summary.changedFileCount does not match changedFiles.");
+    expect(result.failures).toContain("JSON report summary.additions does not match changedFiles.");
+    expect(result.failures).toContain("JSON report summary.requiredCommandCount does not match commandPlan.");
+    expect(result.failures).toContain("JSON report summary.failedCommandCount does not match commandResults.");
+  });
+
   it("fails verification when manifest command digests drift from the JSON report", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-evidence-"));
     tempDirs.push(root);

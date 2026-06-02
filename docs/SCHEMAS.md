@@ -32,8 +32,8 @@ For editor completion in YAML, add a language-server schema comment:
 
 ## Report Schema
 
-Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, package script changes, findings, verification plans, and command results.
+Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, package script changes, findings, verification plans, and command results. `patchdrill verify --evidence` also checks report summary consistency that JSON Schema cannot express, such as changed-file totals and failed-command counts.
 
 ## Evidence Schema
 
-Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the PatchDrill tool version, report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr. `patchdrill verify` cross-checks those command digests against the JSON report artifact when it is present.
+Use `schemas/patchdrill-evidence.schema.json` for audit storage that consumes `patchdrill scan --evidence`. The manifest records the PatchDrill tool version, report digest, generated artifact digests, command-output digests, command result metadata, and local git refs without embedding raw stdout or stderr. `patchdrill verify` cross-checks those command digests and the JSON report's internal summary counts against the JSON report artifact when it is present.
