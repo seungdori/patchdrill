@@ -44,13 +44,15 @@ export function discoverProjectSignals(root: string): ProjectSignal[] {
     });
   }
   for (const signal of discoverNestedRustSignals(root)) add(signal);
-  if (exists(root, "go.mod") || exists(root, "go.work")) {
+  const goManifestPath = firstExisting(root, ["go.work", "go.mod"]);
+  if (goManifestPath) {
     add({
       ecosystem: "go",
-      manifestPath: firstExisting(root, ["go.work", "go.mod"]) ?? "go",
-      workspacePackages: discoverGoWorkspacePackages(root)
+      manifestPath: goManifestPath,
+      workspacePackages: discoverGoWorkspacePackages(root, goManifestPath)
     });
   }
+  for (const signal of discoverNestedGoSignals(root)) add(signal);
   const androidManifestPath = findAndroidManifestPath(root);
   if (androidManifestPath) {
     add({
@@ -443,6 +445,36 @@ function discoverNestedRustSignals(root: string): ProjectSignal[] {
     }));
 }
 
+function discoverNestedGoSignals(root: string): ProjectSignal[] {
+  const rootWorkspaceModuleRoots = exists(root, "go.work")
+    ? discoverGoWorkspacePackages(root, "go.work").map((workspacePackage) => workspacePackage.path)
+    : [];
+  const manifests = findFilesNamed(root, ["go.work", "go.mod"], NESTED_PROJECT_MAX_DEPTH).filter((manifestPath) => {
+    const projectRoot = parentPath(manifestPath);
+    if (projectRoot === "") return false;
+    return !rootWorkspaceModuleRoots.some((moduleRoot) => projectRoot === moduleRoot || projectRoot.startsWith(`${moduleRoot}/`));
+  });
+  const workspaceManifests = manifests.filter((manifestPath) => fileName(manifestPath) === "go.work");
+  const workspaceRoots = workspaceManifests.map((manifestPath) => parentPath(manifestPath)).sort((a, b) => a.localeCompare(b));
+  const selected = new Set<string>();
+
+  for (const manifestPath of workspaceManifests) selected.add(manifestPath);
+  for (const manifestPath of manifests) {
+    if (selected.has(manifestPath) || fileName(manifestPath) !== "go.mod") continue;
+    const projectRoot = parentPath(manifestPath);
+    if (workspaceRoots.some((workspaceRoot) => projectRoot.startsWith(`${workspaceRoot}/`))) continue;
+    selected.add(manifestPath);
+  }
+
+  return [...selected]
+    .sort((a, b) => a.localeCompare(b))
+    .map((manifestPath) => ({
+      ecosystem: "go" as const,
+      manifestPath,
+      workspacePackages: fileName(manifestPath) === "go.work" ? discoverGoWorkspacePackages(root, manifestPath) : []
+    }));
+}
+
 function discoverCargoWorkspacePackages(root: string, manifestPath: string): WorkspacePackage[] {
   let rootManifest = "";
   try {
@@ -555,27 +587,30 @@ function readTomlStringArray(value: string): string[] {
   return strings;
 }
 
-function discoverGoWorkspacePackages(root: string): WorkspacePackage[] {
+function discoverGoWorkspacePackages(root: string, manifestPath: string): WorkspacePackage[] {
   let workspace = "";
   try {
-    workspace = readFileSync(join(root, "go.work"), "utf8");
+    workspace = readFileSync(join(root, manifestPath), "utf8");
   } catch {
     return [];
   }
   const modules = readGoWorkspaceModules(workspace);
   if (modules.length === 0) return [];
   const packages = new Map<string, WorkspacePackage>();
+  const workspaceRoot = parentPath(manifestPath) || ".";
+  const absoluteWorkspaceRoot = workspaceRoot === "." ? root : join(root, workspaceRoot);
 
   for (const modulePath of modules) {
-    const manifest = readGoModuleManifest(join(root, modulePath));
+    const repoModulePath = joinRepoPath(workspaceRoot, modulePath);
+    const manifest = readGoModuleManifest(join(absoluteWorkspaceRoot, modulePath));
     if (!manifest.name) continue;
     const workspacePackage: WorkspacePackage = {
       name: manifest.name,
-      path: modulePath,
+      path: repoModulePath,
       scripts: {}
     };
     if (manifest.dependencies.length > 0) workspacePackage.dependencies = manifest.dependencies;
-    packages.set(modulePath, workspacePackage);
+    packages.set(repoModulePath, workspacePackage);
   }
 
   const workspaceNames = new Set([...packages.values()].map((workspacePackage) => workspacePackage.name));

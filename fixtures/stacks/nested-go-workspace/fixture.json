@@ -1,0 +1,51 @@
+{
+  "name": "nested-go-workspace",
+  "expectedEcosystems": ["node", "go"],
+  "expectedAffectedPackages": ["example.com/core", "example.com/api"],
+  "expectedCommands": [
+    "cd services/go && go test ./modules/core/...",
+    "cd services/go && go vet ./modules/core/...",
+    "cd services/go && go test ./modules/api/...",
+    "cd services/go && go vet ./modules/api/..."
+  ],
+  "baseFiles": [
+    {
+      "path": "package.json",
+      "lines": ["{\"private\": true}"]
+    },
+    {
+      "path": "services/go/go.work",
+      "lines": ["go 1.22", "", "use (", "  ./modules/core", "  ./modules/api", ")"]
+    },
+    {
+      "path": "services/go/modules/core/go.mod",
+      "lines": ["module example.com/core", "", "go 1.22"]
+    },
+    {
+      "path": "services/go/modules/core/core.go",
+      "lines": ["package core", "", "func OK() bool { return true }"]
+    },
+    {
+      "path": "services/go/modules/api/go.mod",
+      "lines": [
+        "module example.com/api",
+        "",
+        "go 1.22",
+        "",
+        "require example.com/core v0.0.0",
+        "",
+        "replace example.com/core => ../core"
+      ]
+    },
+    {
+      "path": "services/go/modules/api/api.go",
+      "lines": ["package api", "", "import \"example.com/core\"", "", "func OK() bool { return core.OK() }"]
+    }
+  ],
+  "changeFiles": [
+    {
+      "path": "services/go/modules/core/core.go",
+      "lines": ["package core", "", "func OK() bool { return false }"]
+    }
+  ]
+}

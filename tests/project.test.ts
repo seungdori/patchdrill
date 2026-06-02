@@ -201,6 +201,54 @@ describe("discoverProjectSignals", () => {
     ]);
   });
 
+  it("detects nested Go modules in polyglot monorepos", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    mkdirSync(join(root, "services", "worker"), { recursive: true });
+    writeFileSync(join(root, "services", "worker", "go.mod"), "module example.com/worker\n\ngo 1.22\n");
+
+    expect(discoverProjectSignals(root)).toContainEqual({
+      ecosystem: "go",
+      manifestPath: "services/worker/go.mod",
+      workspacePackages: []
+    });
+  });
+
+  it("detects nested Go workspaces without promoting member modules to project roots", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    mkdirSync(join(root, "services", "go", "modules", "core"), { recursive: true });
+    mkdirSync(join(root, "services", "go", "modules", "api"), { recursive: true });
+    writeFileSync(join(root, "services", "go", "go.work"), "go 1.22\n\nuse (\n  ./modules/core\n  ./modules/api\n)\n");
+    writeFileSync(join(root, "services", "go", "modules", "core", "go.mod"), "module example.com/core\n\ngo 1.22\n");
+    writeFileSync(
+      join(root, "services", "go", "modules", "api", "go.mod"),
+      "module example.com/api\n\ngo 1.22\n\nrequire example.com/core v0.0.0\n\nreplace example.com/core => ../core\n"
+    );
+
+    expect(discoverProjectSignals(root).filter((signal) => signal.ecosystem === "go")).toEqual([
+      {
+        ecosystem: "go",
+        manifestPath: "services/go/go.work",
+        workspacePackages: [
+          {
+            dependencies: ["example.com/core"],
+            name: "example.com/api",
+            path: "services/go/modules/api",
+            scripts: {}
+          },
+          {
+            name: "example.com/core",
+            path: "services/go/modules/core",
+            scripts: {}
+          }
+        ]
+      }
+    ]);
+  });
+
   it("ignores FastAPI entrypoints with non-importable module paths", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

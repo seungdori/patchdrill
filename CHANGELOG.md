@@ -110,3 +110,4 @@
 - Added dependency proof-gap findings for manifest-only dependency changes and lockfile-only resolution drift.
 - Added nested Python package-root detection with scoped pytest, compile, and optional static-analysis plans.
 - Added nested Cargo workspace detection with manifest-path crate and downstream-dependent verification plans.
+- Added nested Go module and workspace detection with scoped `go test` and `go vet` plans.

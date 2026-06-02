@@ -48,9 +48,9 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
         });
       }
     }
-    if (signal.ecosystem === "go" && touches(paths, [".go", "go.mod", "go.sum", "go.work", "go.work.sum"])) {
+    if (signal.ecosystem === "go" && touchesGo(paths, signal)) {
       const workspacePlanCount = addGoWorkspacePlans(plans, paths, signal);
-      if (workspacePlanCount === 0) addGoPlans(plans);
+      if (workspacePlanCount === 0) addGoPlans(plans, signal);
     }
     if (signal.ecosystem === "java" && touchesJava(paths, root)) {
       addJavaPlans(plans, root, signal);
@@ -476,6 +476,12 @@ function pathsForSignal(paths: string[], signal?: ProjectSignal): string[] {
   return paths
     .filter((path) => path === projectRoot || path.startsWith(`${projectRoot}/`))
     .map((path) => (path === projectRoot ? "." : path.slice(projectRoot.length + 1)));
+}
+
+function stripPathPrefix(path: string, prefix: string): string {
+  if (prefix === "." || !prefix) return path;
+  if (path === prefix) return ".";
+  return path.startsWith(`${prefix}/`) ? path.slice(prefix.length + 1) : path;
 }
 
 function scopedCommand(signal: ProjectSignal | undefined, command: string): string {
@@ -1796,22 +1802,24 @@ function addNodePlans(plans: CommandPlan[], signal: ProjectSignal): void {
   }
 }
 
-function addGoPlans(plans: CommandPlan[]): void {
+function addGoPlans(plans: CommandPlan[], signal?: ProjectSignal): void {
   pushUnique(plans, {
-    id: "go-tests",
-    label: "Go tests",
-    command: "go test ./...",
+    id: scopedPlanId("go-tests", signal),
+    label: scopedPlanLabel("Go tests", signal),
+    command: scopedCommand(signal, "go test ./..."),
     reason: "Go source or module metadata changed.",
     ecosystem: "go",
-    required: true
+    required: true,
+    ...scopedPackagePath(signal)
   });
   pushUnique(plans, {
-    id: "go-vet",
-    label: "Go vet",
-    command: "go vet ./...",
+    id: scopedPlanId("go-vet", signal),
+    label: scopedPlanLabel("Go vet", signal),
+    command: scopedCommand(signal, "go vet ./..."),
     reason: "Static checks catch common Go regressions.",
     ecosystem: "go",
-    required: false
+    required: false,
+    ...scopedPackagePath(signal)
   });
 }
 
@@ -1863,13 +1871,13 @@ function addCargoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: P
 }
 
 function addGoWorkspacePlans(plans: CommandPlan[], paths: string[], signal: ProjectSignal): number {
-  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesGoRootMetadata(paths));
+  const affectedPackages = affectedPackagesForSignal(paths, signal, touchesGoMetadata(paths, signal));
   const directlyAffected = new Set(directlyAffectedPackagesForSignal(paths, signal).map((workspacePackage) => workspacePackage.path));
   const affectedNames = new Set(affectedPackages.map((workspacePackage) => workspacePackage.name));
-  const rootWideChange = touchesGoRootMetadata(paths);
+  const rootWideChange = touchesGoMetadata(paths, signal);
   let added = 0;
   for (const workspacePackage of affectedPackages) {
-    for (const command of goWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange)) {
+    for (const command of goWorkspaceCommands(workspacePackage, directlyAffected, affectedNames, rootWideChange, signal)) {
       const before = plans.length;
       pushUnique(plans, command);
       if (plans.length > before) added += 1;
@@ -1882,15 +1890,16 @@ function goWorkspaceCommands(
   workspacePackage: WorkspacePackage,
   directlyAffected: Set<string>,
   affectedNames: Set<string>,
-  rootWideChange: boolean
+  rootWideChange: boolean,
+  signal: ProjectSignal
 ): CommandPlan[] {
-  const pattern = goWorkspacePattern(workspacePackage.path);
+  const pattern = goWorkspacePattern(workspacePackage.path, signal);
   const reason = goWorkspaceReason(workspacePackage, directlyAffected, affectedNames, rootWideChange);
   return [
     {
-      id: `go-workspace-${slug(workspacePackage.name)}-tests`,
+      id: scopedPlanId(`go-workspace-${slug(workspacePackage.name)}-tests`, signal),
       label: `${workspacePackage.name} Go tests`,
-      command: `go test ${pattern}`,
+      command: scopedCommand(signal, `go test ${pattern}`),
       reason,
       ecosystem: "go",
       required: true,
@@ -1898,9 +1907,9 @@ function goWorkspaceCommands(
       packagePath: workspacePackage.path
     },
     {
-      id: `go-workspace-${slug(workspacePackage.name)}-vet`,
+      id: scopedPlanId(`go-workspace-${slug(workspacePackage.name)}-vet`, signal),
       label: `${workspacePackage.name} Go vet`,
-      command: `go vet ${pattern}`,
+      command: scopedCommand(signal, `go vet ${pattern}`),
       reason: `${reason} Go workspace changes should pass static checks before merge.`,
       ecosystem: "go",
       required: false,
@@ -2099,13 +2108,13 @@ function touchesCargoMetadata(paths: string[], signal: ProjectSignal): boolean {
   return pathsForSignal(paths, signal).some((path) => path === "Cargo.toml" || path === "Cargo.lock");
 }
 
-function touchesGoRootMetadata(paths: string[]): boolean {
-  return paths.some((path) => path === "go.work" || path === "go.work.sum");
+function touchesGoMetadata(paths: string[], signal: ProjectSignal): boolean {
+  return pathsForSignal(paths, signal).some((path) => path === "go.work" || path === "go.work.sum");
 }
 
 function rootWideMetadataChange(paths: string[], signal: ProjectSignal): boolean {
   if (signal.ecosystem === "rust") return touchesCargoMetadata(paths, signal);
-  if (signal.ecosystem === "go") return touchesGoRootMetadata(paths);
+  if (signal.ecosystem === "go") return touchesGoMetadata(paths, signal);
   return touchesRootWorkspaceMetadata(paths);
 }
 
@@ -2138,8 +2147,10 @@ function packageManagerExec(packageManager: string, binary: string): string {
   return `npx ${binary}`;
 }
 
-function goWorkspacePattern(packagePath: string): string {
-  return packagePath === "." ? "./..." : `./${packagePath}/...`;
+function goWorkspacePattern(packagePath: string, signal: ProjectSignal): string {
+  const projectRoot = signalProjectRoot(signal);
+  const scopedPackagePath = projectRoot === "." ? packagePath : stripPathPrefix(packagePath, projectRoot);
+  return scopedPackagePath === "." ? "./..." : `./${scopedPackagePath}/...`;
 }
 
 function cargoCommand(signal: ProjectSignal, cargoSubcommand: "test" | "clippy", args: string): string {
@@ -2198,6 +2209,12 @@ function touchesPython(paths: string[], root: string, signal?: ProjectSignal): b
       "pyrightconfig.json"
     ]) || existsSync(join(signalRoot, "pytest.ini"))
   );
+}
+
+function touchesGo(paths: string[], signal: ProjectSignal): boolean {
+  const scopedPaths = pathsForSignal(paths, signal);
+  if (scopedPaths.length === 0) return false;
+  return touches(scopedPaths, [".go", "go.mod", "go.sum", "go.work", "go.work.sum"]);
 }
 
 function touchesRust(paths: string[], signal: ProjectSignal): boolean {

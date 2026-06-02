@@ -1147,6 +1147,59 @@ describe("planCommands", () => {
     expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["example.com/core", "example.com/api"]);
   });
 
+  it("scopes nested Go module verification to the module root", () => {
+    const commands = planCommands(
+      process.cwd(),
+      [{ path: "services/worker/worker.go", status: "modified", additions: 4, deletions: 1, binary: false }],
+      [{ ecosystem: "go", manifestPath: "services/worker/go.mod", workspacePackages: [] }]
+    );
+
+    expect(commands.map((command) => command.command)).toEqual(["cd services/worker && go test ./...", "cd services/worker && go vet ./..."]);
+    expect(commands.map((command) => command.id)).toEqual(["go-tests-services-worker", "go-vet-services-worker"]);
+    expect(commands.map((command) => command.packagePath)).toEqual(["services/worker", "services/worker"]);
+  });
+
+  it("targets nested Go workspace modules from the workspace root", () => {
+    const files: ChangedFile[] = [
+      { path: "services/go/modules/core/core.go", status: "modified", additions: 4, deletions: 1, binary: false }
+    ];
+    const signals: ProjectSignal[] = [
+      {
+        ecosystem: "go",
+        manifestPath: "services/go/go.work",
+        workspacePackages: [
+          {
+            name: "example.com/core",
+            path: "services/go/modules/core",
+            scripts: {}
+          },
+          {
+            name: "example.com/api",
+            path: "services/go/modules/api",
+            scripts: {},
+            dependencies: ["example.com/core"]
+          }
+        ]
+      }
+    ];
+
+    const commands = planCommands(process.cwd(), files, signals);
+
+    expect(commands.map((command) => command.command)).toEqual([
+      "cd services/go && go test ./modules/core/...",
+      "cd services/go && go vet ./modules/core/...",
+      "cd services/go && go test ./modules/api/...",
+      "cd services/go && go vet ./modules/api/..."
+    ]);
+    expect(commands.map((command) => command.id)).toEqual([
+      "go-workspace-example-com-core-tests-services-go",
+      "go-workspace-example-com-core-vet-services-go",
+      "go-workspace-example-com-api-tests-services-go",
+      "go-workspace-example-com-api-vet-services-go"
+    ]);
+    expect(findAffectedWorkspacePackages(files, signals).map((workspacePackage) => workspacePackage.name)).toEqual(["example.com/core", "example.com/api"]);
+  });
+
   it("uses Pants native changed target selection", () => {
     const files: ChangedFile[] = [
       { path: "src/python/app/service.py", status: "modified", additions: 4, deletions: 1, binary: false }

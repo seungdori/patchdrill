@@ -1,6 +1,6 @@
 # Monorepo Targeting
 
-PatchDrill detects Node, Cargo, Go, and Pants workspaces and reports the affected packages or native changed-target plan for a diff.
+PatchDrill detects Node, Cargo, Go, and Pants workspaces, including nested Cargo and Go workspaces inside polyglot monorepos, and reports the affected packages or native changed-target plan for a diff.
 
 Supported Node workspace metadata:
 
@@ -46,12 +46,13 @@ PatchDrill reads `[workspace].members` from root `Cargo.toml`, expands member gl
 
 ## Go Workspaces
 
-PatchDrill reads `go.work` `use` entries, each module's `module` path, and workspace-internal `require` dependencies. A change under `modules/core` marks that module as affected and also marks downstream workspace modules that require it.
+PatchDrill reads `go.work` `use` entries, each module's `module` path, and workspace-internal `require` dependencies. A change under `modules/core` marks that module as affected and also marks downstream workspace modules that require it. If the Go workspace is nested under a polyglot root, commands run from that nested workspace root.
 
 | Change | Example command |
 | --- | --- |
 | Direct module change | `go test ./modules/core/...` |
 | Downstream dependent module | `go test ./modules/api/...` |
+| Nested workspace module change | `cd services/go && go test ./modules/core/...` |
 | Optional static check | `go vet ./modules/core/...` |
 
 ## Pants Repositories
