@@ -155,16 +155,10 @@ runs:
           --fail-on "$PATCHDRILL_FAIL_ON"
           --max-risk "$PATCHDRILL_MAX_RISK"
           --max-output-chars "$PATCHDRILL_MAX_OUTPUT_CHARS"
+          --run "${PATCHDRILL_RUN:-false}"
+          --run-optional "${PATCHDRILL_RUN_OPTIONAL:-false}"
+          --github-annotations "${PATCHDRILL_ANNOTATIONS:-false}"
         )
-        if [ "$PATCHDRILL_RUN" = "true" ]; then
-          args+=(--run)
-        fi
-        if [ "$PATCHDRILL_RUN_OPTIONAL" = "true" ]; then
-          args+=(--run-optional)
-        fi
-        if [ "$PATCHDRILL_ANNOTATIONS" = "true" ]; then
-          args+=(--github-annotations)
-        fi
         if [ -n "$PATCHDRILL_CONFIG" ]; then
           args+=(--config "$PATCHDRILL_CONFIG")
         fi
@@ -233,23 +227,48 @@ runs:
           node "$GITHUB_ACTION_PATH/dist/cli.js" verify --evidence "$PATCHDRILL_EVIDENCE"
         fi
     - name: Write step summary
-      if: inputs.step-summary == 'true'
       shell: bash
       env:
+        PATCHDRILL_STEP_SUMMARY: ${{ inputs.step-summary }}
         PATCHDRILL_SUMMARY: ${{ inputs.summary }}
       run: |
+        bool_true() {
+          local value="${1,,}"
+          case "$value" in
+            true|1|yes|on) return 0 ;;
+            false|0|no|off|"") return 1 ;;
+            *)
+              echo "Invalid boolean input for step-summary: $1" >&2
+              exit 1
+              ;;
+          esac
+        }
+        if ! bool_true "$PATCHDRILL_STEP_SUMMARY"; then
+          exit 0
+        fi
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$PATCHDRILL_SUMMARY" ]; then
           cat -- "$PATCHDRILL_SUMMARY" >> "$GITHUB_STEP_SUMMARY"
         fi
     - name: Upsert PR comment
-      if: inputs.pr-comment == 'true' && github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v9
       env:
+        PATCHDRILL_PR_COMMENT: ${{ inputs.pr-comment }}
         PATCHDRILL_SUMMARY: ${{ inputs.summary }}
         PATCHDRILL_MARKER: ${{ inputs.comment-marker }}
       with:
         script: |
           const fs = require("fs");
+          const boolTrue = (name) => {
+            const raw = process.env[name] || "";
+            const value = raw.trim().toLowerCase();
+            if (["true", "1", "yes", "on"].includes(value)) return true;
+            if (["false", "0", "no", "off", ""].includes(value)) return false;
+            throw new Error(`Invalid boolean input for pr-comment: ${raw}`);
+          };
+          if (!boolTrue("PATCHDRILL_PR_COMMENT")) {
+            return;
+          }
           const marker = process.env.PATCHDRILL_MARKER || "<!-- patchdrill-report -->";
           const summaryPath = process.env.PATCHDRILL_SUMMARY || "patchdrill-summary.md";
           if (!fs.existsSync(summaryPath)) {

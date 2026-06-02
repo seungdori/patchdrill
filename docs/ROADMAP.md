@@ -132,6 +132,7 @@
 - Structured package script change summaries in JSON, Markdown, and HTML reports.
 - Clearer `patchdrill explain` first-run guidance for teams comparing deterministic evidence with AI PR reviewers.
 - Explicit boolean CLI flag values so `--run=false` and related safety flags are not treated as enabled.
+- GitHub Action boolean inputs now share the CLI boolean vocabulary for execution, annotations, summaries, and PR comments.
 - Missing-evidence risk findings when required verification commands were planned but not run.
 - Dependency proof-gap findings for manifest-only dependency changes and lockfile-only resolution drift.
 - Repository hygiene for default generated report artifacts after local scans.

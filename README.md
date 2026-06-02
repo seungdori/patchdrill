@@ -435,6 +435,8 @@ jobs:
             ${{ steps.patchdrill.outputs.report-sarif }}
 ```
 
+Action boolean inputs accept explicit values: `"true"`, `"false"`, `"1"`, `"0"`, `"yes"`, `"no"`, `"on"`, and `"off"`. Execution and annotation toggles are passed through the same CLI boolean parser, so `run: "false"` never executes repository commands.
+
 ## Example Report
 
 See [examples/report.md](examples/report.md).
