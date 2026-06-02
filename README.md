@@ -209,7 +209,7 @@ patchdrill release-check
 patchdrill release-check --format json
 ```
 
-The release workflow also generates a local Proof Pack smoke bundle and verifies its evidence manifest before `npm pack --dry-run`.
+The release workflow also runs required PatchDrill verification, generates a local Proof Pack smoke bundle, and verifies its evidence manifest before `npm pack --dry-run`.
 
 For automation:
 

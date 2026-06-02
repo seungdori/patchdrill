@@ -100,10 +100,12 @@ describe("composite action", () => {
     expect(release).toContain("node dist/cli.js release-check --format json");
     expect(release).toContain("Verify release Proof Pack smoke");
     expect(release).toContain("--evidence .patchdrill/release-evidence.json");
+    expect(release).toContain("--run");
     expect(release).toContain("node dist/cli.js verify --evidence .patchdrill/release-evidence.json");
     expect(ci.indexOf("npm run check")).toBeLessThan(ci.indexOf("release-check --format json"));
     expect(release.indexOf("npm run check")).toBeLessThan(release.indexOf("release-check --format json"));
     expect(release.indexOf("release-check --format json")).toBeLessThan(release.indexOf("npm pack --dry-run"));
+    expect(release.indexOf("--run")).toBeLessThan(release.indexOf("verify --evidence .patchdrill/release-evidence.json"));
     expect(release.indexOf("verify --evidence .patchdrill/release-evidence.json")).toBeLessThan(release.indexOf("npm pack --dry-run"));
   });
 });

@@ -120,5 +120,6 @@
 - Added package file allowlist and launch keyword checks to release readiness.
 - Hardened release readiness so shipped schemas must parse, expose matching `$id` values, and appear in README/SCHEMAS documentation.
 - Added release Proof Pack smoke generation plus evidence verification before npm packaging, and taught release readiness to check CI/action/release evidence verification.
+- Strengthened the release Proof Pack smoke so it runs required PatchDrill commands before verifying evidence.
 - Added launch case studies and a fixture-backed stack coverage matrix.
 - Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.

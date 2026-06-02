@@ -73,10 +73,10 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "Verify the evidence manifest inside action.yml before reporting output paths."
     ),
     checkBoolean(
-      Boolean(containsInOrder(releaseWorkflow, ["release-evidence.json", "verify --evidence .patchdrill/release-evidence.json", "npm pack --dry-run"])),
+      Boolean(containsInOrder(releaseWorkflow, ["release-evidence.json", "--run", "verify --evidence .patchdrill/release-evidence.json", "npm pack --dry-run"])),
       "Release Proof Pack smoke",
-      "release.yml generates and verifies a release Proof Pack smoke bundle before npm packaging.",
-      "Generate a release Proof Pack with scan --evidence and verify it before npm pack --dry-run."
+      "release.yml runs required verification, generates a release Proof Pack smoke bundle, and verifies it before npm packaging.",
+      "Generate a release Proof Pack with scan --run --evidence and verify it before npm pack --dry-run."
     ),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),

@@ -39,6 +39,7 @@ jobs:
             --json .patchdrill/release.json \
             --sarif .patchdrill/release.sarif \
             --html .patchdrill/release-dashboard.html \
+            --run \
             --fail-on critical
           node dist/cli.js verify --evidence .patchdrill/release-evidence.json
       - run: npm pack --dry-run
