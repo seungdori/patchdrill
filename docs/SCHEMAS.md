@@ -34,7 +34,7 @@ For editor completion in YAML, add a language-server schema comment:
 
 ## Report Schema
 
-Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, package script changes, findings, verification plans, and command results. `patchdrill verify --evidence` also checks report summary consistency that JSON Schema cannot express, such as changed-file totals and failed-command counts.
+Use `schemas/patchdrill-report.schema.json` for bots and dashboards that consume `patchdrill scan --json`. The report includes `schemaVersion: "1"` and the schema covers summary scores, changed files, project signals, workspace package impact, dependency changes, package script changes, findings, verification plans, and command results. Human-facing reports render a computed verification matrix from the same `commandPlan` and `commandResults` fields. `patchdrill verify --evidence` also checks report summary consistency that JSON Schema cannot express, such as changed-file totals and failed-command counts.
 
 ## Evidence Schema
 
@@ -46,4 +46,4 @@ Use `schemas/patchdrill-doctor.schema.json` for onboarding bots and repository b
 
 ## Release-Check Schema
 
-Use `schemas/patchdrill-release-check.schema.json` for release automation that consumes `patchdrill release-check --format json`. The report includes `schemaVersion: "1"`, a top-level `ok` flag, summary counts, and local release-readiness checks for package metadata, action wiring, provenance workflow settings, launch docs, pull request and README Proof Pack commands, parseable shipped schema contracts, synchronized stack-coverage docs, stack fixture contracts, and Markdown links.
+Use `schemas/patchdrill-release-check.schema.json` for release automation that consumes `patchdrill release-check --format json`. The report includes `schemaVersion: "1"`, a top-level `ok` flag, summary counts, and local release-readiness checks for package metadata, action wiring, provenance workflow settings, launch docs, pull request and README Proof Pack commands, parseable shipped schema contracts, synchronized stack-coverage docs, stack fixture contracts, committed demo artifacts, and Markdown links.

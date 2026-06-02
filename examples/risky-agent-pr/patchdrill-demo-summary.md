@@ -4,7 +4,7 @@
 
 - Changed files: 8 (+326 / -78)
 - Verification plan: 4 required, 1 optional
-- Command results: 3 run, 1 failed
+- Verification evidence: 3 run, 2 passed, 1 failed, 0 timed out, 1 missing required, 1 optional skipped
 - Baseline risk delta: +63 (6 new findings)
 
 ## Changed Files
@@ -36,6 +36,6 @@ _3 more findings in the full report._
 | `npm run lint --workspace @acme/web` | passed |
 | `npm test --workspace @acme/web` | failed (1) |
 | `npm run build --workspace @acme/web` | passed |
-| `gh workflow view release.yml --yaml` | planned |
+| `gh workflow view release.yml --yaml` | not run |
 
 Full Markdown, JSON, SARIF, and HTML reports remain available as CI artifacts when configured.

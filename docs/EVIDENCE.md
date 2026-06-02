@@ -25,6 +25,8 @@ The manifest includes:
 
 If a scan infers or configures required verification commands but no matching command results are present, the report includes a `verification.required-not-run` finding. This keeps local scans non-mutating by default while making missing evidence visible in the same report and evidence bundle.
 
+Human-facing reports also render a plan-to-result verification matrix. Each planned command is labeled as passed, failed, timed out, not run, or skipped optional, so reviewers do not have to manually join `commandPlan` and `commandResults` to see which evidence is present.
+
 Verify a saved manifest against its artifacts:
 
 ```bash

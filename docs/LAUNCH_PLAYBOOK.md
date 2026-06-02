@@ -89,7 +89,7 @@ node dist/cli.js verify --evidence .patchdrill/release-evidence.json
 npm pack --dry-run
 ```
 
-`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, command-backed evidence verification in CI/action/release workflows, README and pull request Proof Pack command checklists, synchronized stack-coverage docs, and stack fixture contracts. npm Trusted Publisher configuration still has to be checked in npm account settings.
+`release-check` verifies local repository readiness, including parseable shipped JSON Schemas, matching README/SCHEMAS documentation for every public schema command, command-backed evidence verification in CI/action/release workflows, README and pull request Proof Pack command checklists, synchronized stack-coverage docs, stack fixture contracts, and committed demo artifact synchronization. npm Trusted Publisher configuration still has to be checked in npm account settings.
 
 ## Star Hooks
 

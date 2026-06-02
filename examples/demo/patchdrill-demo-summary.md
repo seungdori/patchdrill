@@ -4,7 +4,7 @@
 
 - Changed files: 5 (+186 / -42)
 - Verification plan: 3 required, 1 optional
-- Command results: 3 run, 0 failed
+- Verification evidence: 3 run, 3 passed, 0 failed, 0 timed out, 0 missing required, 1 optional skipped
 - Baseline risk delta: +14 (2 new findings)
 
 ## Changed Files

@@ -35,7 +35,7 @@ The dashboard includes:
 - Status, risk, confidence, changed-file, required-check, and added-line summary metrics.
 - Multi-run risk and failed-check trends when repeated JSON reports are provided.
 - Findings with severity, rule IDs, locations, tags, and remediation.
-- Verification plans and command results.
+- Verification plans with per-command status, plus captured command results.
 - Changed files, project signals, policy context, baseline context, owner context, and dependency changes.
 
 For CI, upload the HTML alongside the JSON, Markdown, and evidence artifacts:

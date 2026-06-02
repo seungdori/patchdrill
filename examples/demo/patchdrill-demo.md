@@ -12,6 +12,7 @@ Schema version: 1
 - Additions / deletions: +186 / -42
 - Required verification commands: 3
 - Failed verification commands: 0
+- Verification evidence: 3 run, 3 passed, 0 failed, 0 timed out, 0 missing required, 1 optional skipped
 - Added lines inspected: 186
 
 ## Policy
@@ -75,12 +76,12 @@ Schema version: 1
 
 ## Verification Plan
 
-| Required | Package | Command | Reason |
-| --- | --- | --- | --- |
-| yes | @acme/api | `pnpm exec turbo run typecheck --filter=@acme/api` | Auth source changed in @acme/api. |
-| yes | @acme/api | `pnpm exec turbo run test --filter=@acme/api` | Session behavior changed and matching tests exist. |
-| yes |  | `pnpm run test:contracts` | Repository policy requires contract tests for auth/session changes. |
-| no |  | `pnpm run test:e2e` | Optional browser coverage is available for session rotation flows. |
+| Required | Package | Command | Result | Reason |
+| --- | --- | --- | --- | --- |
+| yes | @acme/api | `pnpm exec turbo run typecheck --filter=@acme/api` | passed | Auth source changed in @acme/api. |
+| yes | @acme/api | `pnpm exec turbo run test --filter=@acme/api` | passed | Session behavior changed and matching tests exist. |
+| yes |  | `pnpm run test:contracts` | passed | Repository policy requires contract tests for auth/session changes. |
+| no |  | `pnpm run test:e2e` | skipped optional | Optional browser coverage is available for session rotation flows. |
 
 ## Command Results
 

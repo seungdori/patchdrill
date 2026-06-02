@@ -12,6 +12,9 @@ describe("documentation examples", () => {
     const confidence = readScore(report, "Confidence score");
 
     expect(confidence).toBe(100 - risk);
+    expect(report).toContain("- Verification evidence:");
+    expect(report).toContain("| Required | Package | Command | Result | Reason |");
+    expect(report).toContain("| yes | @acme/auth | `pnpm exec turbo run test --filter=@acme/auth` | passed |");
   });
 
   it("keeps the README terminal demo asset wired", () => {

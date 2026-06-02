@@ -39,6 +39,7 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[PASS] Stack fixture corpus");
+    expect(rendered).toContain("[PASS] Demo artifacts");
     expect(rendered).toContain("[PASS] Markdown local links");
     expect(rendered).toContain("[WARN] npm Trusted Publisher");
   });
@@ -57,6 +58,7 @@ describe("release readiness", () => {
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("README Proof Pack quickstart");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Stack coverage matrix");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Stack fixture corpus");
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Demo artifacts");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("npm provenance publish");
   });
 });

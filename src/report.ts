@@ -1,4 +1,5 @@
 import type { PatchReport, Severity } from "./types.js";
+import { formatVerificationStatus, verificationExecutions, verificationSummary } from "./verification.js";
 
 export { renderGitHubAnnotations } from "./report-annotations.js";
 export { renderHtml, type HtmlOptions } from "./report-html.js";
@@ -29,6 +30,8 @@ export function shouldFail(report: PatchReport, options: GateOptions): boolean {
 export function renderMarkdown(report: PatchReport): string {
   const lines: string[] = [];
   const statusIcon = report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL";
+  const verification = verificationSummary(report);
+  const executions = verificationExecutions(report);
 
   lines.push("# PatchDrill Report");
   lines.push("");
@@ -44,6 +47,9 @@ export function renderMarkdown(report: PatchReport): string {
   lines.push(`- Additions / deletions: +${report.summary.additions} / -${report.summary.deletions}`);
   lines.push(`- Required verification commands: ${report.summary.requiredCommandCount}`);
   lines.push(`- Failed verification commands: ${report.summary.failedCommandCount}`);
+  lines.push(
+    `- Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`
+  );
   lines.push(`- Added lines inspected: ${report.addedLines}`);
   lines.push("");
 
@@ -167,14 +173,16 @@ export function renderMarkdown(report: PatchReport): string {
 
   lines.push("## Verification Plan");
   lines.push("");
-  if (report.commandPlan.length === 0) {
+  if (executions.length === 0) {
     lines.push("No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests.");
   } else {
-    lines.push("| Required | Package | Command | Reason |");
-    lines.push("| --- | --- | --- | --- |");
-    for (const command of report.commandPlan) {
+    lines.push("| Required | Package | Command | Result | Reason |");
+    lines.push("| --- | --- | --- | --- | --- |");
+    for (const command of executions) {
       lines.push(
-        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(command.reason)} |`
+        `| ${command.required ? "yes" : "no"} | ${escapePipe(command.packageName ?? command.packagePath ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(
+          formatVerificationStatus(command)
+        )} | ${escapePipe(command.reason)} |`
       );
     }
   }
@@ -218,7 +226,8 @@ export function renderSummaryMarkdown(report: PatchReport): string {
   const statusIcon = report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL";
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
-  const failedCommands = report.commandResults.filter((result) => result.exitCode !== 0);
+  const verification = verificationSummary(report);
+  const executions = verificationExecutions(report);
 
   lines.push("# PatchDrill Summary");
   lines.push("");
@@ -226,7 +235,9 @@ export function renderSummaryMarkdown(report: PatchReport): string {
   lines.push("");
   lines.push(`- Changed files: ${report.summary.changedFileCount} (+${report.summary.additions} / -${report.summary.deletions})`);
   lines.push(`- Verification plan: ${requiredCommands.length} required, ${optionalCommands.length} optional`);
-  lines.push(`- Command results: ${report.commandResults.length} run, ${failedCommands.length} failed`);
+  lines.push(
+    `- Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`
+  );
   if (report.baseline) {
     lines.push(`- Baseline risk delta: ${formatDelta(report.baseline.riskDelta)} (${report.baseline.newFindingCount} new findings)`);
   }
@@ -272,9 +283,8 @@ export function renderSummaryMarkdown(report: PatchReport): string {
   } else {
     lines.push("| Command | Result |");
     lines.push("| --- | --- |");
-    for (const command of requiredCommands.slice(0, 5)) {
-      const result = report.commandResults.find((candidate) => candidate.id === command.id);
-      lines.push(`| ${markdownTableCode(command.command)} | ${result ? (result.exitCode === 0 ? "passed" : `failed (${result.exitCode})`) : "planned"} |`);
+    for (const command of executions.filter((execution) => execution.required).slice(0, 5)) {
+      lines.push(`| ${markdownTableCode(command.command)} | ${escapePipe(formatVerificationStatus(command))} |`);
     }
     if (requiredCommands.length > 5) {
       lines.push("");

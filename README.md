@@ -53,7 +53,7 @@ npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json
 - Explains package.json, pyproject.toml, requirements.txt, NuGet PackageReference and central PackageVersion files, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, uv.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Flags dependency proof gaps such as manifest-only dependency changes or lockfile-only resolution drift.
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
-- Includes launch-friendly case studies and a public stack coverage matrix so teams can evaluate what evidence PatchDrill actually emits.
+- Includes launch-friendly case studies, a public stack coverage matrix, and per-command verification status so teams can evaluate what evidence PatchDrill actually emits.
 
 ## What It Does
 
@@ -98,9 +98,11 @@ patchdrill explain
 Example summary:
 
 ```text
-PatchDrill WARN - risk 42/100, confidence 58/100
+PatchDrill Gate PASS - assessment WARN, risk 42/100, confidence 58/100
+Gate policy: fail-on critical, max-risk 69
 Changed files: 4, +121/-18
 Required commands: 3, optional commands: 1
+Verification evidence: 0 run, 0 passed, 0 failed, 0 timed out, 3 missing required, 1 optional skipped
 Added lines inspected: 121
 Top findings:
 - [high] High-impact product area changed (src/auth/session.ts)
@@ -548,7 +550,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions are new ecosys
 
 ## Security
 
-PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. When required checks are planned but not executed, PatchDrill reports that as missing verification evidence instead of silently treating the patch as proven. `patchdrill init` writes a CI workflow with `run: "true"` and a per-command timeout so pull requests produce command evidence by default. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
+PatchDrill executes commands only when you pass `--run`. It runs inferred required commands in your repository shell; optional commands require both `--run` and `--run-optional`. When required checks are planned but not executed, PatchDrill reports that as missing verification evidence instead of silently treating the patch as proven. Markdown, compact summaries, the HTML dashboard, and console output label each planned command as passed, failed, timed out, not run, or skipped optional. `patchdrill init` writes a CI workflow with `run: "true"` and a per-command timeout so pull requests produce command evidence by default. Review the verification plan first when scanning untrusted repos. See [SECURITY.md](SECURITY.md).
 
 ## License
 

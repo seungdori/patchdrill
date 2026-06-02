@@ -18,7 +18,8 @@ PatchDrill is split into deterministic modules:
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
-| `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, public release docs, and local Markdown links. |
+| `src/verification.ts` | Joins verification plans with command results into passed, failed, timed-out, not-run, skipped-optional, and unplanned execution states. |
+| `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, public release docs, demo artifact synchronization, and local Markdown links. |
 | `src/report-contract.ts` | Verifies JSON report self-consistency, including summary counts derived from changed files, command plans, and command results. |
 | `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
 | `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |
@@ -44,7 +45,10 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
                            opt-in command runner
                                       |
                                       v
-     command plan + command results -> risk assessment -> baseline comparison
+     command plan + command results -> verification status matrix
+                                      |
+                                      v
+                         risk assessment -> baseline comparison
                                       |
                                       v
                    Proof Pack: Markdown / JSON / SARIF / HTML / evidence

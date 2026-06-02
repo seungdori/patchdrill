@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dashboardCommand, demoCommand, doctorCommand, evidenceCommand, parseArgs, releaseCheckCommand, renderExplainText } from "../src/cli.js";
+import { dashboardCommand, demoCommand, doctorCommand, evidenceCommand, parseArgs, releaseCheckCommand, renderConsoleSummary, renderExplainText } from "../src/cli.js";
 import { verifyEvidenceManifest, type EvidenceManifest } from "../src/evidence.js";
 import type { PatchReport } from "../src/types.js";
 
@@ -157,6 +157,14 @@ describe("cli", () => {
     expect(summary).toContain("# PatchDrill Summary");
     expect(summary).toContain("**FAIL** - risk 94/100");
     expect(summary).toContain("Privileged workflow checks out pull request code");
+  });
+
+  it("prints verification evidence status in console summaries", () => {
+    const text = renderConsoleSummary(exampleReport({ failedCommandCount: 0 }), { failOn: "critical", maxRisk: 100 });
+
+    expect(text).toContain("Required commands: 1, optional commands: 0");
+    expect(text).toContain("Verification evidence: 0 run, 0 passed, 0 failed, 0 timed out, 1 missing required, 0 optional skipped");
+    expect(text).toContain("Run with --run to execute required verification commands.");
   });
 
   it("explains the product boundary against AI PR reviewers", () => {

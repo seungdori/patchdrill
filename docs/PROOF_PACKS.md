@@ -48,7 +48,8 @@ AI PR reviewers are useful for judgment, explanation, and design feedback. They 
 - The exact files and lines that changed.
 - The ecosystems and workspace scopes touched by the patch.
 - The commands PatchDrill inferred from the patch.
-- Which required commands ran and whether they failed.
+- Which required commands ran, failed, timed out, or still lack evidence.
+- Which optional commands were skipped unless `--run-optional` was used.
 - Which risk rules increased the score.
 - Which artifacts belonged to the same scan.
 - Which PatchDrill version, report metadata, and command-output digests produced the evidence bundle.

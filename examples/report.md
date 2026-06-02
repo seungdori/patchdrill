@@ -12,6 +12,7 @@ Schema version: 1
 - Additions / deletions: +96 / -18
 - Required verification commands: 3
 - Failed verification commands: 0
+- Verification evidence: 3 run, 3 passed, 0 failed, 0 timed out, 0 missing required, 0 optional skipped
 - Added lines inspected: 96
 
 ## Policy
@@ -37,9 +38,9 @@ Schema version: 1
 
 ## Project Signals
 
-| Ecosystem | Manifest | Package manager | Task runner |
-| --- | --- | --- | --- |
-| node | package.json | pnpm | turbo |
+| Ecosystem | Framework | Entrypoint | Manifest | Package manager | Task runner |
+| --- | --- | --- | --- | --- | --- |
+| node |  |  | package.json | pnpm | turbo |
 
 ## Affected Workspace Packages
 
@@ -84,15 +85,15 @@ Schema version: 1
 
 ## Verification Plan
 
-| Required | Package | Command | Reason |
-| --- | --- | --- | --- |
-| yes | @acme/auth | `pnpm exec turbo run test --filter=@acme/auth` | @acme/auth changed under packages/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
-| yes | @acme/auth | `pnpm exec turbo run build --filter=@acme/auth` | @acme/auth changed under packages/auth, and its package.json defines "build". PatchDrill detected turbo and will use its task graph. |
-| yes | @acme/web | `pnpm exec turbo run test --filter=@acme/web` | @acme/web depends on @acme/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
+| Required | Package | Command | Result | Reason |
+| --- | --- | --- | --- | --- |
+| yes | @acme/auth | `pnpm exec turbo run test --filter=@acme/auth` | passed | @acme/auth changed under packages/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
+| yes | @acme/auth | `pnpm exec turbo run build --filter=@acme/auth` | passed | @acme/auth changed under packages/auth, and its package.json defines "build". PatchDrill detected turbo and will use its task graph. |
+| yes | @acme/web | `pnpm exec turbo run test --filter=@acme/web` | passed | @acme/web depends on @acme/auth, and its package.json defines "test". PatchDrill detected turbo and will use its task graph. |
 
 ## Command Results
 
-### pnpm --filter @acme/auth run test
+### pnpm exec turbo run test --filter=@acme/auth
 
 - Exit code: 0
 - Duration: 1240ms
@@ -100,6 +101,25 @@ Schema version: 1
 ```text
 Test Files  12 passed
 Tests       87 passed
+```
+
+### pnpm exec turbo run build --filter=@acme/auth
+
+- Exit code: 0
+- Duration: 2180ms
+
+```text
+@acme/auth:build: compiled 18 modules
+```
+
+### pnpm exec turbo run test --filter=@acme/web
+
+- Exit code: 0
+- Duration: 1830ms
+
+```text
+Test Files  9 passed
+Tests       54 passed
 ```
 
 ## Reviewer Notes

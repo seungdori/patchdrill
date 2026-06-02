@@ -407,7 +407,7 @@
       <div class="metric">
         <div class="metric-label">Required checks</div>
         <div class="metric-value">4</div>
-        <div class="metric-detail">1 optional, 1 failed</div>
+        <div class="metric-detail">2 passed, 1 failed, 1 missing</div>
       </div>
       <div class="metric">
         <div class="metric-label">Added lines</div>
@@ -532,10 +532,10 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Required</th><th>Package</th><th>Command</th><th>Reason</th></tr>
+            <tr><th>Required</th><th>Package</th><th>Command</th><th>Result</th><th>Reason</th></tr>
           </thead>
           <tbody>
-            <tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run lint --workspace @acme/web</code></td><td>Billing and release-adjacent source files changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm test --workspace @acme/web</code></td><td>Billing checkout and webhook behavior changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run build --workspace @acme/web</code></td><td>Production web package changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>gh workflow view release.yml --yaml</code></td><td>Repository policy requires human-readable workflow evidence when privileged release jobs change.</td></tr><tr><td><span class="pill info">no</span></td><td>@acme/web</td><td><code>npm run test:e2e -- --grep billing</code></td><td>Optional browser coverage is available for checkout flows.</td></tr>
+            <tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run lint --workspace @acme/web</code></td><td><span class="pill pass">passed</span></td><td>Billing and release-adjacent source files changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm test --workspace @acme/web</code></td><td><span class="pill fail">failed (1)</span></td><td>Billing checkout and webhook behavior changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/web</td><td><code>npm run build --workspace @acme/web</code></td><td><span class="pill pass">passed</span></td><td>Production web package changed.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>gh workflow view release.yml --yaml</code></td><td><span class="pill warn">not run</span></td><td>Repository policy requires human-readable workflow evidence when privileged release jobs change.</td></tr><tr><td><span class="pill info">no</span></td><td>@acme/web</td><td><code>npm run test:e2e -- --grep billing</code></td><td><span class="pill info">skipped optional</span></td><td>Optional browser coverage is available for checkout flows.</td></tr>
           </tbody>
         </table>
       </div>

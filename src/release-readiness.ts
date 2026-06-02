@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { createDemoReport, type DemoScenario } from "./demo.js";
 import { checkMarkdownLinks } from "./markdown-links.js";
+import { renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown } from "./report.js";
 import { schemaFileName, schemaNames, type SchemaName } from "./schema.js";
 import { renderStackCoverageMarkdown } from "./stack-coverage.js";
 
@@ -93,6 +95,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
       "examples/case-studies/README.md points readers to concrete demo artifacts.",
       "Add examples/case-studies/README.md with demo artifact links."
     ),
+    checkDemoArtifacts(root),
     checkBoolean(
       markdownLinks.summary.failureCount === 0,
       "Markdown local links",
@@ -355,6 +358,47 @@ function checkStackFixtureCorpus(root: string): ReleaseCheck {
         ? `Validated ${fixturePaths.length} stack fixture contract${fixturePaths.length === 1 ? "" : "s"} under fixtures/stacks.`
         : `Stack fixture corpus is missing ${failures.join(", ")}.`,
     ...(failures.length > 0 ? { remediation: `Fix ${failures.join(", ")} before release.` } : {})
+  };
+}
+
+function checkDemoArtifacts(root: string): ReleaseCheck {
+  const failures: string[] = [];
+  const scenarios: Array<{ scenario: DemoScenario; directory: string }> = [
+    { scenario: "review-ready", directory: "examples/demo" },
+    { scenario: "risky-agent-pr", directory: "examples/risky-agent-pr" }
+  ];
+
+  for (const { scenario, directory } of scenarios) {
+    const report = createDemoReport(scenario);
+    const expected = new Map([
+      [`${directory}/patchdrill-demo-summary.md`, renderSummaryMarkdown(report)],
+      [`${directory}/patchdrill-demo.md`, renderMarkdown(report)],
+      [`${directory}/patchdrill-demo.json`, `${JSON.stringify(report, null, 2)}\n`],
+      [`${directory}/patchdrill-demo.sarif`, renderSarif(report)],
+      [`${directory}/patchdrill-demo.html`, renderHtml(report)]
+    ]);
+
+    for (const [relativePath, expectedContents] of expected) {
+      const absolutePath = join(root, relativePath);
+      if (!existsSync(absolutePath)) {
+        failures.push(`${relativePath} missing`);
+        continue;
+      }
+      if (readFileSync(absolutePath, "utf8") !== expectedContents) {
+        failures.push(`${relativePath} stale`);
+      }
+    }
+  }
+
+  const examples = failures.slice(0, 4);
+  return {
+    status: failures.length === 0 ? "pass" : "fail",
+    title: "Demo artifacts",
+    detail:
+      failures.length === 0
+        ? "Committed demo Proof Pack artifacts are synchronized with the current renderers."
+        : `Committed demo artifacts are out of date: ${examples.join(", ")}${failures.length > examples.length ? ", ..." : ""}.`,
+    ...(failures.length > 0 ? { remediation: "Regenerate examples/demo and examples/risky-agent-pr with patchdrill demo before release." } : {})
   };
 }
 

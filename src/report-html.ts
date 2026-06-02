@@ -1,4 +1,5 @@
 import type { PatchReport } from "./types.js";
+import { formatVerificationStatus, verificationExecutions, verificationSummary, type VerificationExecution, type VerificationStatus } from "./verification.js";
 
 export interface HtmlOptions {
   history?: PatchReport[];
@@ -10,7 +11,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
   const statusTone = htmlStatusTone(summary.status);
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
-  const failedCommands = report.commandResults.filter((result) => result.exitCode !== 0);
+  const verification = verificationSummary(report);
   const runTrend = htmlRunTrend(options.history);
   const commandResultsHtml = htmlCommandResults(report);
   const context = [
@@ -412,7 +413,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
       ${htmlMetric("Risk score", `${summary.riskScore}/100`, "Higher means more review proof is needed.", htmlScoreBar(summary.riskScore, statusTone))}
       ${htmlMetric("Confidence", `${summary.confidenceScore}/100`, "Higher means stronger verification evidence.", htmlScoreBar(summary.confidenceScore, "pass"))}
       ${htmlMetric("Changed files", summary.changedFileCount, `+${summary.additions} / -${summary.deletions}`)}
-      ${htmlMetric("Required checks", summary.requiredCommandCount, `${optionalCommands.length} optional, ${failedCommands.length} failed`)}
+      ${htmlMetric("Required checks", summary.requiredCommandCount, `${verification.passed} passed, ${verification.failed} failed, ${verification.missingRequired} missing`)}
       ${htmlMetric("Added lines", report.addedLines, "Diff lines scanned for risky content.")}
     </div>
 
@@ -552,12 +553,13 @@ function htmlFindings(report: PatchReport): string {
 
 function htmlVerificationPlan(report: PatchReport): string {
   return htmlTable(
-    ["Required", "Package", "Command", "Reason"],
-    report.commandPlan.map((command) => [
-      `<span class="pill ${command.required ? "warn" : "info"}">${command.required ? "yes" : "no"}</span>`,
-      escapeHtml(command.packageName ?? command.packagePath ?? ""),
-      `<code>${escapeHtml(command.command)}</code>`,
-      escapeHtml(command.reason)
+    ["Required", "Package", "Command", "Result", "Reason"],
+    verificationExecutions(report).map((execution) => [
+      `<span class="pill ${execution.required ? "warn" : "info"}">${execution.required ? "yes" : "no"}</span>`,
+      escapeHtml(execution.packageName ?? execution.packagePath ?? ""),
+      `<code>${escapeHtml(execution.command)}</code>`,
+      htmlVerificationStatus(execution),
+      escapeHtml(execution.reason)
     ]),
     "No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests."
   );
@@ -607,6 +609,17 @@ function htmlChangedFiles(report: PatchReport): string {
     }),
     "No changed files detected."
   );
+}
+
+function htmlVerificationStatus(execution: VerificationExecution): string {
+  return `<span class="pill ${htmlVerificationTone(execution.status)}">${escapeHtml(formatVerificationStatus(execution))}</span>`;
+}
+
+function htmlVerificationTone(status: VerificationStatus): string {
+  if (status === "passed") return "pass";
+  if (status === "failed" || status === "timed-out") return "fail";
+  if (status === "not-run") return "warn";
+  return "info";
 }
 
 function htmlProjectSignals(report: PatchReport): string {

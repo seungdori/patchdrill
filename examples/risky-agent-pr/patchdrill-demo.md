@@ -12,6 +12,7 @@ Schema version: 1
 - Additions / deletions: +326 / -78
 - Required verification commands: 4
 - Failed verification commands: 1
+- Verification evidence: 3 run, 2 passed, 1 failed, 0 timed out, 1 missing required, 1 optional skipped
 - Added lines inspected: 326
 
 ## Policy
@@ -90,13 +91,13 @@ Schema version: 1
 
 ## Verification Plan
 
-| Required | Package | Command | Reason |
-| --- | --- | --- | --- |
-| yes | @acme/web | `npm run lint --workspace @acme/web` | Billing and release-adjacent source files changed. |
-| yes | @acme/web | `npm test --workspace @acme/web` | Billing checkout and webhook behavior changed. |
-| yes | @acme/web | `npm run build --workspace @acme/web` | Production web package changed. |
-| yes |  | `gh workflow view release.yml --yaml` | Repository policy requires human-readable workflow evidence when privileged release jobs change. |
-| no | @acme/web | `npm run test:e2e -- --grep billing` | Optional browser coverage is available for checkout flows. |
+| Required | Package | Command | Result | Reason |
+| --- | --- | --- | --- | --- |
+| yes | @acme/web | `npm run lint --workspace @acme/web` | passed | Billing and release-adjacent source files changed. |
+| yes | @acme/web | `npm test --workspace @acme/web` | failed (1) | Billing checkout and webhook behavior changed. |
+| yes | @acme/web | `npm run build --workspace @acme/web` | passed | Production web package changed. |
+| yes |  | `gh workflow view release.yml --yaml` | not run | Repository policy requires human-readable workflow evidence when privileged release jobs change. |
+| no | @acme/web | `npm run test:e2e -- --grep billing` | skipped optional | Optional browser coverage is available for checkout flows. |
 
 ## Command Results
 

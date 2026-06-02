@@ -12,6 +12,7 @@ import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, rende
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
+import { verificationSummary } from "./verification.js";
 
 const severities: Severity[] = ["info", "low", "medium", "high", "critical"];
 
@@ -325,15 +326,17 @@ export function releaseCheckCommand(parsed: ParsedArgs = { command: "release-che
   }
 }
 
-function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
+export function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
   const required = report.commandPlan.filter((command) => command.required);
   const optional = report.commandPlan.filter((command) => !command.required);
+  const verification = verificationSummary(report);
   const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
   const lines = [
     `PatchDrill Gate ${gateStatus} - assessment ${report.summary.status.toUpperCase()}, risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
     `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}${gateOptions.maxRiskDelta !== undefined ? `, max-risk-delta ${gateOptions.maxRiskDelta}` : ""}`,
     `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
-    `Required commands: ${required.length}, optional commands: ${optional.length}${report.commandResults.length > 0 ? `, failed: ${report.summary.failedCommandCount}` : ""}`,
+    `Required commands: ${required.length}, optional commands: ${optional.length}`,
+    `Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`,
     `Added lines inspected: ${report.addedLines}`
   ];
   if (report.findings.length > 0) {
@@ -342,7 +345,7 @@ function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOpti
       lines.push(`- [${finding.severity}] ${finding.title}${finding.file ? ` (${finding.file})` : ""}`);
     }
   }
-  if (required.length > 0 && report.commandResults.length === 0) {
+  if (verification.missingRequired > 0) {
     lines.push("Run with --run to execute required verification commands. Add --run-optional to include optional checks.");
   }
   return lines.join("\n");

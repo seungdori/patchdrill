@@ -60,8 +60,10 @@ describe("report", () => {
     expect(renderMarkdown(report)).toContain("Schema version: 1");
     expect(renderMarkdown(report)).toContain("| Ecosystem | Framework | Entrypoint | Manifest | Package manager | Task runner |");
     expect(renderMarkdown(report)).toContain("| python | fastapi | app.main:app | requirements.txt |  |  |");
+    expect(renderMarkdown(report)).toContain("- Verification evidence: 0 run, 0 passed, 0 failed, 0 timed out, 1 missing required, 0 optional skipped");
     expect(renderMarkdown(report)).toContain("## Package Script Changes");
     expect(renderMarkdown(report)).toContain("| package.json | `test` | updated | `vitest run` | `true` |");
+    expect(renderMarkdown(report)).toContain("| yes |  | `npm run test` | not run | Tests exist. |");
     expect(renderMarkdown(report)).toContain("file.high-impact-area");
     expect(shouldFail(report, { failOn: "critical", maxRisk: 100 })).toBe(false);
     expect(shouldFail(report, { failOn: "high", maxRisk: 100 })).toBe(true);
@@ -101,6 +103,14 @@ describe("report", () => {
         { failOn: "critical", maxRisk: 100, maxRiskDelta: 0 }
       )
     ).toBe(true);
+  });
+
+  it("renders unplanned command results in the verification plan", () => {
+    const report = htmlReport({ generatedAt: "2026-06-01T00:00:00.000Z", riskScore: 12, failedCommandCount: 1 });
+    report.commandPlan = [];
+    report.summary.requiredCommandCount = 0;
+
+    expect(renderMarkdown(report)).toContain("| no |  | `npm test` | unplanned failed (1) | A command result was recorded without a matching verification plan entry. |");
   });
 
   it("renders a self-contained escaped HTML dashboard", () => {
@@ -176,6 +186,8 @@ describe("report", () => {
     expect(html).toContain("Package Script Changes");
     expect(html).toContain("postinstall");
     expect(html).toContain("node scripts/install.js");
+    expect(html).toContain("Result");
+    expect(html).toContain("failed (1)");
     expect(html).toContain("Unsafe &lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).toContain("npm test -- --grep=&quot;&lt;auth&gt;&quot;");
     expect(html).toContain("&lt;ok&gt;");
@@ -238,7 +250,7 @@ describe("report", () => {
 
     expect(summary).toContain("# PatchDrill Summary");
     expect(summary).toContain("**FAIL** - risk 32/100, confidence 70/100");
-    expect(summary).toContain("- Command results: 1 run, 1 failed");
+    expect(summary).toContain("- Verification evidence: 1 run, 0 passed, 1 failed, 0 timed out, 0 missing required, 0 optional skipped");
     expect(summary).toContain("- Baseline risk delta: +20 (2 new findings)");
     expect(summary).toContain("- `src/app.ts` (modified, +4 / -1)");
     expect(summary).toContain("| medium | Example finding | Global |");

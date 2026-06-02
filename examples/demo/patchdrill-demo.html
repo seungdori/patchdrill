@@ -407,7 +407,7 @@
       <div class="metric">
         <div class="metric-label">Required checks</div>
         <div class="metric-value">3</div>
-        <div class="metric-detail">1 optional, 0 failed</div>
+        <div class="metric-detail">3 passed, 0 failed, 0 missing</div>
       </div>
       <div class="metric">
         <div class="metric-label">Added lines</div>
@@ -484,10 +484,10 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Required</th><th>Package</th><th>Command</th><th>Reason</th></tr>
+            <tr><th>Required</th><th>Package</th><th>Command</th><th>Result</th><th>Reason</th></tr>
           </thead>
           <tbody>
-            <tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run typecheck --filter=@acme/api</code></td><td>Auth source changed in @acme/api.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run test --filter=@acme/api</code></td><td>Session behavior changed and matching tests exist.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>pnpm run test:contracts</code></td><td>Repository policy requires contract tests for auth/session changes.</td></tr><tr><td><span class="pill info">no</span></td><td></td><td><code>pnpm run test:e2e</code></td><td>Optional browser coverage is available for session rotation flows.</td></tr>
+            <tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run typecheck --filter=@acme/api</code></td><td><span class="pill pass">passed</span></td><td>Auth source changed in @acme/api.</td></tr><tr><td><span class="pill warn">yes</span></td><td>@acme/api</td><td><code>pnpm exec turbo run test --filter=@acme/api</code></td><td><span class="pill pass">passed</span></td><td>Session behavior changed and matching tests exist.</td></tr><tr><td><span class="pill warn">yes</span></td><td></td><td><code>pnpm run test:contracts</code></td><td><span class="pill pass">passed</span></td><td>Repository policy requires contract tests for auth/session changes.</td></tr><tr><td><span class="pill info">no</span></td><td></td><td><code>pnpm run test:e2e</code></td><td><span class="pill info">skipped optional</span></td><td>Optional browser coverage is available for session rotation flows.</td></tr>
           </tbody>
         </table>
       </div>
