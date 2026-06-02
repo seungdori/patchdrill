@@ -111,3 +111,7 @@
 - Added nested Python package-root detection with scoped pytest, compile, and optional static-analysis plans.
 - Added nested Cargo workspace detection with manifest-path crate and downstream-dependent verification plans.
 - Added nested Go module and workspace detection with scoped `go test` and `go vet` plans.
+- Added `patchdrill doctor` for first-run repository readiness diagnosis.
+- Added `patchdrill release-check` for local npm and GitHub Action release readiness checks.
+- Added launch case studies and a fixture-backed stack coverage matrix.
+- Added named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.

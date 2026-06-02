@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { createDemoReport, demoScenarioNames, isDemoScenario, type DemoScenario } from "./demo.js";
 import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest, type EvidenceArtifactKind, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot } from "./git.js";
-import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writePolicyFile, type PolicyPackName } from "./init.js";
+import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
+import { inspectDoctor, renderDoctor } from "./doctor.js";
+import { checkReleaseReadiness, releaseReadinessHasFailures, renderReleaseReadiness } from "./release-readiness.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
@@ -44,6 +46,10 @@ async function main(): Promise<void> {
     demoCommand(parsed);
     return;
   }
+  if (command === "doctor") {
+    doctorCommand();
+    return;
+  }
   if (command === "evidence") {
     evidenceCommand(parsed);
     return;
@@ -58,6 +64,10 @@ async function main(): Promise<void> {
   }
   if (command === "schema") {
     schemaCommand(parsed);
+    return;
+  }
+  if (command === "release-check") {
+    releaseCheckCommand();
     return;
   }
   if (command === "verify") {
@@ -183,6 +193,11 @@ export function demoCommand(parsed: ParsedArgs): void {
   console.log(`- ${files.html}`);
 }
 
+export function doctorCommand(): void {
+  const root = gitRoot(process.cwd());
+  console.log(renderDoctor(inspectDoctor(root)).trimEnd());
+}
+
 export function evidenceCommand(parsed: ParsedArgs): void {
   const reportPath = flagString(parsed, "json");
   const evidencePath = flagString(parsed, "evidence") ?? flagString(parsed, "output");
@@ -218,6 +233,8 @@ function initCommand(parsed: ParsedArgs): void {
     const policyPath = writePolicyFile(root, force, policyPack);
     console.log(`Created ${policyPath}`);
   }
+  const guidePath = writeOnboardingGuide(root, force, policyPack);
+  console.log(`Created ${guidePath}`);
 }
 
 export function explainCommand(): void {
@@ -288,6 +305,15 @@ function verifyCommand(parsed: ParsedArgs): void {
   }
 }
 
+export function releaseCheckCommand(): void {
+  const root = gitRoot(process.cwd());
+  const checks = checkReleaseReadiness(root);
+  console.log(renderReleaseReadiness(checks).trimEnd());
+  if (releaseReadinessHasFailures(checks)) {
+    process.exitCode = 1;
+  }
+}
+
 function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
   const required = report.commandPlan.filter((command) => command.required);
   const optional = report.commandPlan.filter((command) => !command.required);
@@ -339,7 +365,11 @@ export function parseArgs(args: string[]): ParsedArgs {
       }
       continue;
     }
-    if (!arg.startsWith("-") && command === "scan" && ["scan", "dashboard", "demo", "evidence", "init", "explain", "schema", "verify", "help"].includes(arg)) {
+    if (
+      !arg.startsWith("-") &&
+      command === "scan" &&
+      ["scan", "dashboard", "demo", "doctor", "evidence", "init", "explain", "release-check", "schema", "verify", "help"].includes(arg)
+    ) {
       command = arg;
       continue;
     }
@@ -505,9 +535,11 @@ Usage:
   patchdrill scan [options]
   patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
   patchdrill demo [--scenario <name>] [--output <directory>]
+  patchdrill doctor
   patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
   patchdrill explain
+  patchdrill release-check
   patchdrill schema [policy|report|evidence] [--output <path>]
   patchdrill verify --evidence <patchdrill-evidence.json>
 

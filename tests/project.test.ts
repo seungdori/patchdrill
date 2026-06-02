@@ -215,6 +215,20 @@ describe("discoverProjectSignals", () => {
     });
   });
 
+  it("does not discover generated PatchDrill artifact directories as nested projects", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ private: true }));
+    mkdirSync(join(root, ".patchdrill", "artifact-python"), { recursive: true });
+    writeFileSync(join(root, ".patchdrill", "artifact-python", "pyproject.toml"), "[project]\nname = \"artifact\"\n");
+    mkdirSync(join(root, ".patchdrill", "artifact-rust"), { recursive: true });
+    writeFileSync(join(root, ".patchdrill", "artifact-rust", "Cargo.toml"), "[package]\nname = \"artifact\"\n");
+    mkdirSync(join(root, "packages", "server"), { recursive: true });
+    writeFileSync(join(root, "packages", "server", "pyproject.toml"), "[project]\nname = \"server\"\n");
+
+    expect(discoverProjectSignals(root).map((signal) => signal.manifestPath)).toEqual(["package.json", "packages/server/pyproject.toml"]);
+  });
+
   it("detects nested Go workspaces without promoting member modules to project roots", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-project-"));
     tempDirs.push(root);

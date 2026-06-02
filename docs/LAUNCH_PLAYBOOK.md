@@ -32,12 +32,15 @@ Done for the public repository:
 - Package automation script findings for install-time hooks, removed verification scripts, no-op checks, and remote shell pipes.
 - First-party fixtures for more than five popular stacks, including Node/Turborepo, Python, Rails, Terraform, Kubernetes, Java/Gradle, .NET, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go.
 - Example report and release provenance documentation.
+- `patchdrill doctor` for first-run repository readiness diagnosis.
+- `patchdrill release-check` for static npm/GitHub Action release readiness checks.
+- Public case-study and stack-coverage docs for launch evaluation.
 
 Still needed for launch distribution:
 
 - Publish npm package as `patchdrill`.
 - Move the `v0` GitHub Action tag after each compatible 0.x action update.
-- Dogfood on 20 real pull requests and add anonymized example reports.
+- Dogfood on 20 external real pull requests and add anonymized example reports.
 - Submit to GitHub Trending-adjacent communities: Hacker News Show HN, r/programming, r/ClaudeCode, r/codex, r/opensource, DevTools directories.
 - Write a blog post: "AI made patches faster. Here is how to make review evidence faster too."
 
@@ -59,6 +62,19 @@ Show:
 - Proof Pack artifact bundle.
 - SARIF upload in GitHub code scanning.
 - `.patchdrill.yml` policy rule that requires owner review for a sensitive path.
+
+## Release Gate
+
+Run this before creating the first public release:
+
+```bash
+patchdrill doctor
+patchdrill release-check
+npm run check
+npm pack --dry-run
+```
+
+`release-check` verifies local repository readiness. npm Trusted Publisher configuration still has to be checked in npm account settings.
 
 ## Star Hooks
 

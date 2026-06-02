@@ -32,33 +32,34 @@ interface CargoTableDependency {
 }
 
 interface DependencyAnalyzer {
+  name: string;
   matches: (path: string) => boolean;
   analyze: (file: string, before: string | undefined, after: string | undefined) => DependencyChange[];
 }
 
 const dependencyAnalyzers: DependencyAnalyzer[] = [
-  createDependencyAnalyzer((path) => path.endsWith("package.json"), parsePackageJson, diffPackageJson, () => ({})),
-  createDependencyAnalyzer(isRequirementsFile, parseRequirements, diffRequirementPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("pyproject.toml"), parsePyprojectDependencies, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer(isDotnetDependencyManifest, parseDotnetDependencyManifest, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("pom.xml"), parseMavenPomDependencies, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer(isGradleBuildFile, parseGradleDependencies, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer(isGradleVersionCatalog, parseGradleVersionCatalog, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("composer.json"), parseComposerJson, diffPackageJson, () => ({})),
-  createDependencyAnalyzer((path) => path.endsWith("Gemfile"), parseGemfile, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("go.mod"), parseGoMod, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("Cargo.toml"), parseCargoToml, diffManifestDependencies, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("package-lock.json"), parsePackageLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("pnpm-lock.yaml"), parsePnpmLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("yarn.lock"), parseYarnLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("bun.lock"), parseBunLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("go.sum"), parseGoSum, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("Cargo.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("poetry.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("uv.lock"), parseUvLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("Pipfile.lock"), parsePipfileLock, diffLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("Gemfile.lock"), parseGemfileLock, diffNameVersionLockPackages, () => new Map()),
-  createDependencyAnalyzer((path) => path.endsWith("composer.lock"), parseComposerLock, diffLockPackages, () => new Map())
+  createDependencyAnalyzer("package.json", (path) => path.endsWith("package.json"), parsePackageJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer("requirements.txt", isRequirementsFile, parseRequirements, diffRequirementPackages, () => new Map()),
+  createDependencyAnalyzer("pyproject.toml", (path) => path.endsWith("pyproject.toml"), parsePyprojectDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("NuGet PackageReference/PackageVersion", isDotnetDependencyManifest, parseDotnetDependencyManifest, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Maven pom.xml", (path) => path.endsWith("pom.xml"), parseMavenPomDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Gradle build file", isGradleBuildFile, parseGradleDependencies, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Gradle version catalog", isGradleVersionCatalog, parseGradleVersionCatalog, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("composer.json", (path) => path.endsWith("composer.json"), parseComposerJson, diffPackageJson, () => ({})),
+  createDependencyAnalyzer("Gemfile", (path) => path.endsWith("Gemfile"), parseGemfile, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("go.mod", (path) => path.endsWith("go.mod"), parseGoMod, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("Cargo.toml", (path) => path.endsWith("Cargo.toml"), parseCargoToml, diffManifestDependencies, () => new Map()),
+  createDependencyAnalyzer("package-lock.json", (path) => path.endsWith("package-lock.json"), parsePackageLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("pnpm-lock.yaml", (path) => path.endsWith("pnpm-lock.yaml"), parsePnpmLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("yarn.lock", (path) => path.endsWith("yarn.lock"), parseYarnLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("bun.lock", (path) => path.endsWith("bun.lock"), parseBunLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("go.sum", (path) => path.endsWith("go.sum"), parseGoSum, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("Cargo.lock", (path) => path.endsWith("Cargo.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("poetry.lock", (path) => path.endsWith("poetry.lock"), parseTomlPackageLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("uv.lock", (path) => path.endsWith("uv.lock"), parseUvLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("Pipfile.lock", (path) => path.endsWith("Pipfile.lock"), parsePipfileLock, diffLockPackages, () => new Map()),
+  createDependencyAnalyzer("Gemfile.lock", (path) => path.endsWith("Gemfile.lock"), parseGemfileLock, diffNameVersionLockPackages, () => new Map()),
+  createDependencyAnalyzer("composer.lock", (path) => path.endsWith("composer.lock"), parseComposerLock, diffLockPackages, () => new Map())
 ];
 
 export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: ChangedFile[]): DependencyChange[] {
@@ -74,13 +75,19 @@ export function analyzeDependencyChanges(options: GitDiffOptions, changedFiles: 
   );
 }
 
+export function supportedDependencyFormats(): string[] {
+  return dependencyAnalyzers.map((analyzer) => analyzer.name);
+}
+
 function createDependencyAnalyzer<T>(
+  name: string,
   matches: (path: string) => boolean,
   parse: (value: string | undefined) => T | undefined,
   diff: (file: string, before: T, after: T) => DependencyChange[],
   empty: () => T
 ): DependencyAnalyzer {
   return {
+    name,
     matches,
     analyze: (file, beforeContent, afterContent) => {
       const before = parse(beforeContent);

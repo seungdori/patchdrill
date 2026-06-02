@@ -64,6 +64,16 @@ describe("cli", () => {
       flags: { scenario: "risky-agent-pr", output: "patchdrill-demo" },
       positionals: []
     });
+    expect(parseArgs(["doctor"])).toEqual({
+      command: "doctor",
+      flags: {},
+      positionals: []
+    });
+    expect(parseArgs(["release-check"])).toEqual({
+      command: "release-check",
+      flags: {},
+      positionals: []
+    });
     expect(parseArgs(["dashboard", "--json", "previous.json", "--json", "current.json", "--output", "patchdrill-dashboard.html"])).toEqual({
       command: "dashboard",
       flags: {

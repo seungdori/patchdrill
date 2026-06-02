@@ -1,0 +1,37 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { checkReleaseReadiness, releaseReadinessHasFailures, renderReleaseReadiness } from "../src/release-readiness.js";
+
+const tempDirs: string[] = [];
+
+describe("release readiness", () => {
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the repository release path free of local blockers", () => {
+    const checks = checkReleaseReadiness(process.cwd());
+    const rendered = renderReleaseReadiness(checks);
+
+    expect(releaseReadinessHasFailures(checks)).toBe(false);
+    expect(rendered).toContain("PatchDrill Release Check - PASS");
+    expect(rendered).toContain("[PASS] npm provenance publish");
+    expect(rendered).toContain("[WARN] npm Trusted Publisher");
+  });
+
+  it("flags missing package and workflow release requirements", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-release-"));
+    tempDirs.push(root);
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "wrong", version: "0.1.0" }, null, 2), "utf8");
+
+    const checks = checkReleaseReadiness(root);
+
+    expect(releaseReadinessHasFailures(checks)).toBe(true);
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Package name");
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("npm provenance publish");
+  });
+});

@@ -12,6 +12,8 @@ Configure the npm package as a trusted publisher for this repository and the `Re
 2. Run local verification:
 
 ```bash
+patchdrill doctor
+patchdrill release-check
 npm run check
 npm pack --dry-run
 node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill/release.json --sarif .patchdrill/release.sarif
@@ -23,3 +25,5 @@ node dist/cli.js scan --run --markdown .patchdrill/release.md --json .patchdrill
 ## Dry Run
 
 Use `workflow_dispatch` to run release checks without publishing. Publishing is limited to GitHub Release events.
+
+`patchdrill release-check` is intentionally local and static. It verifies package metadata, action wiring, release workflow provenance settings, README install paths, and repository release files. It cannot verify the npm account-side Trusted Publisher setup; check that in npm before publishing.

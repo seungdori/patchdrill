@@ -8,6 +8,23 @@ It reads a git diff, maps changed files to ecosystems, owners, dependency change
 
 ![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)
 
+## 30-Second Demo
+
+Generate a risky AI-agent PR scenario without needing a git repository:
+
+```bash
+npx --yes github:seungdori/patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+```
+
+Then inspect the reviewer-facing artifacts:
+
+```bash
+cat patchdrill-risky-demo/patchdrill-demo-summary.md
+open patchdrill-risky-demo/patchdrill-demo.html
+```
+
+PatchDrill should show a privileged workflow boundary, secret-looking content, package lifecycle script risk, and the verification plan a reviewer should ask for before merge.
+
 ```bash
 npx --yes github:seungdori/patchdrill scan --base origin/main --run \
   --markdown patchdrill-report.md \
@@ -33,6 +50,7 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
 - Explains package.json, pyproject.toml, requirements.txt, NuGet PackageReference and central PackageVersion files, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, uv.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
 - Flags dependency proof gaps such as manifest-only dependency changes or lockfile-only resolution drift.
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
+- Includes launch-friendly case studies and a public stack coverage matrix so teams can evaluate what evidence PatchDrill actually emits.
 
 ## What It Does
 
@@ -124,6 +142,12 @@ Try the failure case that shows what PatchDrill catches in an agent-authored PR:
 patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
 ```
 
+Diagnose what PatchDrill can infer from your repository before changing CI:
+
+```bash
+patchdrill doctor
+```
+
 Analyze uncommitted work:
 
 ```bash
@@ -172,6 +196,12 @@ Verify an evidence manifest against its generated artifacts:
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
+Check whether this repository is ready for npm/GitHub Action release:
+
+```bash
+patchdrill release-check
+```
+
 Regenerate an evidence manifest after final artifact post-processing:
 
 ```bash
@@ -183,6 +213,8 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
 ```
 
 See committed demo outputs in [examples/demo](examples/demo), including `patchdrill-demo-summary.md` as the PR comment preview.
+
+Read the launch case studies in [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md) and the fixture-backed support matrix in [docs/STACK_COVERAGE.md](docs/STACK_COVERAGE.md).
 
 Add repeated JSON reports in oldest-to-newest order to show run trends:
 
@@ -244,9 +276,11 @@ patchdrill init --policy-pack regulated
 patchdrill scan [options]
 patchdrill dashboard --json <report.json> [--json <report.json>...] [--output <dashboard.html>]
 patchdrill demo [--scenario <name>] [--output <directory>]
+patchdrill doctor
 patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
 patchdrill explain
+patchdrill release-check
 patchdrill schema [policy|report|evidence] [--output <path>]
 patchdrill verify --evidence <patchdrill-evidence.json>
 ```
@@ -454,6 +488,12 @@ For the built-in risk rules, see [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md).
 ## Release Provenance
 
 PatchDrill includes a release workflow for npm trusted publishing and provenance. Configure the package as a trusted publisher in npm, then publish from a GitHub Release. See [docs/RELEASE.md](docs/RELEASE.md).
+
+Before publishing, run:
+
+```bash
+patchdrill release-check
+```
 
 ## Dependency Review
 

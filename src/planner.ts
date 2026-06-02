@@ -139,6 +139,10 @@ export function planCommands(root: string, changedFiles: ChangedFile[], signals:
   return plans;
 }
 
+export function supportedPlannerEcosystems(): ProjectSignal["ecosystem"][] {
+  return [...new Set(signalPlanners.map((planner) => planner.ecosystem))].sort();
+}
+
 function addPythonSignalPlans(plans: CommandPlan[], signal: ProjectSignal, context: PlannerContext): void {
   const signalRoot = signalRootPath(context.root, signal);
   const scopedPaths = pathsForSignal(context.paths, signal);

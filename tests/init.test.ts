@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { policyPackNames, policyTemplate, workflowTemplate, writeGitHubWorkflow, writePolicyFile } from "../src/init.js";
+import { onboardingGuideTemplate, policyPackNames, policyTemplate, workflowTemplate, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile } from "../src/init.js";
 import { loadPolicy } from "../src/policy.js";
 
 const tempDirs: string[] = [];
@@ -36,6 +36,16 @@ describe("init", () => {
     expect(workflow).toContain("actions/upload-artifact@v7");
   });
 
+  it("generates an onboarding guide with first-run commands", () => {
+    const guide = onboardingGuideTemplate("agentic");
+
+    expect(guide).toContain("patchdrill doctor");
+    expect(guide).toContain("patchdrill scan --base origin/main --run");
+    expect(guide).toContain("patchdrill verify --evidence patchdrill-evidence.json");
+    expect(guide).toContain("Starter policy pack: `agentic`");
+    expect(guide).toContain("`scan` does not mutate the repository");
+  });
+
   it("writes the workflow to the standard GitHub Actions path", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-init-"));
     tempDirs.push(root);
@@ -55,6 +65,16 @@ describe("init", () => {
     expect(policyPath).toBe(join(root, ".patchdrill.yml"));
     expect(readFileSync(policyPath, "utf8")).toBe(policyTemplate());
     expect(policyTemplate()).toContain("agent-policy-review");
+  });
+
+  it("writes an onboarding guide", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-init-"));
+    tempDirs.push(root);
+
+    const guidePath = writeOnboardingGuide(root);
+
+    expect(guidePath).toBe(join(root, ".github", "patchdrill-onboarding.md"));
+    expect(readFileSync(guidePath, "utf8")).toBe(onboardingGuideTemplate());
   });
 
   it("generates loadable built-in policy packs", () => {

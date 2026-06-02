@@ -28,6 +28,17 @@ export function writePolicyFile(root: string, force = false, pack: PolicyPackNam
   return policyPath;
 }
 
+export function writeOnboardingGuide(root: string, force = false, pack: PolicyPackName = "default"): string {
+  const guideDir = join(root, ".github");
+  const guidePath = join(guideDir, "patchdrill-onboarding.md");
+  if (existsSync(guidePath) && !force) {
+    throw new Error(`${guidePath} already exists. Re-run with --force to overwrite.`);
+  }
+  mkdirSync(guideDir, { recursive: true });
+  writeFileSync(guidePath, onboardingGuideTemplate(pack), "utf8");
+  return guidePath;
+}
+
 export function workflowTemplate(): string {
   return `name: PatchDrill
 
@@ -81,6 +92,46 @@ jobs:
             \${{ steps.patchdrill.outputs.report-json }}
             \${{ steps.patchdrill.outputs.report-sarif }}
             \${{ steps.patchdrill.outputs.report-html }}
+`;
+}
+
+export function onboardingGuideTemplate(pack: PolicyPackName = "default"): string {
+  return `# PatchDrill Onboarding
+
+This repository is wired for deterministic patch evidence.
+
+## First Local Run
+
+\`\`\`bash
+patchdrill doctor
+patchdrill scan --base origin/main
+\`\`\`
+
+## Evidence Run
+
+\`\`\`bash
+patchdrill scan --base origin/main --run \\
+  --evidence patchdrill-evidence.json \\
+  --summary-markdown patchdrill-summary.md \\
+  --markdown patchdrill-report.md \\
+  --json patchdrill-report.json \\
+  --sarif patchdrill.sarif \\
+  --html patchdrill-dashboard.html
+patchdrill verify --evidence patchdrill-evidence.json
+\`\`\`
+
+## CI Behavior
+
+- The generated workflow runs PatchDrill on pull requests and writes Markdown, JSON, SARIF, HTML, and evidence artifacts.
+- \`scan\` does not mutate the repository.
+- Verification commands only run when \`run: "true"\` or \`--run\` is set.
+- Optional commands require \`run-optional: "true"\` or \`--run-optional\`.
+
+## Policy Pack
+
+Starter policy pack: \`${pack}\`.
+
+Review \`.patchdrill.yml\` before enforcing the gate on protected branches. Keep required commands conservative and reviewable.
 `;
 }
 

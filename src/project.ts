@@ -791,7 +791,7 @@ function walkForManifest(directory: string, root: string, manifestName: string, 
 }
 
 function shouldSkipDirectory(name: string): boolean {
-  return ["node_modules", ".git", "dist", "coverage", ".next", "build"].includes(name);
+  return ["node_modules", ".git", ".patchdrill", ".next", ".turbo", ".nx", "dist", "coverage", "build", "tmp"].includes(name);
 }
 
 function relativePath(root: string, path: string): string {
@@ -844,7 +844,7 @@ function walkForExtension(directory: string, extension: string, maxDepth: number
   try {
     const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
     for (const entry of entries) {
-      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "dist") continue;
+      if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
       if (entry.isFile() && entry.name.endsWith(extension)) return true;
       if (entry.isDirectory() && walkForExtension(path, extension, maxDepth, depth + 1)) return true;
@@ -979,7 +979,7 @@ function walkForFileName(directory: string, fileName: string, maxDepth: number, 
   try {
     const entries = readdirSync(directory, { withFileTypes: true, encoding: "utf8" });
     for (const entry of entries) {
-      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "dist") continue;
+      if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
       if (entry.isFile() && entry.name === fileName) return true;
       if (entry.isDirectory() && walkForFileName(path, fileName, maxDepth, depth + 1)) return true;

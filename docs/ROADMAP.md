@@ -123,6 +123,10 @@
 - Evidence manifest verification against JSON report summary and count metadata.
 - Evidence manifest verification against JSON report internal summary consistency.
 - Evidence manifest verification against JSON report command metadata and command-output digests.
+- Launch packaging with 30-second demo guidance, public case studies, and stack coverage matrix.
+- `patchdrill doctor` for first-run repository readiness diagnosis.
+- `patchdrill release-check` for local npm/GitHub Action release readiness checks.
+- Named dependency analyzer registry and planner ecosystem introspection for coverage and architecture reporting.
 - Evidence manifests record the PatchDrill tool version.
 - Evidence manifest regeneration for finalized artifacts and CI verification before upload.
 - Fail-state `risky-agent-pr` demo scenario for quick product evaluation.

@@ -11,11 +11,13 @@ PatchDrill is split into deterministic modules:
 | `src/policy.ts` | Loads `.patchdrill.yml/json`, filters ignored paths, and merges repo-specific commands/rules. |
 | `src/project.ts` | Discovers ecosystem signals, nested project roots, package managers, task runners, solution filters, Xcode containers, and workspace dependency graphs from manifests. |
 | `src/dependency.ts` | Extracts package.json, pyproject.toml, requirements.txt, NuGet PackageReference/PackageVersion, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm, pnpm, Yarn, Bun, Go, Cargo, Poetry, uv, Pipfile, Bundler, and Composer dependency additions, removals, and version updates through a parser/diff analyzer registry. |
+| `src/doctor.ts` | Renders first-run repository readiness diagnostics without mutating the repository or running verification commands. |
 | `src/package-scripts.ts` | Extracts package.json script additions, removals, and updates so risk scoring can distinguish dependency intent from executable package automation changes. |
 | `src/evidence.ts` | Renders and verifies Proof Pack evidence manifests with tool version, report metadata, artifact, and command-output digests. |
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
 | `src/risk.ts` | Scores the patch and emits explainable findings, including missing required verification evidence, dependency proof gaps, and whole-workflow GitHub Actions trust-boundary checks. |
 | `src/runner.ts` | Executes required commands when `--run` is set and optional commands when `--run-optional` is also set. |
+| `src/release-readiness.ts` | Performs local static release-readiness checks for npm package metadata, action wiring, provenance workflow settings, and public release docs. |
 | `src/report-contract.ts` | Verifies JSON report self-consistency, including summary counts derived from changed files, command plans, and command results. |
 | `src/report.ts` | Renders Markdown summaries, evaluates fail thresholds, and keeps the public report-renderer re-export surface stable. |
 | `src/report-annotations.ts` | Renders escaped GitHub Actions annotation commands from findings. |
@@ -23,6 +25,7 @@ PatchDrill is split into deterministic modules:
 | `src/report-sarif.ts` | Renders SARIF 2.1.0 output and stable finding fingerprints for GitHub code scanning. |
 | `src/schema.ts` | Exposes embedded JSON Schemas for policy and report contracts. |
 | `src/scan.ts` | Orchestrates the scan pipeline. |
+| `src/stack-coverage.ts` | Defines the public fixture-backed stack coverage matrix used by launch docs and tests. |
 | `src/cli.ts` | Parses arguments and handles user output. |
 
 ## Pipeline
@@ -51,7 +54,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
 
 ## Extension Seams
 
-- Dependency formats register a matcher, parser, diff function, and empty snapshot in `src/dependency.ts`, so adding a manifest or lockfile format does not grow the scan orchestrator.
+- Dependency formats register a name, matcher, parser, diff function, and empty snapshot in `src/dependency.ts`, so adding a manifest or lockfile format does not grow the scan orchestrator and can be reflected in coverage docs.
 - Verification command adapters add plans through `src/command-plan.ts`, so duplicate detector and policy commands are normalized before running or scoring evidence gaps.
 - Report contract checks live in `src/report-contract.ts`, so evidence verification can reject a JSON report whose summary counts no longer match its payload.
 - Project and workspace detection lives in `src/project.ts`; command planning consumes those signals through the handler registry in `src/planner.ts`.
