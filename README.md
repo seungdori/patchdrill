@@ -280,6 +280,8 @@ Options:
 | `--list` | List available schemas when used with `patchdrill schema`. |
 | `--output <path>` | Write a schema/dashboard file or demo artifact directory. |
 
+Boolean flags accept explicit values such as `--run=false`, `--quiet=true`, and `--github-annotations=off`.
+
 ## Supported Signals
 
 PatchDrill detects project shape from repo manifests:

@@ -23,11 +23,11 @@ async function main(): Promise<void> {
   const parsed = parseArgs(process.argv.slice(2));
   const command = parsed.command;
 
-  if (parsed.flags.help || command === "help") {
+  if (flagBoolean(parsed, "help") || command === "help") {
     printHelp();
     return;
   }
-  if (parsed.flags.version) {
+  if (flagBoolean(parsed, "version")) {
     console.log(readVersion());
     return;
   }
@@ -84,8 +84,8 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
   const jsonPath = flagString(parsed, "json");
   const sarifPath = flagString(parsed, "sarif");
   const htmlPath = flagString(parsed, "html");
-  const run = Boolean(parsed.flags.run);
-  const runOptional = Boolean(parsed.flags["run-optional"]);
+  const run = flagBoolean(parsed, "run");
+  const runOptional = flagBoolean(parsed, "run-optional");
   const cliFailOn = cliFailOnValue ? readSeverity(cliFailOnValue, "critical") : undefined;
   const cliMaxRisk = cliMaxRiskValue ? readMaxRisk(cliMaxRiskValue) : undefined;
   const cliMaxRiskDelta = cliMaxRiskDeltaValue ? readMaxRiskDelta(cliMaxRiskDeltaValue) : undefined;
@@ -118,14 +118,14 @@ async function scanCommand(parsed: ParsedArgs): Promise<void> {
     maxRisk: cliMaxRisk ?? report.policy?.maxRisk ?? 69,
     ...(cliMaxRiskDelta !== undefined ? { maxRiskDelta: cliMaxRiskDelta } : {})
   };
-  if (!parsed.flags.quiet) {
+  if (!flagBoolean(parsed, "quiet")) {
     console.log(renderConsoleSummary(report, gateOptions));
     if (!parsed.flags.markdown) {
       console.log("");
       console.log(renderMarkdown(report));
     }
   }
-  if (parsed.flags["github-annotations"]) {
+  if (flagBoolean(parsed, "github-annotations")) {
     const annotations = renderGitHubAnnotations(report).trimEnd();
     if (annotations) console.log(annotations);
   }
@@ -211,10 +211,11 @@ export function evidenceCommand(parsed: ParsedArgs): void {
 function initCommand(parsed: ParsedArgs): void {
   const root = gitRoot(process.cwd());
   const policyPack = readPolicyPack(flagString(parsed, "policy-pack"));
-  const path = writeGitHubWorkflow(root, Boolean(parsed.flags.force));
+  const force = flagBoolean(parsed, "force");
+  const path = writeGitHubWorkflow(root, force);
   console.log(`Created ${path}`);
-  if (parsed.flags.policy || parsed.flags["policy-pack"]) {
-    const policyPath = writePolicyFile(root, Boolean(parsed.flags.force), policyPack);
+  if (flagBoolean(parsed, "policy") || parsed.flags["policy-pack"]) {
+    const policyPath = writePolicyFile(root, force, policyPack);
     console.log(`Created ${policyPath}`);
   }
 }
@@ -254,7 +255,7 @@ Typical CI/local use:
 
 function schemaCommand(parsed: ParsedArgs): void {
   const requested = parsed.positionals[0];
-  if (parsed.flags.list || requested === undefined) {
+  if (flagBoolean(parsed, "list") || requested === undefined) {
     console.log(schemaNames.join("\n"));
     return;
   }
@@ -279,7 +280,7 @@ function verifyCommand(parsed: ParsedArgs): void {
     throw new Error("verify requires --evidence <patchdrill-evidence.json>.");
   }
   const result = verifyEvidenceManifest(evidencePath, process.cwd());
-  if (!parsed.flags.quiet) {
+  if (!flagBoolean(parsed, "quiet")) {
     console.log(formatEvidenceVerification(result));
   }
   if (!result.ok) {
@@ -323,11 +324,14 @@ export function parseArgs(args: string[]): ParsedArgs {
       const key = rawKey ?? "";
       if (!key) continue;
       if (inlineValue !== undefined) {
-        addFlag(flags, key, inlineValue);
+        addFlag(flags, key, isBooleanFlag(key) ? readBooleanFlag(inlineValue, key) : inlineValue);
       } else {
         const next = args[index + 1];
         if (next && !next.startsWith("-") && takesValue(key)) {
           addFlag(flags, key, next);
+          index += 1;
+        } else if (next && !next.startsWith("-") && isBooleanFlag(key) && isBooleanLiteral(next)) {
+          addFlag(flags, key, readBooleanFlag(next, key));
           index += 1;
         } else {
           addFlag(flags, key, true);
@@ -373,6 +377,15 @@ function flagStrings(parsed: ParsedArgs, key: string): string[] {
   return [];
 }
 
+function flagBoolean(parsed: ParsedArgs, key: string): boolean {
+  const value = parsed.flags[key];
+  if (value === undefined) return false;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return readBooleanFlag(value, key);
+  const last = value.at(-1);
+  return last === undefined ? false : readBooleanFlag(last, key);
+}
+
 function takesValue(flag: string): boolean {
   return [
     "base",
@@ -394,6 +407,20 @@ function takesValue(flag: string): boolean {
     "scenario",
     "output"
   ].includes(flag);
+}
+
+function isBooleanFlag(flag: string): boolean {
+  return ["help", "version", "quiet", "run", "run-optional", "github-annotations", "force", "policy", "list"].includes(flag);
+}
+
+function isBooleanLiteral(value: string): boolean {
+  return /^(true|false|1|0|yes|no|on|off)$/i.test(value);
+}
+
+function readBooleanFlag(value: string, flag: string): boolean {
+  if (/^(true|1|yes|on)$/i.test(value)) return true;
+  if (/^(false|0|no|off)$/i.test(value)) return false;
+  throw new Error(`Invalid boolean value "${value}" for --${flag}. Expected true or false.`);
 }
 
 function readSeverity(value: string | boolean | undefined, fallback: Severity): Severity {
@@ -517,6 +544,8 @@ Options:
   --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version
   --help              Print help
+
+Boolean flags accept explicit values: --run=false, --quiet=true, --github-annotations=off.
 `);
 }
 

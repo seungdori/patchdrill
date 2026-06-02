@@ -41,10 +41,19 @@ describe("cli", () => {
       command: "scan",
       flags: { run: true, "run-optional": true }
     });
+    expect(parseArgs(["scan", "--run=false", "--run-optional", "off", "--github-annotations=0", "--quiet", "no"])).toMatchObject({
+      command: "scan",
+      flags: { run: false, "run-optional": false, "github-annotations": false, quiet: false }
+    });
+    expect(parseArgs(["scan", "--run=true", "--run=false"])).toMatchObject({
+      command: "scan",
+      flags: { run: ["true", "false"] }
+    });
     expect(parseArgs(["scan", "--github-annotations"])).toMatchObject({
       command: "scan",
       flags: { "github-annotations": true }
     });
+    expect(() => parseArgs(["scan", "--run=maybe"])).toThrow('Invalid boolean value "maybe" for --run');
     expect(parseArgs(["demo", "--output", "patchdrill-demo"])).toEqual({
       command: "demo",
       flags: { output: "patchdrill-demo" },
