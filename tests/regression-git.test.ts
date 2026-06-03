@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readChangedFiles } from "../src/git.js";
+import { readAddedLines, readChangedFiles } from "../src/git.js";
 
 const tempDirs: string[] = [];
 
@@ -208,6 +208,27 @@ describe("readChangedFiles git regression", () => {
     expect(arrow?.status).toBe("modified");
     // resolveNumstatPath must not mangle this non-rename path to "b.txt" and lose its stats.
     expect((arrow?.additions ?? 0) + (arrow?.deletions ?? 0)).toBeGreaterThan(0);
+  });
+  it("does not overflow the call stack on a very large added-line diff", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-regression-git-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+
+    writeFileSync(join(root, "data.csv"), "header\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "initial"]);
+
+    // Regenerating a large data file (e.g. an OHLCV cache) yields a diff with
+    // hundreds of thousands of added lines. Spreading that many into push(...)
+    // previously overflowed the call stack ("Maximum call stack size exceeded").
+    const big = `header\n${Array.from({ length: 200_000 }, (_, index) => `row,${index}`).join("\n")}\n`;
+    writeFileSync(join(root, "data.csv"), big);
+    git(root, ["add", "."]);
+
+    const lines = readAddedLines({ cwd: root });
+    expect(lines.length).toBeGreaterThan(150_000);
   });
 });
 

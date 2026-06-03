@@ -188,7 +188,7 @@ function walkMarkdownFiles(root: string, directory: string): string[] {
   for (const entry of readdirSync(directory, { withFileTypes: true, encoding: "utf8" })) {
     const absolutePath = resolve(directory, entry.name);
     if (entry.isDirectory()) {
-      results.push(...walkMarkdownFiles(root, absolutePath));
+      for (const match of walkMarkdownFiles(root, absolutePath)) results.push(match);
       continue;
     }
     if (entry.isFile() && isMarkdownPath(entry.name)) {

@@ -22,6 +22,9 @@ export function runGit(cwd: string, args: string[]): string {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
+    // Real diffs (e.g. a regenerated data file) easily exceed the 1MB default,
+    // which would otherwise throw or be silently swallowed by safeGit.
+    maxBuffer: 512 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"]
   }).trimEnd();
 }
@@ -90,20 +93,22 @@ export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
 
 export function readAddedLines(options: GitDiffOptions): AddedLine[] {
   const root = gitRoot(options.cwd);
-  const lines: AddedLine[] = [];
 
+  // Use flat() rather than push(...array): a large diff (e.g. a regenerated CSV)
+  // yields tens of thousands of added lines, and spreading that many arguments
+  // into push() overflows the call stack.
   if (options.base) {
     const range = `${options.base}...${options.head ?? "HEAD"}`;
-    lines.push(...parseAddedLines(runGit(root, ["diff", "--unified=0", "--no-ext-diff", range])));
-  } else if (hasHead(root)) {
-    lines.push(...parseAddedLines(safeGit(root, ["diff", "--unified=0", "--no-ext-diff"])));
-    lines.push(...parseAddedLines(safeGit(root, ["diff", "--cached", "--unified=0", "--no-ext-diff"])));
-    lines.push(...readUntrackedAddedLines(root));
-  } else {
-    lines.push(...readUntrackedAddedLines(root));
+    return parseAddedLines(runGit(root, ["diff", "--unified=0", "--no-ext-diff", range]));
   }
-
-  return lines;
+  if (hasHead(root)) {
+    return [
+      parseAddedLines(safeGit(root, ["diff", "--unified=0", "--no-ext-diff"])),
+      parseAddedLines(safeGit(root, ["diff", "--cached", "--unified=0", "--no-ext-diff"])),
+      readUntrackedAddedLines(root)
+    ].flat();
+  }
+  return readUntrackedAddedLines(root);
 }
 
 export function readFilePair(options: GitDiffOptions, path: string): { before?: string; after?: string } {

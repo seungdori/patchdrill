@@ -827,7 +827,9 @@ function walkForManifest(directory: string, root: string, manifestName: string, 
     }
     for (const entry of entries) {
       if (!entry.isDirectory() || shouldSkipDirectory(entry.name)) continue;
-      results.push(...walkForManifest(join(directory, entry.name), root, manifestName, maxDepth, depth + 1));
+      for (const match of walkForManifest(join(directory, entry.name), root, manifestName, maxDepth, depth + 1)) {
+        results.push(match);
+      }
     }
     return results;
   } catch {
@@ -836,7 +838,29 @@ function walkForManifest(directory: string, root: string, manifestName: string, 
 }
 
 function shouldSkipDirectory(name: string): boolean {
-  return ["node_modules", ".git", ".patchdrill", ".next", ".turbo", ".nx", "dist", "coverage", "build", "tmp"].includes(name);
+  // Skip dependency stores, build output, and tool caches: they are never the
+  // user's project source, and walking them (e.g. a huge .pnpm-store) wastes work.
+  return [
+    "node_modules",
+    ".git",
+    ".patchdrill",
+    ".next",
+    ".turbo",
+    ".nx",
+    "dist",
+    "coverage",
+    "build",
+    "tmp",
+    ".pnpm-store",
+    ".yarn",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".uv-cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".pytest_cache"
+  ].includes(name);
 }
 
 function relativePath(root: string, path: string): string {
@@ -884,7 +908,9 @@ function walkForFileNames(root: string, directory: string, fileNames: Set<string
       if (shouldSkipDirectory(entry.name)) continue;
       const path = join(directory, entry.name);
       if (entry.isFile() && fileNames.has(entry.name)) results.push(relativePath(root, path));
-      if (entry.isDirectory()) results.push(...walkForFileNames(root, path, fileNames, maxDepth, depth + 1));
+      if (entry.isDirectory()) {
+        for (const match of walkForFileNames(root, path, fileNames, maxDepth, depth + 1)) results.push(match);
+      }
     }
     return results;
   } catch {
