@@ -565,7 +565,7 @@ export function assessRisk(changedFiles: ChangedFile[], commandResults: CommandR
       severity: "medium",
       title: "Source changed without matching test changes",
       detail: `No changed test file matched ${examples.join(", ")}${untestedSourceFiles.length > examples.length ? ", ..." : ""}. Existing suites may still cover this, but the PR should prove it.`,
-      remediation: `Add or update nearby tests such as ${testCandidates(untestedSourceFiles[0]?.path ?? "").slice(0, 3).join(", ")}, or explain why existing tests cover the patch.`
+      remediation: `Add or update nearby tests such as ${suggestedTestPaths(untestedSourceFiles[0]?.path ?? "").slice(0, 3).join(", ")}, or explain why existing tests cover the patch.`
     });
   }
 
@@ -682,6 +682,48 @@ function relatedTestExtensions(extension: string): string[] {
   if (extension === ".jsx") return [".jsx", ".js", ".tsx", ".ts"];
   if (extension === ".js" || extension === ".mjs" || extension === ".cjs") return [extension, ".js", ".jsx", ".ts", ".tsx"];
   return [extension];
+}
+
+// Suggest test paths using the convention idiomatic to the source file's
+// language (e.g. foo_test.go, test_foo.py, FooTests.cs) rather than the
+// JavaScript-style foo.test.js for every language.
+function suggestedTestPaths(sourcePath: string): string[] {
+  const parsed = parsePath(sourcePath);
+  if (!parsed) return [];
+  const { name, extension, directory } = parsed;
+  // Rust unit tests are inline #[cfg(test)] modules; integration tests live under tests/.
+  if (extension === ".rs") return [joinPath("tests", `${name}${extension}`)];
+  const fileName = idiomaticTestFileName(name, extension);
+  // Java/Kotlin/Scala mirror src/main/<lang> -> src/test/<lang>.
+  if (extension === ".java" || extension === ".kt" || extension === ".scala") {
+    const mirror = directory.replace("/main/", "/test/");
+    return mirror !== directory ? [joinPath(mirror, fileName), joinPath(directory, fileName)] : [joinPath(directory, fileName)];
+  }
+  const testRoot = extension === ".rb" ? "spec" : "tests";
+  return [joinPath(directory, fileName), joinPath(testRoot, fileName)];
+}
+
+function idiomaticTestFileName(name: string, extension: string): string {
+  switch (extension) {
+    case ".go":
+      return `${name}_test${extension}`;
+    case ".py":
+      return `test_${name}${extension}`;
+    case ".rb":
+      return `${name}_spec${extension}`;
+    case ".cs":
+    case ".fs":
+    case ".vb":
+    case ".swift":
+      return `${name}Tests${extension}`;
+    case ".java":
+    case ".kt":
+    case ".scala":
+    case ".php":
+      return `${name}Test${extension}`;
+    default:
+      return `${name}.test${extension}`;
+  }
 }
 
 function testMirrorDirectories(directory: string): string[] {
