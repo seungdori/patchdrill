@@ -209,6 +209,22 @@ describe("readChangedFiles git regression", () => {
     // resolveNumstatPath must not mangle this non-rename path to "b.txt" and lose its stats.
     expect((arrow?.additions ?? 0) + (arrow?.deletions ?? 0)).toBeGreaterThan(0);
   });
+  it("throws a clear error when --base points to a missing ref", () => {
+    const root = mkdtempSync(join(tmpdir(), "patchdrill-regression-git-"));
+    tempDirs.push(root);
+    git(root, ["init", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "PatchDrill Test"]);
+    writeFileSync(join(root, "a.txt"), "x\n");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "only commit"]);
+
+    // HEAD~1 does not exist in a single-commit repo, and an unfetched remote ref
+    // should report a clear message instead of a raw git crash.
+    expect(() => readChangedFiles({ cwd: root, base: "HEAD~1" })).toThrow(/"HEAD~1" was not found/);
+    expect(() => readChangedFiles({ cwd: root, base: "origin/nope" })).toThrow(/not found/);
+  });
+
   it("does not overflow the call stack on a very large added-line diff", () => {
     const root = mkdtempSync(join(tmpdir(), "patchdrill-regression-git-"));
     tempDirs.push(root);

@@ -54,9 +54,25 @@ export function hasHead(cwd: string): boolean {
   }
 }
 
+// Fail with a clear, actionable message when a --base/--head ref is missing
+// (a typo, an unfetched origin/main, or a single-commit repo) instead of letting
+// the raw `git diff` failure crash the CLI.
+function assertRef(cwd: string, ref: string): void {
+  try {
+    runGit(cwd, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]);
+  } catch {
+    throw new Error(`Git ref "${ref}" was not found. Make sure it exists and is fetched (for example: git fetch origin).`);
+  }
+}
+
 export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
   const root = gitRoot(options.cwd);
   const entries = new Map<string, RawDiffEntry>();
+
+  if (options.base) {
+    assertRef(root, options.base);
+    if (options.head) assertRef(root, options.head);
+  }
 
   if (options.base) {
     const range = `${options.base}...${options.head ?? "HEAD"}`;
@@ -93,6 +109,10 @@ export function readChangedFiles(options: GitDiffOptions): ChangedFile[] {
 
 export function readAddedLines(options: GitDiffOptions): AddedLine[] {
   const root = gitRoot(options.cwd);
+  if (options.base) {
+    assertRef(root, options.base);
+    if (options.head) assertRef(root, options.head);
+  }
 
   // Use flat() rather than push(...array): a large diff (e.g. a regenerated CSV)
   // yields tens of thousands of added lines, and spreading that many arguments
