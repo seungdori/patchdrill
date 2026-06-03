@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createDemoReport } from "../src/demo.js";
 import { isLocale, LOCALES, resolveLocale, t } from "../src/i18n.js";
 import { renderMarkdown, renderSummaryMarkdown } from "../src/report.js";
+import { assessRisk } from "../src/risk.js";
+import type { ChangedFile } from "../src/types.js";
 
 describe("i18n locale resolution", () => {
   it("recognizes the supported locales", () => {
@@ -83,5 +85,27 @@ describe("i18n report rendering", () => {
     expect(renderSummaryMarkdown(report, "ja")).toContain("# PatchDrill サマリー");
     expect(renderSummaryMarkdown(report, "zh")).toContain("# PatchDrill 摘要");
     expect(renderSummaryMarkdown(report, "en")).toBe(renderSummaryMarkdown(report));
+  });
+
+  // Guard against English leaking from real (engine-generated, interpolated)
+  // finding text — the kind of gap only a live scan reveals.
+  it("does not leak English in localized finding detail/remediation for common rules", () => {
+    const file = (path: string, additions = 10): ChangedFile => ({ path, status: "modified", additions, deletions: 0, binary: false });
+    const assessments = [
+      assessRisk([file("src/app.ts", 50)], []), // test.source-without-test-change
+      assessRisk([file("src/big.ts", 2600)], []), // patch.large
+      assessRisk([file("src/m.ts", 700)], []), // patch.medium
+      assessRisk([file("src/x.ts")], [{ id: "t", command: "npm test", exitCode: 1, durationMs: 5, stdout: "", stderr: "boom" }]) // command.failed
+    ];
+    for (const locale of ["ko", "ja", "zh"] as const) {
+      for (const assessment of assessments) {
+        for (const finding of assessment.findings) {
+          expect(t(locale, finding.detail), `detail untranslated: ${finding.ruleId}`).not.toBe(finding.detail);
+          if (finding.remediation) {
+            expect(t(locale, finding.remediation), `remediation untranslated: ${finding.ruleId}`).not.toBe(finding.remediation);
+          }
+        }
+      }
+    }
   });
 });
