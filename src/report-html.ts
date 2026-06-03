@@ -1,20 +1,24 @@
+import { t, type Locale } from "./i18n.js";
 import type { PatchReport } from "./types.js";
 import type { VerificationStatus } from "./types.js";
 import { formatVerificationStatus, verificationExecutions, verificationSummary, type VerificationExecution } from "./verification.js";
 
 export interface HtmlOptions {
   history?: PatchReport[];
+  locale?: Locale;
 }
 
 export function renderHtml(report: PatchReport, options: HtmlOptions = {}): string {
+  const locale = options.locale ?? "en";
+  const tr = (text: string): string => t(locale, text);
   const summary = report.summary;
-  const statusLabel = summary.status.toUpperCase();
+  const statusLabel = tr(summary.status.toUpperCase());
   const statusTone = htmlStatusTone(summary.status);
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
   const verification = verificationSummary(report);
   const runTrend = htmlRunTrend(options.history);
-  const commandResultsHtml = htmlCommandResults(report);
+  const commandResultsHtml = htmlCommandResults(report, locale);
   const context = [
     report.base ? `Base: ${report.base}` : undefined,
     report.head ? `Head: ${report.head}` : undefined,
@@ -403,7 +407,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
       <div class="header-row">
         <div>
           <p class="eyebrow">PatchDrill</p>
-          <h1>Verification Dashboard</h1>
+          <h1>${escapeHtml(tr("Verification Dashboard"))}</h1>
         </div>
         <span class="pill ${statusTone}">${escapeHtml(statusLabel)}</span>
       </div>
@@ -411,62 +415,62 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
     </header>
 
     <div class="grid metrics">
-      ${htmlMetric("Risk score", `${summary.riskScore}/100`, "Higher means more review proof is needed.", htmlScoreBar(summary.riskScore, statusTone))}
-      ${htmlMetric("Confidence", `${summary.confidenceScore}/100`, "Higher means stronger verification evidence.", htmlScoreBar(summary.confidenceScore, "pass"))}
-      ${htmlMetric("Changed files", summary.changedFileCount, `+${summary.additions} / -${summary.deletions}`)}
-      ${htmlMetric("Required checks", summary.requiredCommandCount, `${verification.passed} passed, ${verification.failed} failed, ${verification.missingRequired} missing`)}
-      ${htmlMetric("Added lines", report.addedLines, "Diff lines scanned for risky content.")}
+      ${htmlMetric(tr("Risk score"), `${summary.riskScore}/100`, tr("Higher means more review proof is needed."), htmlScoreBar(summary.riskScore, statusTone))}
+      ${htmlMetric(tr("Confidence"), `${summary.confidenceScore}/100`, tr("Higher means stronger verification evidence."), htmlScoreBar(summary.confidenceScore, "pass"))}
+      ${htmlMetric(tr("Changed files"), summary.changedFileCount, `+${summary.additions} / -${summary.deletions}`)}
+      ${htmlMetric(tr("Required checks"), summary.requiredCommandCount, `${verification.passed} ${tr("passed")}, ${verification.failed} ${tr("failed")}, ${verification.missingRequired} ${tr("missing")}`)}
+      ${htmlMetric(tr("Added lines"), report.addedLines, tr("Diff lines scanned for risky content."))}
     </div>
 
 ${runTrend}
 
     <section>
       <div class="section-heading">
-        <h2>Findings</h2>
-        <span class="pill ${statusTone}">${escapeHtml(report.findings.length)} total</span>
+        <h2>${escapeHtml(tr("Findings"))}</h2>
+        <span class="pill ${statusTone}">${escapeHtml(report.findings.length)} ${escapeHtml(tr("total"))}</span>
       </div>
-      ${htmlFindings(report)}
+      ${htmlFindings(report, locale)}
     </section>
 
     <section>
       <div class="section-heading">
-        <h2>Verification Plan</h2>
-        <span class="pill ${requiredCommands.length > 0 ? "info" : "pass"}">${escapeHtml(requiredCommands.length)} required, ${escapeHtml(optionalCommands.length)} optional</span>
+        <h2>${escapeHtml(tr("Verification Plan"))}</h2>
+        <span class="pill ${requiredCommands.length > 0 ? "info" : "pass"}">${escapeHtml(requiredCommands.length)} ${escapeHtml(tr("required"))}, ${escapeHtml(optionalCommands.length)} ${escapeHtml(tr("optional"))}</span>
       </div>
-      ${htmlVerificationPlan(report)}
+      ${htmlVerificationPlan(report, locale)}
     </section>
 
 ${commandResultsHtml}
 
     <section>
-      <h2>Changed Files</h2>
+      <h2>${escapeHtml(tr("Changed Files"))}</h2>
       ${htmlChangedFiles(report)}
     </section>
 
     <div class="grid two-column">
       <section>
-        <h2>Project Signals</h2>
+        <h2>${escapeHtml(tr("Project Signals"))}</h2>
         ${htmlProjectSignals(report)}
       </section>
       <section>
-        <h2>Review Context</h2>
+        <h2>${escapeHtml(tr("Review Context"))}</h2>
         ${htmlReviewContext(report)}
       </section>
     </div>
 
     <section>
-      <h2>Dependency Changes</h2>
+      <h2>${escapeHtml(tr("Dependency Changes"))}</h2>
       ${htmlDependencyChanges(report)}
     </section>
 
     <section>
-      <h2>Package Script Changes</h2>
+      <h2>${escapeHtml(tr("Package Script Changes"))}</h2>
       ${htmlPackageScriptChanges(report)}
     </section>
 
     <section>
-      <h2>Reviewer Notes</h2>
-      <p class="muted">Treat this dashboard as triage evidence, not a replacement for review. High-impact areas still need human sign-off even when automated commands pass.</p>
+      <h2>${escapeHtml(tr("Reviewer Notes"))}</h2>
+      <p class="muted">${escapeHtml(tr("Treat this dashboard as triage evidence, not a replacement for review. High-impact areas still need human sign-off even when automated commands pass."))}</p>
     </section>
   </main>
 </body>
@@ -524,55 +528,58 @@ function htmlScoreBar(score: number, tone: string): string {
   return `<div class="bar" aria-hidden="true"><span class="${escapeHtml(tone)}" style="width: ${clampScore(score)}%;"></span></div>`;
 }
 
-function htmlFindings(report: PatchReport): string {
+function htmlFindings(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   if (report.findings.length === 0) {
-    return `<p class="empty">No risk findings.</p>`;
+    return `<p class="empty">${escapeHtml(tr("No risk findings."))}</p>`;
   }
 
   return `<div class="finding-list">
         ${report.findings
           .map((finding) => {
-            const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "Global";
-            const tags = finding.tags && finding.tags.length > 0 ? `Tags: ${finding.tags.join(", ")}` : undefined;
-            const remediation = finding.remediation ? `\n          <p class="muted">Remediation: ${escapeHtml(finding.remediation)}</p>` : "";
-            const rule = finding.ruleId ? `\n          <p class="muted">Rule: <code>${escapeHtml(finding.ruleId)}</code></p>` : "";
+            const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : tr("Global");
+            const tags = finding.tags && finding.tags.length > 0 ? `${tr("Tags")}: ${finding.tags.join(", ")}` : undefined;
+            const remediation = finding.remediation ? `\n          <p class="muted">${escapeHtml(tr("Remediation"))}: ${escapeHtml(tr(finding.remediation))}</p>` : "";
+            const rule = finding.ruleId ? `\n          <p class="muted">${escapeHtml(tr("Rule"))}: <code>${escapeHtml(finding.ruleId)}</code></p>` : "";
             const tagLine = tags ? `\n          <p class="muted">${escapeHtml(tags)}</p>` : "";
             return `<article class="finding">
           <div class="finding-head">
             <div>
-              <div class="finding-title">${escapeHtml(finding.title)}</div>
+              <div class="finding-title">${escapeHtml(tr(finding.title))}</div>
               <div class="metric-detail">${escapeHtml(location)}</div>
             </div>
-            <span class="pill ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</span>
+            <span class="pill ${escapeHtml(finding.severity)}">${escapeHtml(tr(finding.severity))}</span>
           </div>
-          <p>${escapeHtml(finding.detail)}</p>${remediation}${rule}${tagLine}
+          <p>${escapeHtml(tr(finding.detail))}</p>${remediation}${rule}${tagLine}
         </article>`;
           })
           .join("")}
       </div>`;
 }
 
-function htmlVerificationPlan(report: PatchReport): string {
+function htmlVerificationPlan(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   return htmlTable(
-    ["Required", "Package", "Command", "Result", "Reason"],
+    [tr("Required"), tr("Package"), tr("Command"), tr("Result"), tr("Reason")],
     verificationExecutions(report).map((execution) => [
-      `<span class="pill ${execution.required ? "warn" : "info"}">${execution.required ? "yes" : "no"}</span>`,
+      `<span class="pill ${execution.required ? "warn" : "info"}">${execution.required ? tr("yes") : tr("no")}</span>`,
       escapeHtml(execution.packageName ?? execution.packagePath ?? ""),
       `<code>${escapeHtml(execution.command)}</code>`,
-      htmlVerificationStatus(execution),
-      escapeHtml(execution.reason)
+      htmlVerificationStatus(execution, locale),
+      escapeHtml(tr(execution.reason))
     ]),
-    "No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests."
+    tr("No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests.")
   );
 }
 
-function htmlCommandResults(report: PatchReport): string {
+function htmlCommandResults(report: PatchReport, locale: Locale): string {
   if (report.commandResults.length === 0) return "";
+  const tr = (text: string): string => t(locale, text);
 
   return `<section>
       <div class="section-heading">
-        <h2>Command Results</h2>
-        <span class="pill ${report.summary.failedCommandCount > 0 ? "fail" : "pass"}">${escapeHtml(report.summary.failedCommandCount)} failed</span>
+        <h2>${escapeHtml(tr("Command Results"))}</h2>
+        <span class="pill ${report.summary.failedCommandCount > 0 ? "fail" : "pass"}">${escapeHtml(report.summary.failedCommandCount)} ${escapeHtml(tr("failed"))}</span>
       </div>
       <div class="grid">
         ${report.commandResults
@@ -583,10 +590,10 @@ function htmlCommandResults(report: PatchReport): string {
             return `<details>
           <summary>
             <span><code>${escapeHtml(result.command)}</code></span>
-            <span class="pill ${tone}">exit ${escapeHtml(result.exitCode)}</span>
+            <span class="pill ${tone}">${escapeHtml(tr("exit"))} ${escapeHtml(result.exitCode)}</span>
           </summary>
           <div class="command-body">
-            <p class="muted">Duration: ${escapeHtml(result.durationMs)}ms${result.timedOut ? " | Timed out: yes" : ""}</p>${stdout}${stderr}
+            <p class="muted">${escapeHtml(tr("Duration"))}: ${escapeHtml(result.durationMs)}ms${result.timedOut ? ` | ${escapeHtml(tr("Timed out: yes"))}` : ""}</p>${stdout}${stderr}
           </div>
         </details>`;
           })
@@ -612,8 +619,8 @@ function htmlChangedFiles(report: PatchReport): string {
   );
 }
 
-function htmlVerificationStatus(execution: VerificationExecution): string {
-  return `<span class="pill ${htmlVerificationTone(execution.status)}">${escapeHtml(formatVerificationStatus(execution))}</span>`;
+function htmlVerificationStatus(execution: VerificationExecution, locale: Locale): string {
+  return `<span class="pill ${htmlVerificationTone(execution.status)}">${escapeHtml(t(locale, formatVerificationStatus(execution)))}</span>`;
 }
 
 function htmlVerificationTone(status: VerificationStatus): string {

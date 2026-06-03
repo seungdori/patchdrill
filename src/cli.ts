@@ -5,11 +5,12 @@ import { fileURLToPath } from "node:url";
 import { createDemoReport, demoScenarioNames, isDemoScenario, type DemoScenario } from "./demo.js";
 import { formatEvidenceVerification, renderEvidenceManifest, verifyEvidenceManifest, type EvidenceArtifactKind, type RenderedEvidenceArtifact } from "./evidence.js";
 import { gitRoot } from "./git.js";
+import { isLocale, LOCALES, resolveLocale, t, type Locale } from "./i18n.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
 import { inspectDoctor, renderDoctor } from "./doctor.js";
 import { checkReleaseReadiness, createReleaseReadinessReport, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
 import { reportContractFailures } from "./report-contract.js";
-import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, type GateOptions } from "./report.js";
+import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, verificationEvidencePhrase, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
@@ -112,6 +113,7 @@ export async function scanCommand(parsed: ParsedArgs): Promise<void> {
   if (cliMaxRiskDelta !== undefined && !baselinePath) {
     throw new Error("--max-risk-delta requires --baseline so the risk delta gate has a previous report to compare against.");
   }
+  const locale = readLocale(parsed, true);
   const report = await scan({
     cwd: process.cwd(),
     ...(base ? { base } : {}),
@@ -119,6 +121,7 @@ export async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(configPath ? { configPath } : {}),
     ...(baselinePath ? { baselinePath } : {}),
     ...(evidencePath ? { evidencePath } : {}),
+    locale,
     run,
     ...(runOptional ? { runOptional: true } : {}),
     ...(cliFailOn ? { failOn: cliFailOn } : {}),
@@ -137,10 +140,10 @@ export async function scanCommand(parsed: ParsedArgs): Promise<void> {
     ...(cliMaxRiskDelta !== undefined ? { maxRiskDelta: cliMaxRiskDelta } : {})
   };
   if (!flagBoolean(parsed, "quiet")) {
-    console.log(renderConsoleSummary(report, gateOptions));
+    console.log(renderConsoleSummary(report, gateOptions, locale));
     if (!markdownPath) {
       console.log("");
-      console.log(renderMarkdown(report));
+      console.log(renderMarkdown(report, locale));
     }
   }
   if (flagBoolean(parsed, "github-annotations")) {
@@ -160,12 +163,13 @@ export function dashboardCommand(parsed: ParsedArgs): void {
   }
 
   const output = flagString(parsed, "output") ?? "patchdrill-dashboard.html";
+  const locale = readLocale(parsed);
   const reports = jsonPaths.map((path) => readSavedReport(path).report);
   const report = reports[reports.length - 1];
   if (!report) throw new Error("dashboard requires at least one JSON report.");
   const resolved = resolve(process.cwd(), output);
   mkdirSync(dirname(resolved), { recursive: true });
-  writeFileSync(resolved, renderHtml(report, reports.length > 1 ? { history: reports } : undefined), "utf8");
+  writeFileSync(resolved, renderHtml(report, { ...(reports.length > 1 ? { history: reports } : {}), locale }), "utf8");
   console.log(`Wrote ${output}`);
 }
 
@@ -173,8 +177,9 @@ export function demoCommand(parsed: ParsedArgs): void {
   const scenario = readDemoScenario(flagString(parsed, "scenario"));
   const report = createDemoReport(scenario);
   const output = flagString(parsed, "output");
+  const locale = readLocale(parsed);
   if (!output) {
-    console.log(renderMarkdown(report).trimEnd());
+    console.log(renderMarkdown(report, locale).trimEnd());
     return;
   }
 
@@ -187,11 +192,11 @@ export function demoCommand(parsed: ParsedArgs): void {
     sarif: join(outputDir, "patchdrill-demo.sarif"),
     html: join(outputDir, "patchdrill-demo.html")
   };
-  writeFileSync(files.summaryMarkdown, renderSummaryMarkdown(report), "utf8");
-  writeFileSync(files.markdown, renderMarkdown(report), "utf8");
+  writeFileSync(files.summaryMarkdown, renderSummaryMarkdown(report, locale), "utf8");
+  writeFileSync(files.markdown, renderMarkdown(report, locale), "utf8");
   writeFileSync(files.json, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   writeFileSync(files.sarif, renderSarif(report), "utf8");
-  writeFileSync(files.html, renderHtml(report), "utf8");
+  writeFileSync(files.html, renderHtml(report, { locale }), "utf8");
 
   console.log(`Wrote demo artifacts to ${output}`);
   console.log(`- ${files.summaryMarkdown}`);
@@ -361,27 +366,28 @@ export function releaseCheckCommand(parsed: ParsedArgs = { command: "release-che
   }
 }
 
-export function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions): string {
+export function renderConsoleSummary(report: Awaited<ReturnType<typeof scan>>, gateOptions: GateOptions, locale: Locale = "en"): string {
+  const tr = (text: string): string => t(locale, text);
   const required = report.commandPlan.filter((command) => command.required);
   const optional = report.commandPlan.filter((command) => !command.required);
   const verification = verificationSummary(report);
   const gateStatus = shouldFail(report, gateOptions) ? "FAIL" : "PASS";
   const lines = [
-    `PatchDrill Gate ${gateStatus} - assessment ${report.summary.status.toUpperCase()}, risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`,
-    `Gate policy: fail-on ${gateOptions.failOn}, max-risk ${gateOptions.maxRisk}${gateOptions.maxRiskDelta !== undefined ? `, max-risk-delta ${gateOptions.maxRiskDelta}` : ""}`,
-    `Changed files: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
-    `Required commands: ${required.length}, optional commands: ${optional.length}`,
-    `Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`,
-    `Added lines inspected: ${report.addedLines}`
+    `${tr("PatchDrill Gate")} ${tr(gateStatus)} - ${tr("assessment")} ${tr(report.summary.status.toUpperCase())}, ${tr("risk")} ${report.summary.riskScore}/100, ${tr("confidence")} ${report.summary.confidenceScore}/100`,
+    `${tr("Gate policy")}: ${tr("fail-on")} ${gateOptions.failOn}, ${tr("max-risk")} ${gateOptions.maxRisk}${gateOptions.maxRiskDelta !== undefined ? `, ${tr("max-risk-delta")} ${gateOptions.maxRiskDelta}` : ""}`,
+    `${tr("Changed files")}: ${report.summary.changedFileCount}, +${report.summary.additions}/-${report.summary.deletions}`,
+    `${tr("Required commands")}: ${required.length}, ${tr("optional commands")}: ${optional.length}`,
+    `${tr("Verification evidence")}: ${verificationEvidencePhrase(verification, locale)}`,
+    `${tr("Added lines inspected")}: ${report.addedLines}`
   ];
   if (report.findings.length > 0) {
-    lines.push("Top findings:");
+    lines.push(`${tr("Top findings")}:`);
     for (const finding of report.findings.slice(0, 5)) {
-      lines.push(`- [${finding.severity}] ${finding.title}${finding.file ? ` (${finding.file})` : ""}`);
+      lines.push(`- [${tr(finding.severity)}] ${tr(finding.title)}${finding.file ? ` (${finding.file})` : ""}`);
     }
   }
   if (verification.missingRequired > 0) {
-    lines.push("Run with --run to execute required verification commands. Add --run-optional to include optional checks.");
+    lines.push(tr("Run with --run to execute required verification commands. Add --run-optional to include optional checks."));
   }
   return lines.join("\n");
 }
@@ -492,7 +498,8 @@ function takesValue(flag: string): boolean {
     "policy-pack",
     "scenario",
     "format",
-    "output"
+    "output",
+    "locale"
   ].includes(flag);
 }
 
@@ -553,6 +560,17 @@ function readPositiveInteger(value: string, label: string): number {
     throw new Error(`Invalid ${label} "${value}". Expected a positive integer.`);
   }
   return parsed;
+}
+
+function readLocale(parsed: ParsedArgs, detectEnv = false): Locale {
+  const explicit = flagString(parsed, "locale");
+  if (explicit !== undefined && !isLocale(explicit)) {
+    throw new Error(`Invalid locale "${explicit}". Expected one of ${LOCALES.join(", ")}.`);
+  }
+  // Only `scan` auto-detects the system locale (it analyzes the user's own repo).
+  // `demo`/`dashboard` render fixed or saved artifacts and stay English unless an
+  // explicit --locale is given, so sample output and fixtures are deterministic.
+  return resolveLocale(detectEnv ? { explicit, env: process.env } : { explicit });
 }
 
 function readPolicyPack(value: string | boolean | undefined): PolicyPackName {
@@ -648,6 +666,7 @@ Options:
                       Starter policy pack for init --policy: ${policyPackNames.join(", ")}
   --scenario <name>   Demo scenario: ${demoScenarioNames.join(", ")}
   --format <format>   Output format for doctor and release-check: text, json
+  --locale <lang>     Language for human-facing reports: ${LOCALES.join(", ")} (default: system locale, else en)
   --list              List schemas when used with schema
   --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version

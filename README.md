@@ -336,6 +336,7 @@ Options:
 | `--max-output-chars <n>` | Keep the last `n` characters from each command output stream, default `20000`. |
 | `--command-timeout-ms <n>` | Stop each verification command after `n` milliseconds. |
 | `--quiet` | Only use exit code. |
+| `--locale <lang>` | Language for human-facing reports (markdown, summary, HTML, console): `en`, `ko`, `ja`, `zh`. Defaults to the system locale (`LC_ALL`/`LANG`), then English. JSON and SARIF stay English. |
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--scenario <name>` | Demo scenario for `patchdrill demo`: `review-ready`, `risky-agent-pr`. |

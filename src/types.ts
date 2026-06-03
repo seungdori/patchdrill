@@ -1,3 +1,5 @@
+import type { Locale } from "./i18n.js";
+
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 
 export type PatchStatus = "pass" | "warn" | "fail";
@@ -248,4 +250,6 @@ export interface ScanOptions {
   commandTimeoutMs?: number;
   /** Override the report timestamp for reproducible output; falls back to SOURCE_DATE_EPOCH then wall clock. */
   generatedAt?: string;
+  /** Output locale for human-facing artifacts (markdown/summary/html). Default English. */
+  locale?: Locale;
 }

@@ -1,4 +1,5 @@
-import type { PatchReport, Severity } from "./types.js";
+import { t, type Locale } from "./i18n.js";
+import type { PatchReport, Severity, VerificationSummary } from "./types.js";
 import { formatVerificationStatus, verificationExecutions, verificationSummary } from "./verification.js";
 
 export { renderGitHubAnnotations } from "./report-annotations.js";
@@ -27,68 +28,67 @@ export function shouldFail(report: PatchReport, options: GateOptions): boolean {
   return report.findings.some((finding) => severityRank[finding.severity] >= threshold);
 }
 
-export function renderMarkdown(report: PatchReport): string {
+export function renderMarkdown(report: PatchReport, locale: Locale = "en"): string {
+  const tr = (text: string): string => t(locale, text);
   const lines: string[] = [];
-  const statusIcon = report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL";
+  const statusIcon = tr(report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL");
   const verification = verificationSummary(report);
   const executions = verificationExecutions(report);
 
-  lines.push("# PatchDrill Report");
+  lines.push(`# ${tr("PatchDrill Report")}`);
   lines.push("");
-  lines.push(`Status: **${statusIcon}**`);
-  lines.push(`Risk score: **${report.summary.riskScore}/100**`);
-  lines.push(`Confidence score: **${report.summary.confidenceScore}/100**`);
-  lines.push(`Generated: ${report.generatedAt}`);
-  lines.push(`Schema version: ${report.schemaVersion}`);
+  lines.push(`${tr("Status")}: **${statusIcon}**`);
+  lines.push(`${tr("Risk score")}: **${report.summary.riskScore}/100**`);
+  lines.push(`${tr("Confidence score")}: **${report.summary.confidenceScore}/100**`);
+  lines.push(`${tr("Generated")}: ${report.generatedAt}`);
+  lines.push(`${tr("Schema version")}: ${report.schemaVersion}`);
   lines.push("");
-  lines.push("## Summary");
+  lines.push(`## ${tr("Summary")}`);
   lines.push("");
-  lines.push(`- Changed files: ${report.summary.changedFileCount}`);
-  lines.push(`- Additions / deletions: +${report.summary.additions} / -${report.summary.deletions}`);
-  lines.push(`- Required verification commands: ${report.summary.requiredCommandCount}`);
-  lines.push(`- Failed verification commands: ${report.summary.failedCommandCount}`);
-  lines.push(
-    `- Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`
-  );
-  lines.push(`- Added lines inspected: ${report.addedLines}`);
+  lines.push(`- ${tr("Changed files")}: ${report.summary.changedFileCount}`);
+  lines.push(`- ${tr("Additions / deletions")}: +${report.summary.additions} / -${report.summary.deletions}`);
+  lines.push(`- ${tr("Required verification commands")}: ${report.summary.requiredCommandCount}`);
+  lines.push(`- ${tr("Failed verification commands")}: ${report.summary.failedCommandCount}`);
+  lines.push(`- ${tr("Verification evidence")}: ${verificationEvidencePhrase(verification, locale)}`);
+  lines.push(`- ${tr("Added lines inspected")}: ${report.addedLines}`);
   lines.push("");
 
   if (report.policy) {
-    lines.push("## Policy");
+    lines.push(`## ${tr("Policy")}`);
     lines.push("");
-    lines.push(`- Config: ${report.policy.path}`);
-    lines.push(`- Ignored path patterns: ${report.policy.ignoredPaths.length}`);
-    if (report.policy.failOn) lines.push(`- Fail-on severity: ${report.policy.failOn}`);
-    if (report.policy.maxRisk !== undefined) lines.push(`- Max risk: ${report.policy.maxRisk}`);
-    lines.push(`- Policy rules: ${report.policy.ruleCount}`);
-    lines.push(`- Policy commands: ${report.policy.requiredCommandCount} required, ${report.policy.optionalCommandCount} optional`);
+    lines.push(`- ${tr("Config")}: ${report.policy.path}`);
+    lines.push(`- ${tr("Ignored path patterns")}: ${report.policy.ignoredPaths.length}`);
+    if (report.policy.failOn) lines.push(`- ${tr("Fail-on severity")}: ${report.policy.failOn}`);
+    if (report.policy.maxRisk !== undefined) lines.push(`- ${tr("Max risk")}: ${report.policy.maxRisk}`);
+    lines.push(`- ${tr("Policy rules")}: ${report.policy.ruleCount}`);
+    lines.push(`- ${tr("Policy commands")}: ${report.policy.requiredCommandCount} ${tr("required")}, ${report.policy.optionalCommandCount} ${tr("optional")}`);
     lines.push("");
   }
 
   if (report.codeOwners) {
-    lines.push("## Code Owners");
+    lines.push(`## ${tr("Code Owners")}`);
     lines.push("");
-    lines.push(`- Config: ${report.codeOwners.path}`);
-    lines.push(`- Rules: ${report.codeOwners.ruleCount}`);
+    lines.push(`- ${tr("Config")}: ${report.codeOwners.path}`);
+    lines.push(`- ${tr("Rules")}: ${report.codeOwners.ruleCount}`);
     lines.push("");
   }
 
   if (report.baseline) {
-    lines.push("## Baseline");
+    lines.push(`## ${tr("Baseline")}`);
     lines.push("");
-    lines.push(`- Baseline report: ${report.baseline.path}`);
-    if (report.baseline.previousStatus) lines.push(`- Status: ${report.baseline.previousStatus} -> ${report.baseline.currentStatus}`);
+    lines.push(`- ${tr("Baseline report")}: ${report.baseline.path}`);
+    if (report.baseline.previousStatus) lines.push(`- ${tr("Status")}: ${tr(report.baseline.previousStatus)} -> ${tr(report.baseline.currentStatus)}`);
     if (report.baseline.previousRiskScore !== undefined) {
-      lines.push(`- Risk: ${report.baseline.previousRiskScore}/100 -> ${report.baseline.currentRiskScore}/100 (${formatDelta(report.baseline.riskDelta)})`);
+      lines.push(`- ${tr("Risk")}: ${report.baseline.previousRiskScore}/100 -> ${report.baseline.currentRiskScore}/100 (${formatDelta(report.baseline.riskDelta)})`);
     }
-    lines.push(`- Findings: ${report.baseline.newFindingCount} new, ${report.baseline.resolvedFindingCount} resolved, ${report.baseline.unchangedFindingCount} unchanged`);
+    lines.push(`- ${tr("Findings")}: ${report.baseline.newFindingCount} ${tr("new")}, ${report.baseline.resolvedFindingCount} ${tr("resolved")}, ${report.baseline.unchangedFindingCount} ${tr("unchanged")}`);
     lines.push("");
   }
 
   if (report.projectSignals.length > 0) {
-    lines.push("## Project Signals");
+    lines.push(`## ${tr("Project Signals")}`);
     lines.push("");
-    lines.push("| Ecosystem | Framework | Entrypoint | Manifest | Package manager | Task runner |");
+    lines.push(`| ${tr("Ecosystem")} | ${tr("Framework")} | ${tr("Entrypoint")} | ${tr("Manifest")} | ${tr("Package manager")} | ${tr("Task runner")} |`);
     lines.push("| --- | --- | --- | --- | --- | --- |");
     for (const signal of report.projectSignals) {
       lines.push(`| ${signal.ecosystem} | ${signal.framework ?? ""} | ${signal.entrypoint ?? ""} | ${signal.manifestPath} | ${signal.packageManager ?? ""} | ${signal.taskRunner ?? ""} |`);
@@ -97,9 +97,9 @@ export function renderMarkdown(report: PatchReport): string {
   }
 
   if (report.affectedPackages.length > 0) {
-    lines.push("## Affected Workspace Packages");
+    lines.push(`## ${tr("Affected Workspace Packages")}`);
     lines.push("");
-    lines.push("| Package | Path |");
+    lines.push(`| ${tr("Package")} | ${tr("Path")} |`);
     lines.push("| --- | --- |");
     for (const workspacePackage of report.affectedPackages) {
       lines.push(`| ${escapePipe(workspacePackage.name)} | ${escapePipe(workspacePackage.path)} |`);
@@ -108,9 +108,9 @@ export function renderMarkdown(report: PatchReport): string {
   }
 
   if (report.dependencyChanges.length > 0) {
-    lines.push("## Dependency Changes");
+    lines.push(`## ${tr("Dependency Changes")}`);
     lines.push("");
-    lines.push("| File | Type | Package | Path | Change | Before | After |");
+    lines.push(`| ${tr("File")} | ${tr("Type")} | ${tr("Package")} | ${tr("Path")} | ${tr("Change")} | ${tr("Before")} | ${tr("After")} |`);
     lines.push("| --- | --- | --- | --- | --- | --- | --- |");
     for (const change of report.dependencyChanges) {
       lines.push(
@@ -125,9 +125,9 @@ export function renderMarkdown(report: PatchReport): string {
   }
 
   if (report.packageScriptChanges.length > 0) {
-    lines.push("## Package Script Changes");
+    lines.push(`## ${tr("Package Script Changes")}`);
     lines.push("");
-    lines.push("| File | Script | Change | Before | After |");
+    lines.push(`| ${tr("File")} | ${tr("Script")} | ${tr("Change")} | ${tr("Before")} | ${tr("After")} |`);
     lines.push("| --- | --- | --- | --- | --- |");
     for (const change of report.packageScriptChanges) {
       lines.push(
@@ -139,12 +139,12 @@ export function renderMarkdown(report: PatchReport): string {
     lines.push("");
   }
 
-  lines.push("## Changed Files");
+  lines.push(`## ${tr("Changed Files")}`);
   lines.push("");
   if (report.changedFiles.length === 0) {
-    lines.push("No changed files detected.");
+    lines.push(tr("No changed files detected."));
   } else {
-    lines.push("| File | Status | +/- | Owners |");
+    lines.push(`| ${tr("File")} | ${tr("Status")} | ${tr("+/-")} | ${tr("Owners")} |`);
     lines.push("| --- | --- | --- | --- |");
     for (const file of report.changedFiles) {
       const rename = file.previousPath ? `${escapePipe(file.previousPath)} -> ${escapePipe(file.path)}` : escapePipe(file.path);
@@ -153,50 +153,50 @@ export function renderMarkdown(report: PatchReport): string {
   }
   lines.push("");
 
-  lines.push("## Findings");
+  lines.push(`## ${tr("Findings")}`);
   lines.push("");
   if (report.findings.length === 0) {
-    lines.push("No risk findings.");
+    lines.push(tr("No risk findings."));
   } else {
-    lines.push("| Severity | Rule | Finding | Location | Remediation |");
+    lines.push(`| ${tr("Severity")} | ${tr("Rule")} | ${tr("Finding")} | ${tr("Location")} | ${tr("Remediation")} |`);
     lines.push("| --- | --- | --- | --- | --- |");
     for (const finding of report.findings) {
       const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "";
       lines.push(
-        `| ${finding.severity} | ${escapeText(finding.ruleId ?? "")} | ${escapeText(finding.title)}: ${escapeText(finding.detail)} | ${escapeText(location)} | ${escapeText(
-          finding.remediation ?? ""
+        `| ${tr(finding.severity)} | ${escapeText(finding.ruleId ?? "")} | ${escapeText(tr(finding.title))}: ${escapeText(tr(finding.detail))} | ${escapeText(location)} | ${escapeText(
+          tr(finding.remediation ?? "")
         )} |`
       );
     }
   }
   lines.push("");
 
-  lines.push("## Verification Plan");
+  lines.push(`## ${tr("Verification Plan")}`);
   lines.push("");
   if (executions.length === 0) {
-    lines.push("No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests.");
+    lines.push(tr("No verification commands were inferred. This is common for docs-only patches or repos without recognized manifests."));
   } else {
-    lines.push("| Required | Package | Command | Result | Reason |");
+    lines.push(`| ${tr("Required")} | ${tr("Package")} | ${tr("Command")} | ${tr("Result")} | ${tr("Reason")} |`);
     lines.push("| --- | --- | --- | --- | --- |");
     for (const command of executions) {
       lines.push(
-        `| ${command.required ? "yes" : "no"} | ${escapeText(command.packageName ?? command.packagePath ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(
-          formatVerificationStatus(command)
-        )} | ${escapeText(command.reason)} |`
+        `| ${command.required ? tr("yes") : tr("no")} | ${escapeText(command.packageName ?? command.packagePath ?? "")} | ${markdownTableCode(command.command)} | ${escapePipe(
+          tr(formatVerificationStatus(command))
+        )} | ${escapeText(tr(command.reason))} |`
       );
     }
   }
   lines.push("");
 
   if (report.commandResults.length > 0) {
-    lines.push("## Command Results");
+    lines.push(`## ${tr("Command Results")}`);
     lines.push("");
     for (const result of report.commandResults) {
       lines.push(`### ${inlineCode(result.command)}`);
       lines.push("");
-      lines.push(`- Exit code: ${result.exitCode}`);
-      lines.push(`- Duration: ${result.durationMs}ms`);
-      if (result.timedOut) lines.push("- Timed out: yes");
+      lines.push(`- ${tr("Exit code")}: ${result.exitCode}`);
+      lines.push(`- ${tr("Duration")}: ${result.durationMs}ms`);
+      if (result.timedOut) lines.push(`- ${tr("Timed out: yes")}`);
       if (result.stdout.trim()) {
         lines.push("");
         lines.push(...fencedCodeBlock(result.stdout.trim()));
@@ -209,93 +209,97 @@ export function renderMarkdown(report: PatchReport): string {
     }
   }
 
-  lines.push("## Reviewer Notes");
+  lines.push(`## ${tr("Reviewer Notes")}`);
   lines.push("");
-  lines.push("- Treat this report as triage evidence, not a replacement for review.");
-  lines.push("- High-impact areas still need human sign-off even when automated commands pass.");
+  lines.push(`- ${tr("Treat this report as triage evidence, not a replacement for review.")}`);
+  lines.push(`- ${tr("High-impact areas still need human sign-off even when automated commands pass.")}`);
 
   return `${lines.join("\n")}\n`;
 }
 
-export function renderSummaryMarkdown(report: PatchReport): string {
+export function renderSummaryMarkdown(report: PatchReport, locale: Locale = "en"): string {
+  const tr = (text: string): string => t(locale, text);
   const lines: string[] = [];
-  const statusIcon = report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL";
+  const statusIcon = tr(report.summary.status === "pass" ? "PASS" : report.summary.status === "warn" ? "WARN" : "FAIL");
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
   const verification = verificationSummary(report);
   const executions = verificationExecutions(report);
 
-  lines.push("# PatchDrill Summary");
+  lines.push(`# ${tr("PatchDrill Summary")}`);
   lines.push("");
-  lines.push(`**${statusIcon}** - risk ${report.summary.riskScore}/100, confidence ${report.summary.confidenceScore}/100`);
+  lines.push(`**${statusIcon}** - ${tr("risk")} ${report.summary.riskScore}/100, ${tr("confidence")} ${report.summary.confidenceScore}/100`);
   lines.push("");
-  lines.push(`- Changed files: ${report.summary.changedFileCount} (+${report.summary.additions} / -${report.summary.deletions})`);
-  lines.push(`- Verification plan: ${requiredCommands.length} required, ${optionalCommands.length} optional`);
-  lines.push(
-    `- Verification evidence: ${verification.run} run, ${verification.passed} passed, ${verification.failed} failed, ${verification.timedOut} timed out, ${verification.missingRequired} missing required, ${verification.skippedOptional} optional skipped`
-  );
+  lines.push(`- ${tr("Changed files")}: ${report.summary.changedFileCount} (+${report.summary.additions} / -${report.summary.deletions})`);
+  lines.push(`- ${tr("Verification plan")}: ${requiredCommands.length} ${tr("required")}, ${optionalCommands.length} ${tr("optional")}`);
+  lines.push(`- ${tr("Verification evidence")}: ${verificationEvidencePhrase(verification, locale)}`);
   if (report.baseline) {
-    lines.push(`- Baseline risk delta: ${formatDelta(report.baseline.riskDelta)} (${report.baseline.newFindingCount} new findings)`);
+    lines.push(`- ${tr("Baseline risk delta")}: ${formatDelta(report.baseline.riskDelta)} (${report.baseline.newFindingCount} ${tr("new findings")})`);
   }
   lines.push("");
 
-  lines.push("## Changed Files");
+  lines.push(`## ${tr("Changed Files")}`);
   lines.push("");
   if (report.changedFiles.length === 0) {
-    lines.push("No changed files detected.");
+    lines.push(tr("No changed files detected."));
   } else {
     for (const file of report.changedFiles.slice(0, 5)) {
       const path = file.previousPath ? `${file.previousPath} -> ${file.path}` : file.path;
-      lines.push(`- \`${escapeBackticks(path)}\` (${file.status}, +${file.additions} / -${file.deletions}${file.binary ? ", binary" : ""})`);
+      lines.push(`- \`${escapeBackticks(path)}\` (${tr(file.status)}, +${file.additions} / -${file.deletions}${file.binary ? `, ${tr("binary")}` : ""})`);
     }
     if (report.changedFiles.length > 5) {
       lines.push("");
-      lines.push(`_${report.changedFiles.length - 5} more changed files in the full report._`);
+      lines.push(`_${report.changedFiles.length - 5} ${tr("more changed files in the full report.")}_`);
     }
   }
   lines.push("");
 
-  lines.push("## Top Findings");
+  lines.push(`## ${tr("Top Findings")}`);
   lines.push("");
   if (report.findings.length === 0) {
-    lines.push("No risk findings.");
+    lines.push(tr("No risk findings."));
   } else {
-    lines.push("| Severity | Finding | Location |");
+    lines.push(`| ${tr("Severity")} | ${tr("Finding")} | ${tr("Location")} |`);
     lines.push("| --- | --- | --- |");
     for (const finding of report.findings.slice(0, 5)) {
-      lines.push(`| ${finding.severity} | ${escapeText(finding.title)} | ${escapeText(findingLocation(finding))} |`);
+      lines.push(`| ${tr(finding.severity)} | ${escapeText(tr(finding.title))} | ${escapeText(tr(findingLocation(finding)))} |`);
     }
     if (report.findings.length > 5) {
       lines.push("");
-      lines.push(`_${report.findings.length - 5} more findings in the full report._`);
+      lines.push(`_${report.findings.length - 5} ${tr("more findings in the full report.")}_`);
     }
   }
   lines.push("");
 
-  lines.push("## Required Checks");
+  lines.push(`## ${tr("Required Checks")}`);
   lines.push("");
   if (requiredCommands.length === 0) {
-    lines.push("No required verification commands were inferred.");
+    lines.push(tr("No required verification commands were inferred."));
   } else {
-    lines.push("| Command | Result |");
+    lines.push(`| ${tr("Command")} | ${tr("Result")} |`);
     lines.push("| --- | --- |");
     for (const command of executions.filter((execution) => execution.required).slice(0, 5)) {
-      lines.push(`| ${markdownTableCode(command.command)} | ${escapePipe(formatVerificationStatus(command))} |`);
+      lines.push(`| ${markdownTableCode(command.command)} | ${escapePipe(tr(formatVerificationStatus(command)))} |`);
     }
     if (requiredCommands.length > 5) {
       lines.push("");
-      lines.push(`_${requiredCommands.length - 5} more required checks in the full report._`);
+      lines.push(`_${requiredCommands.length - 5} ${tr("more required checks in the full report.")}_`);
     }
   }
   lines.push("");
 
-  lines.push("Full Markdown, JSON, SARIF, and HTML reports remain available as CI artifacts when configured.");
+  lines.push(tr("Full Markdown, JSON, SARIF, and HTML reports remain available as CI artifacts when configured."));
 
   return `${lines.join("\n")}\n`;
 }
 
 function findingLocation(finding: { file?: string; line?: number }): string {
   return finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : "Global";
+}
+
+export function verificationEvidencePhrase(verification: VerificationSummary, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
+  return `${verification.run} ${tr("run")}, ${verification.passed} ${tr("passed")}, ${verification.failed} ${tr("failed")}, ${verification.timedOut} ${tr("timed out")}, ${verification.missingRequired} ${tr("missing required")}, ${verification.skippedOptional} ${tr("optional skipped")}`;
 }
 
 function escapePipe(value: string): string {

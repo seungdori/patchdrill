@@ -113,12 +113,15 @@ export async function scan(options: ScanOptions): Promise<PatchReport> {
   });
 
   const reportJson = `${JSON.stringify(report, null, 2)}\n`;
+  // Human-facing artifacts honor the locale; the JSON report and SARIF stay
+  // English (machine-facing, and what the evidence digest/contract verify).
+  const locale = options.locale ?? "en";
   const artifacts: RenderedEvidenceArtifact[] = [];
-  if (options.summaryMarkdownPath) artifacts.push({ kind: "summary-markdown", path: options.summaryMarkdownPath, contents: renderSummaryMarkdown(report) });
-  if (options.markdownPath) artifacts.push({ kind: "markdown", path: options.markdownPath, contents: renderMarkdown(report) });
+  if (options.summaryMarkdownPath) artifacts.push({ kind: "summary-markdown", path: options.summaryMarkdownPath, contents: renderSummaryMarkdown(report, locale) });
+  if (options.markdownPath) artifacts.push({ kind: "markdown", path: options.markdownPath, contents: renderMarkdown(report, locale) });
   if (options.jsonPath) artifacts.push({ kind: "json", path: options.jsonPath, contents: reportJson });
   if (options.sarifPath) artifacts.push({ kind: "sarif", path: options.sarifPath, contents: renderSarif(report) });
-  if (options.htmlPath) artifacts.push({ kind: "html", path: options.htmlPath, contents: renderHtml(report) });
+  if (options.htmlPath) artifacts.push({ kind: "html", path: options.htmlPath, contents: renderHtml(report, { locale }) });
   for (const artifact of artifacts) {
     writeOutput(artifact.path, artifact.contents, root);
   }

@@ -147,3 +147,4 @@
 - Allowed reproducible report timestamps via `SOURCE_DATE_EPOCH` for byte-identical Proof Packs.
 - Corrected demo Proof Pack rule IDs to match the engine and rule catalog.
 - Added a Node version matrix (20, 22, 24), workflow concurrency cancellation, and per-job timeouts to CI.
+- Added localized human-facing reports (English, Korean, Japanese, Simplified Chinese) for the console summary, Markdown summary, Markdown report, and HTML dashboard via a deterministic translation catalog. `scan` auto-detects the system locale (`LC_ALL`/`LANG`) and `--locale` overrides it; JSON, SARIF, and the evidence manifest stay English for machine consumers, and English output remains byte-identical.
