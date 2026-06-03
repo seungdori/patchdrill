@@ -147,7 +147,7 @@ export async function scanCommand(parsed: ParsedArgs): Promise<void> {
     }
   }
   if (flagBoolean(parsed, "github-annotations")) {
-    const annotations = renderGitHubAnnotations(report).trimEnd();
+    const annotations = renderGitHubAnnotations(report, locale).trimEnd();
     if (annotations) console.log(annotations);
   }
 

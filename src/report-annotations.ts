@@ -1,14 +1,15 @@
+import { t, type Locale } from "./i18n.js";
 import type { PatchReport, Severity } from "./types.js";
 
-export function renderGitHubAnnotations(report: PatchReport): string {
+export function renderGitHubAnnotations(report: PatchReport, locale: Locale = "en"): string {
   const lines = report.findings.map((finding) => {
     const command = githubAnnotationCommand(finding.severity);
     const properties = [
       finding.file ? `file=${escapeGitHubCommandProperty(finding.file)}` : undefined,
       finding.line !== undefined ? `line=${escapeGitHubCommandProperty(String(finding.line))}` : undefined,
-      `title=${escapeGitHubCommandProperty(finding.title)}`
+      `title=${escapeGitHubCommandProperty(t(locale, finding.title))}`
     ].filter((property): property is string => property !== undefined);
-    const detail = `${finding.detail}${finding.remediation ? ` Remediation: ${finding.remediation}` : ""}`;
+    const detail = `${t(locale, finding.detail)}${finding.remediation ? ` ${t(locale, "Remediation")}: ${t(locale, finding.remediation)}` : ""}`;
     return `::${command} ${properties.join(",")}::${escapeGitHubCommandData(detail)}`;
   });
 

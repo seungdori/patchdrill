@@ -17,7 +17,7 @@ export function renderHtml(report: PatchReport, options: HtmlOptions = {}): stri
   const requiredCommands = report.commandPlan.filter((command) => command.required);
   const optionalCommands = report.commandPlan.filter((command) => !command.required);
   const verification = verificationSummary(report);
-  const runTrend = htmlRunTrend(options.history);
+  const runTrend = htmlRunTrend(options.history, locale);
   const commandResultsHtml = htmlCommandResults(report, locale);
   const context = [
     report.base ? `Base: ${report.base}` : undefined,
@@ -444,28 +444,28 @@ ${commandResultsHtml}
 
     <section>
       <h2>${escapeHtml(tr("Changed Files"))}</h2>
-      ${htmlChangedFiles(report)}
+      ${htmlChangedFiles(report, locale)}
     </section>
 
     <div class="grid two-column">
       <section>
         <h2>${escapeHtml(tr("Project Signals"))}</h2>
-        ${htmlProjectSignals(report)}
+        ${htmlProjectSignals(report, locale)}
       </section>
       <section>
         <h2>${escapeHtml(tr("Review Context"))}</h2>
-        ${htmlReviewContext(report)}
+        ${htmlReviewContext(report, locale)}
       </section>
     </div>
 
     <section>
       <h2>${escapeHtml(tr("Dependency Changes"))}</h2>
-      ${htmlDependencyChanges(report)}
+      ${htmlDependencyChanges(report, locale)}
     </section>
 
     <section>
       <h2>${escapeHtml(tr("Package Script Changes"))}</h2>
-      ${htmlPackageScriptChanges(report)}
+      ${htmlPackageScriptChanges(report, locale)}
     </section>
 
     <section>
@@ -478,7 +478,8 @@ ${commandResultsHtml}
 `;
 }
 
-function htmlRunTrend(history: PatchReport[] | undefined): string {
+function htmlRunTrend(history: PatchReport[] | undefined, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   if (!history || history.length <= 1) return "";
   const previous = history[history.length - 2];
   const latest = history[history.length - 1];
@@ -486,10 +487,10 @@ function htmlRunTrend(history: PatchReport[] | undefined): string {
   const failedDelta = previous && latest ? latest.summary.failedCommandCount - previous.summary.failedCommandCount : 0;
   const deltaTone = riskDelta > 0 || failedDelta > 0 ? "warn" : riskDelta < 0 || failedDelta < 0 ? "pass" : "info";
   const table = htmlTable(
-    ["Run", "Status", "Risk", "Confidence", "Changed", "Required", "Failed", "Generated", "Base", "Head"],
+    [tr("Run"), tr("Status"), tr("Risk"), tr("Confidence"), tr("Changed"), tr("Required"), tr("Failed"), tr("Generated"), tr("Base"), tr("Head")],
     history.map((run, index) => [
-      escapeHtml(index === history.length - 1 ? `${index + 1} latest` : `${index + 1}`),
-      `<span class="pill ${htmlStatusTone(run.summary.status)}">${escapeHtml(run.summary.status)}</span>`,
+      escapeHtml(index === history.length - 1 ? `${index + 1} ${tr("latest")}` : `${index + 1}`),
+      `<span class="pill ${htmlStatusTone(run.summary.status)}">${escapeHtml(tr(run.summary.status.toUpperCase()))}</span>`,
       `<div class="trend-risk"><span>${escapeHtml(`${run.summary.riskScore}/100`)}</span>${htmlScoreBar(run.summary.riskScore, htmlStatusTone(run.summary.status))}</div>`,
       escapeHtml(`${run.summary.confidenceScore}/100`),
       escapeHtml(`${run.summary.changedFileCount} (+${run.summary.additions}/-${run.summary.deletions})`),
@@ -499,13 +500,13 @@ function htmlRunTrend(history: PatchReport[] | undefined): string {
       escapeHtml(run.base ?? ""),
       escapeHtml(run.head ?? "")
     ]),
-    "No historical runs provided."
+    tr("No historical runs provided.")
   ).replace('class="table-wrap"', 'class="table-wrap trend-table"');
 
   return `<section>
       <div class="section-heading">
-        <h2>Run Trend</h2>
-        <span class="pill ${deltaTone}">risk ${formatDelta(riskDelta)}, failed checks ${formatDelta(failedDelta)}</span>
+        <h2>${escapeHtml(tr("Run Trend"))}</h2>
+        <span class="pill ${deltaTone}">${escapeHtml(tr("risk"))} ${formatDelta(riskDelta)}, ${escapeHtml(tr("failed checks"))} ${formatDelta(failedDelta)}</span>
       </div>
       ${table}
     </section>`;
@@ -602,20 +603,21 @@ function htmlCommandResults(report: PatchReport, locale: Locale): string {
     </section>`;
 }
 
-function htmlChangedFiles(report: PatchReport): string {
+function htmlChangedFiles(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   return htmlTable(
-    ["File", "Status", "+/-", "Owners"],
+    [tr("File"), tr("Status"), tr("+/-"), tr("Owners")],
     report.changedFiles.map((file) => {
       const path = file.previousPath ? `${escapeHtml(file.previousPath)} <span class="muted">-&gt;</span> ${escapeHtml(file.path)}` : escapeHtml(file.path);
       const owners = file.owners && file.owners.length > 0 ? file.owners.join(", ") : "";
       return [
         path,
-        escapeHtml(file.status),
-        escapeHtml(`+${file.additions} / -${file.deletions}${file.binary ? " (binary)" : ""}`),
+        escapeHtml(tr(file.status)),
+        escapeHtml(`+${file.additions} / -${file.deletions}${file.binary ? ` (${tr("binary")})` : ""}`),
         escapeHtml(owners)
       ];
     }),
-    "No changed files detected."
+    tr("No changed files detected.")
   );
 }
 
@@ -630,9 +632,10 @@ function htmlVerificationTone(status: VerificationStatus): string {
   return "info";
 }
 
-function htmlProjectSignals(report: PatchReport): string {
+function htmlProjectSignals(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   return htmlTable(
-    ["Ecosystem", "Framework", "Entrypoint", "Manifest", "Package manager", "Task runner"],
+    [tr("Ecosystem"), tr("Framework"), tr("Entrypoint"), tr("Manifest"), tr("Package manager"), tr("Task runner")],
     report.projectSignals.map((signal) => [
       escapeHtml(signal.ecosystem),
       escapeHtml(signal.framework ?? ""),
@@ -641,32 +644,33 @@ function htmlProjectSignals(report: PatchReport): string {
       escapeHtml(signal.packageManager ?? ""),
       escapeHtml(signal.taskRunner ?? "")
     ]),
-    "No project manifests were recognized."
+    tr("No project manifests were recognized.")
   );
 }
 
-function htmlReviewContext(report: PatchReport): string {
+function htmlReviewContext(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   const details: [string, string][] = [];
   if (report.policy) {
-    details.push(["Policy", `${report.policy.path} (${report.policy.ruleCount} rules)`]);
-    details.push(["Policy commands", `${report.policy.requiredCommandCount} required, ${report.policy.optionalCommandCount} optional`]);
-    if (report.policy.failOn) details.push(["Fail-on", report.policy.failOn]);
-    if (report.policy.maxRisk !== undefined) details.push(["Max risk", `${report.policy.maxRisk}`]);
+    details.push([tr("Policy"), `${report.policy.path} (${report.policy.ruleCount} ${tr("rules")})`]);
+    details.push([tr("Policy commands"), `${report.policy.requiredCommandCount} ${tr("required")}, ${report.policy.optionalCommandCount} ${tr("optional")}`]);
+    if (report.policy.failOn) details.push([tr("Fail-on"), report.policy.failOn]);
+    if (report.policy.maxRisk !== undefined) details.push([tr("Max risk"), `${report.policy.maxRisk}`]);
   }
   if (report.codeOwners) {
-    details.push(["Code owners", `${report.codeOwners.path} (${report.codeOwners.ruleCount} rules)`]);
+    details.push([tr("Code owners"), `${report.codeOwners.path} (${report.codeOwners.ruleCount} ${tr("rules")})`]);
   }
   if (report.baseline) {
-    details.push(["Baseline", report.baseline.path]);
-    details.push(["Risk delta", formatDelta(report.baseline.riskDelta)]);
-    details.push(["Findings delta", `${report.baseline.newFindingCount} new, ${report.baseline.resolvedFindingCount} resolved, ${report.baseline.unchangedFindingCount} unchanged`]);
+    details.push([tr("Baseline"), report.baseline.path]);
+    details.push([tr("Risk delta"), formatDelta(report.baseline.riskDelta)]);
+    details.push([tr("Findings delta"), `${report.baseline.newFindingCount} ${tr("new")}, ${report.baseline.resolvedFindingCount} ${tr("resolved")}, ${report.baseline.unchangedFindingCount} ${tr("unchanged")}`]);
   }
   if (report.affectedPackages.length > 0) {
-    details.push(["Affected packages", report.affectedPackages.map((workspacePackage) => workspacePackage.name).join(", ")]);
+    details.push([tr("Affected packages"), report.affectedPackages.map((workspacePackage) => workspacePackage.name).join(", ")]);
   }
 
   if (details.length === 0) {
-    return `<p class="empty">No policy, owner, baseline, or workspace package context was detected.</p>`;
+    return `<p class="empty">${escapeHtml(tr("No policy, owner, baseline, or workspace package context was detected."))}</p>`;
   }
 
   return `<div class="detail-list">
@@ -681,9 +685,10 @@ function htmlReviewContext(report: PatchReport): string {
       </div>`;
 }
 
-function htmlDependencyChanges(report: PatchReport): string {
+function htmlDependencyChanges(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   return htmlTable(
-    ["File", "Type", "Package", "Path", "Change", "Before", "After"],
+    [tr("File"), tr("Type"), tr("Package"), tr("Path"), tr("Change"), tr("Before"), tr("After")],
     report.dependencyChanges.map((change) => [
       escapeHtml(change.file),
       escapeHtml(change.dependencyType),
@@ -693,13 +698,14 @@ function htmlDependencyChanges(report: PatchReport): string {
       escapeHtml(change.before ?? ""),
       escapeHtml(change.after ?? "")
     ]),
-    "No dependency changes detected."
+    tr("No dependency changes detected.")
   );
 }
 
-function htmlPackageScriptChanges(report: PatchReport): string {
+function htmlPackageScriptChanges(report: PatchReport, locale: Locale): string {
+  const tr = (text: string): string => t(locale, text);
   return htmlTable(
-    ["File", "Script", "Change", "Before", "After"],
+    [tr("File"), tr("Script"), tr("Change"), tr("Before"), tr("After")],
     report.packageScriptChanges.map((change) => [
       escapeHtml(change.file),
       `<code>${escapeHtml(change.scriptName)}</code>`,
@@ -707,7 +713,7 @@ function htmlPackageScriptChanges(report: PatchReport): string {
       `<code>${escapeHtml(change.before ?? "")}</code>`,
       `<code>${escapeHtml(change.after ?? "")}</code>`
     ]),
-    "No package script changes detected."
+    tr("No package script changes detected.")
   );
 }
 
