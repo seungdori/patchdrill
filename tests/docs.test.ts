@@ -17,11 +17,13 @@ describe("documentation examples", () => {
     expect(report).toContain("| yes | @acme/auth | `pnpm exec turbo run test --filter=@acme/auth` | passed |");
   });
 
-  it("keeps the README terminal demo asset wired", () => {
+  it("keeps the README hero demo asset wired", () => {
     const readme = readFileSync("README.md", "utf8");
 
-    expect(readme).toContain("![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)");
-    expect(existsSync("docs/assets/patchdrill-demo.svg")).toBe(true);
+    expect(readme).toContain("(docs/media/patchdrill-dashboard.png)");
+    expect(existsSync("docs/media/patchdrill-dashboard.png")).toBe(true);
+    // The VHS tape that regenerates the animated demo stays committed and reproducible.
+    expect(existsSync("demo/patchdrill.tape")).toBe(true);
   });
 
   it("keeps the README focused on the proof-layer product boundary", () => {

@@ -1,12 +1,39 @@
 # PatchDrill
 
-PatchDrill is the deterministic proof layer between code review and CI for AI-generated and human patches.
+[![CI](https://github.com/seungdori/patchdrill/actions/workflows/ci.yml/badge.svg)](https://github.com/seungdori/patchdrill/actions/workflows/ci.yml)
+![deterministic](https://img.shields.io/badge/deterministic-yes-2ea44f)
+![runs offline](https://img.shields.io/badge/runs-offline-2ea44f)
+![no model call](https://img.shields.io/badge/no%20model%20call-%E2%9C%93-2ea44f)
+![no telemetry](https://img.shields.io/badge/no%20telemetry-%E2%9C%93-2ea44f)
+![read-only by default](https://img.shields.io/badge/read--only-by%20default-2ea44f)
+![license MIT](https://img.shields.io/badge/license-MIT-blue)
 
-AI PR reviewers answer: "Does this diff look right?" Traditional CI answers: "Did the commands we already configured pass?" PatchDrill answers the missing question: "What proof should exist for this diff before merge?"
+## Your AI reviewer says LGTM. CI is green. The PR still shouldn't merge.
 
-It reads a git diff, maps changed files to ecosystems, owners, dependency changes, workflow trust boundaries, risk rules, and verification commands, then emits a portable Proof Pack that reviewers, bots, auditors, and frontier models can inspect without trusting a model judgment.
+PatchDrill is the **deterministic proof layer between code review and CI** for AI-generated and human patches. It reads the git diff and tells you exactly what proof should exist before you merge — **no model call, no network, the same answer every time.**
 
-![PatchDrill terminal demo](docs/assets/patchdrill-demo.svg)
+**Not a linter. Not SAST. Not an AI reviewer.** It answers the one question those tools never ask: *what proof should exist for THIS diff before merge — and what's missing?*
+
+[![PatchDrill Proof Pack dashboard for a risky AI-agent PR — FAIL, risk 94/100](docs/media/patchdrill-dashboard.png)](docs/media/patchdrill-dashboard.png)
+
+*An AI agent opened this PR. PatchDrill scored it **FAIL · 94/100** — a privileged `pull_request_target` workflow checkout, a leaked secret, a disabled test script — in one offline, deterministic command. No model call. (Generate the animated version with `vhs demo/patchdrill.tape`.)*
+
+**What it catches in a diff:**
+
+- **Leaked secrets** — `.env` files, private keys, and token-shaped strings added in the patch
+- **Prompt injection** — instructions slipped into `AGENTS.md`, issue templates, and docs an agent will read
+- **Workflow escalation** — broad token writes, `pull_request_target`, OIDC exchange, `secrets: inherit`, unpinned actions, remote-script pipes
+- **Missing proof** — source changed with no test changed; required checks planned but never run
+- **Dependency drift** — manifest changes with no matching lockfile (and lockfile drift with no manifest intent)
+- **The verification it implies** — the actual commands for the *changed* packages + downstream dependents across ~25 ecosystems, not just root-level defaults
+
+> **Built for teams merging AI-/agent-authored PRs who can't eyeball every diff anymore.** Run it locally in 30 seconds — no config, no CI changes, no API key:
+>
+> ```bash
+> npx --yes github:seungdori/patchdrill demo --scenario risky-agent-pr
+> ```
+
+Output is a portable **Proof Pack** — Markdown, JSON, SARIF, a self-contained HTML dashboard, and a hash-stamped evidence manifest — that a human, a CI gate, an auditor, or a frontier model can all inspect. Run it in your language with `--locale ko|ja|zh`.
 
 ## 30-Second Demo
 
@@ -112,13 +139,13 @@ Run with --run to execute required verification commands. Add --run-optional to 
 
 ## Install
 
-Use the current GitHub build before the npm package is published:
+Run it instantly with no install, straight from GitHub:
 
 ```bash
 npx --yes github:seungdori/patchdrill scan --base origin/main
 ```
 
-After the npm package is published, use it without installing:
+Once the npm package is published, the same works without the `github:` prefix:
 
 ```bash
 npx patchdrill scan --base origin/main
@@ -548,6 +575,18 @@ PatchDrill also summarizes `package.json` script additions, removals, and update
 - More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck workspaces.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
 - Optional LLM summary mode that never replaces deterministic findings.
+
+## FAQ
+
+**Is this an AI tool?** No. PatchDrill makes **zero model calls**, needs no API key, and runs fully offline. The same diff in produces a byte-identical Proof Pack out (it honors `SOURCE_DATE_EPOCH`). It is the deterministic layer that exists *because* AI writes code now — not another AI.
+
+**Isn't this just a linter or SAST?** No. A linter checks code against fixed rules; SAST matches known vulnerability patterns. PatchDrill infers what verification *this specific diff* implies and reports the proof that *should* exist but doesn't — including required checks that were planned but never run. No linter or SAST tracks that gap.
+
+**Is it another CI gate I have to add?** It doesn't have to be. Run it locally in 30 seconds with no config (`npx --yes github:seungdori/patchdrill demo`). It maps what your existing review and CI should each cover for a diff; `scan` never mutates your repo and commands run only with `--run`.
+
+**Does it phone home?** No network calls, no telemetry, no account. Your source never leaves your checkout.
+
+**Why trust a new project?** You don't have to trust the maintainer or a star count — re-run any Proof Pack and get byte-identical output, and verify every artifact hash yourself. CI proves the tool against first-party fixtures for ~25 stack shapes.
 
 ## Contributing
 

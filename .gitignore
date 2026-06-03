@@ -10,3 +10,6 @@ patchdrill-report.md
 patchdrill-report.json
 patchdrill.sarif
 patchdrill-dashboard.html
+
+# VHS demo recording output
+/out/
