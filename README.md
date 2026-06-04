@@ -1,5 +1,7 @@
 # PatchDrill
 
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [中文](README.zh.md)
+
 [![CI](https://github.com/seungdori/patchdrill/actions/workflows/ci.yml/badge.svg)](https://github.com/seungdori/patchdrill/actions/workflows/ci.yml)
 ![deterministic](https://img.shields.io/badge/deterministic-yes-2ea44f)
 ![runs offline](https://img.shields.io/badge/runs-offline-2ea44f)
@@ -30,7 +32,7 @@ PatchDrill is the **deterministic proof layer between code review and CI** for A
 > **Built for teams merging AI-/agent-authored PRs who can't eyeball every diff anymore.** Run it locally in 30 seconds — no config, no CI changes, no API key:
 >
 > ```bash
-> npx --yes github:seungdori/patchdrill demo --scenario risky-agent-pr
+> npx --yes patchdrill demo --scenario risky-agent-pr
 > ```
 
 Output is a portable **Proof Pack** — Markdown, JSON, SARIF, a self-contained HTML dashboard, and a hash-stamped evidence manifest — that a human, a CI gate, an auditor, or a frontier model can all inspect. Run it in your language with `--locale ko|ja|zh`.
@@ -40,7 +42,7 @@ Output is a portable **Proof Pack** — Markdown, JSON, SARIF, a self-contained 
 Generate a risky AI-agent PR scenario without needing a git repository:
 
 ```bash
-npx --yes github:seungdori/patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
+npx --yes patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
 ```
 
 Then inspect the reviewer-facing artifacts:
@@ -53,7 +55,7 @@ open patchdrill-risky-demo/patchdrill-demo.html
 PatchDrill should show a privileged workflow boundary, secret-looking content, package lifecycle script risk, and the verification plan a reviewer should ask for before merge.
 
 ```bash
-npx --yes github:seungdori/patchdrill scan --base origin/main --run \
+npx --yes patchdrill scan --base origin/main --run \
   --evidence patchdrill-evidence.json \
   --summary-markdown patchdrill-summary.md \
   --markdown patchdrill-report.md \
@@ -62,10 +64,10 @@ npx --yes github:seungdori/patchdrill scan --base origin/main --run \
   --html patchdrill-dashboard.html \
   --fail-on high \
   --max-risk 69
-npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json
+npx --yes patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-## Why Star It
+## Why PatchDrill
 
 - Makes AI-era PRs reviewable without asking another model to be the source of truth.
 - Builds a Proof Pack for each patch: Markdown for humans, JSON for bots with required structured verification status, SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
@@ -139,26 +141,26 @@ Run with --run to execute required verification commands. Add --run-optional to 
 
 ## Install
 
-Run it instantly with no install, straight from GitHub:
+Run it instantly with no install — it is published on [npm](https://www.npmjs.com/package/patchdrill):
 
 ```bash
-npx --yes github:seungdori/patchdrill scan --base origin/main
+npx --yes patchdrill scan --base origin/main
 ```
 
-Once the npm package is published, the same works without the `github:` prefix:
-
-```bash
-npx patchdrill scan --base origin/main
-```
-
-Or install the published package globally:
+Or install it globally:
 
 ```bash
 npm install -g patchdrill
 patchdrill scan --base origin/main
 ```
 
-The examples below use `patchdrill` for readability. Replace it with `npx --yes github:seungdori/patchdrill` when running directly from this repository.
+To run the latest unreleased build straight from source, use the `github:` prefix instead:
+
+```bash
+npx --yes github:seungdori/patchdrill scan --base origin/main
+```
+
+The examples below use `patchdrill` for readability.
 
 ## Quickstart
 
@@ -582,7 +584,7 @@ PatchDrill also summarizes `package.json` script additions, removals, and update
 
 **Isn't this just a linter or SAST?** No. A linter checks code against fixed rules; SAST matches known vulnerability patterns. PatchDrill infers what verification *this specific diff* implies and reports the proof that *should* exist but doesn't — including required checks that were planned but never run. No linter or SAST tracks that gap.
 
-**Is it another CI gate I have to add?** It doesn't have to be. Run it locally in 30 seconds with no config (`npx --yes github:seungdori/patchdrill demo`). It maps what your existing review and CI should each cover for a diff; `scan` never mutates your repo and commands run only with `--run`.
+**Is it another CI gate I have to add?** It doesn't have to be. Run it locally in 30 seconds with no config (`npx --yes patchdrill demo`). It maps what your existing review and CI should each cover for a diff; `scan` never mutates your repo and commands run only with `--run`.
 
 **Does it phone home?** No network calls, no telemetry, no account. Your source never leaves your checkout.
 

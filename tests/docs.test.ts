@@ -82,7 +82,7 @@ describe("documentation examples", () => {
       expect(docs).toContain("--html patchdrill-dashboard.html");
       expect(docs).toContain("patchdrill verify --evidence patchdrill-evidence.json");
     }
-    expect(readme).toContain("npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json");
+    expect(readme).toContain("npx --yes patchdrill verify --evidence patchdrill-evidence.json");
     expect(prCommentDocs).toContain("id: patchdrill");
     expect(prCommentDocs).toContain("evidence: patchdrill-evidence.json");
     expect(prCommentDocs).toContain("html: patchdrill-dashboard.html");

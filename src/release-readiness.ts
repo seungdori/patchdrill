@@ -84,8 +84,8 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     ),
     checkPullRequestTemplate(pullRequestTemplate),
     checkReadmeProofPackQuickstart(readme),
-    checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the pre-npm GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
-    checkBoolean(Boolean(readme?.includes("npx patchdrill")), "npm install path", "README documents the future npm install path.", "Document npx patchdrill."),
+    checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the from-source GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
+    checkBoolean(Boolean(readme?.includes("npx --yes patchdrill")) && Boolean(readme?.includes("npm install -g patchdrill")), "npm install path", "README documents the published npm install path.", "Document npx --yes patchdrill and npm install -g patchdrill."),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
     checkStackCoverageMatrix(root),
     checkStackFixtureCorpus(root),
@@ -269,14 +269,14 @@ function checkPullRequestTemplate(contents: string | undefined): ReleaseCheck {
 
 function checkReadmeProofPackQuickstart(contents: string | undefined): ReleaseCheck {
   const required = [
-    "npx --yes github:seungdori/patchdrill scan --base origin/main --run",
+    "npx --yes patchdrill scan --base origin/main --run",
     "--evidence patchdrill-evidence.json",
     "--summary-markdown patchdrill-summary.md",
     "--markdown patchdrill-report.md",
     "--json patchdrill-report.json",
     "--sarif patchdrill.sarif",
     "--html patchdrill-dashboard.html",
-    "npx --yes github:seungdori/patchdrill verify --evidence patchdrill-evidence.json",
+    "npx --yes patchdrill verify --evidence patchdrill-evidence.json",
     "patchdrill scan --base origin/main --run",
     "patchdrill verify --evidence patchdrill-evidence.json"
   ];
