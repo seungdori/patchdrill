@@ -25,11 +25,11 @@ PatchDrill is the **deterministic proof layer between code review and CI** for A
 - **Leaked secrets** — `.env` files, private keys, and token-shaped strings added in the patch
 - **Prompt injection** — instructions slipped into `AGENTS.md`, issue templates, and docs an agent will read
 - **Workflow escalation** — broad token writes, `pull_request_target`, OIDC exchange, `secrets: inherit`, unpinned actions, remote-script pipes
-- **Missing proof** — source changed with no test changed; required checks planned but never run
+- **Missing proof** — source changed with no matching test change; required checks planned but never run
 - **Dependency drift** — manifest changes with no matching lockfile (and lockfile drift with no manifest intent)
 - **The verification it implies** — the actual commands for the *changed* packages + downstream dependents across ~25 ecosystems, not just root-level defaults
 
-> **Built for teams merging AI-/agent-authored PRs who can't eyeball every diff anymore.** Run it locally in 30 seconds — no config, no CI changes, no API key:
+> **Built for teams that merge AI- and agent-authored PRs faster than they can eyeball every diff.** Run it locally in 30 seconds — no config, no CI changes, no API key:
 >
 > ```bash
 > npx --yes patchdrill demo --scenario risky-agent-pr
@@ -69,17 +69,17 @@ npx --yes patchdrill verify --evidence patchdrill-evidence.json
 
 ## Why PatchDrill
 
-- Makes AI-era PRs reviewable without asking another model to be the source of truth.
-- Builds a Proof Pack for each patch: Markdown for humans, JSON for bots with required structured verification status, SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
+- Makes AI-written PRs reviewable without trusting another model to be the final word.
+- Builds a Proof Pack for each patch: Markdown for humans, JSON for bots (including a required structured verification status), SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
 - Works locally first and in CI later. `scan` never mutates the repository, and commands only run when `--run` is set.
-- Flags the review surfaces that routinely hide regressions: auth, billing, migrations, secrets, CI workflow supply chain, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but not run.
-- Infers reviewable commands from the patch instead of only running root-level defaults.
+- Flags the parts of a diff where regressions usually slip through: auth, billing, migrations, secrets, CI workflows and their supply chain, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but never run.
+- Infers which commands to run from the patch itself, instead of just falling back to root-level defaults.
 - Works with the tools you already have: git, npm, pnpm, yarn, bun, pytest, Django, FastAPI, cargo, Go, Maven, Gradle, Spring Boot, Android Gradle, Ruby, Rails, RSpec, PHP, Composer, Laravel, dotnet, ASP.NET Core, Swift, Xcode, Terraform, Docker, Kubernetes, Helm, Bazel, and Buck2.
 - Supports policy-as-code through `.patchdrill.yml`, including default, regulated, and agentic starter packs.
 - Ships with serious open-source security posture: CodeQL, OpenSSF Scorecard, Dependabot, strict tests, and package dry-run verification.
-- Understands Node, Cargo, Go, and Pants workspaces, plus nested Python projects, nested Cargo and Go workspaces, Turborepo, and Nx, targeting changed packages plus downstream dependents instead of blindly running only root-level commands.
+- Understands Node, Cargo, Go, and Pants workspaces — plus nested Python projects, nested Cargo and Go workspaces, Turborepo, and Nx — so it targets the packages you actually changed and the ones that depend on them.
 - Includes first-party stack fixtures for Node/Turborepo, Next.js, Python, uv-managed Python, Django, FastAPI, Rails, PHP/Composer, Terraform, Docker/Compose, Kubernetes/Helm/Kustomize, Java/Maven/Gradle, Spring Boot Maven/Gradle, Android Gradle, .NET, ASP.NET Core, SwiftPM, Xcode, Bazel, Buck2, Pants, Cargo, and Go repository shapes.
-- Explains package.json, pyproject.toml, requirements.txt, NuGet PackageReference and central PackageVersion files, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm package-lock, pnpm-lock, yarn.lock, bun.lock, go.sum, Cargo.lock, poetry.lock, uv.lock, Pipfile.lock, Gemfile.lock, and composer.lock dependency additions, removals, and version updates instead of only saying "lockfile changed."
+- Explains dependency manifest and lockfile changes — what was added, removed, or bumped across package.json, go.mod, Cargo.toml, pyproject.toml, and a dozen-plus other formats — instead of only saying "lockfile changed." (See [Dependency Review](#dependency-review) for the full file list.)
 - Flags dependency proof gaps such as manifest-only dependency changes or lockfile-only resolution drift.
 - Adds CODEOWNERS owner hints to changed files so reviewers can see the responsible teams.
 - Includes launch-friendly case studies, a public stack coverage matrix, and per-command verification status so teams can evaluate what evidence PatchDrill actually emits.
@@ -176,7 +176,7 @@ Try the failure case that shows what PatchDrill catches in an agent-authored PR:
 patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
 ```
 
-Diagnose what PatchDrill can infer from your repository before changing CI:
+See what PatchDrill can infer about your repo before you change CI:
 
 ```bash
 patchdrill doctor
@@ -247,12 +247,6 @@ patchdrill release-check --format json
 ```
 
 The release workflow also runs required PatchDrill verification, generates a local Proof Pack smoke bundle, and verifies its evidence manifest before `npm pack --dry-run`.
-
-For automation:
-
-```bash
-patchdrill release-check --format json
-```
 
 Regenerate an evidence manifest after final artifact post-processing:
 
@@ -400,7 +394,7 @@ PatchDrill detects project shape from repo manifests:
 | Pants | `pants.toml` | `pants --changed-since=HEAD --changed-dependents=transitive test` |
 | GitHub Actions | `.github/workflows/*` | workflow diff review |
 
-For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for directly changed packages and downstream dependents. When `turbo.json` or `nx.json` is present, it plans native task-runner commands such as `pnpm exec turbo run test --filter=@acme/api` or `npx nx run api:test`. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
+For Node workspaces, PatchDrill detects `package.json` workspaces and `pnpm-workspace.yaml`, then emits package-scoped commands such as `pnpm --filter @acme/api run test` or `npm --workspace @acme/api run build` for directly changed packages and downstream dependents. When `turbo.json` or `nx.json` is present, PatchDrill plans native task-runner commands such as `pnpm exec turbo run test --filter=@acme/api` or `npx nx run api:test`. See [docs/MONOREPOS.md](docs/MONOREPOS.md).
 
 For nested Python projects, PatchDrill treats each discovered `pyproject.toml`, `uv.lock`, `requirements.txt`, or `manage.py` package root as its own verification scope, so a monorepo can plan `cd packages/pine-engine && uv run pytest` instead of incorrectly collapsing every Python change into a root command.
 
@@ -438,7 +432,7 @@ The risk model is intentionally explainable. Every score increase is represented
 
 See [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md) for the built-in rule IDs and what each one means.
 
-## Policy-As-Code
+## Policy-as-Code
 
 PatchDrill reads `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json` from the repository root.
 
@@ -574,13 +568,13 @@ PatchDrill also summarizes `package.json` script additions, removals, and update
 ## Roadmap
 
 - Broader first-party fixture coverage for common open-source stacks.
-- More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck workspaces.
+- More native affected-task integrations beyond Turborepo, Nx, Pants, Cargo, Go, Bazel, and Buck2 workspaces.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
 - Optional LLM summary mode that never replaces deterministic findings.
 
 ## FAQ
 
-**Is this an AI tool?** No. PatchDrill makes **zero model calls**, needs no API key, and runs fully offline. The same diff in produces a byte-identical Proof Pack out (it honors `SOURCE_DATE_EPOCH`). It is the deterministic layer that exists *because* AI writes code now — not another AI.
+**Is this an AI tool?** No. PatchDrill makes **zero model calls**, needs no API key, and runs fully offline. Feed it the same diff and you get a byte-identical Proof Pack back (it honors `SOURCE_DATE_EPOCH`). It is the deterministic layer that exists *because* AI writes code now — not another AI.
 
 **Isn't this just a linter or SAST?** No. A linter checks code against fixed rules; SAST matches known vulnerability patterns. PatchDrill infers what verification *this specific diff* implies and reports the proof that *should* exist but doesn't — including required checks that were planned but never run. No linter or SAST tracks that gap.
 
