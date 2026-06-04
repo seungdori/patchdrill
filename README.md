@@ -14,9 +14,9 @@ PatchDrill is the **deterministic proof layer between code review and CI** for A
 
 **Not a linter. Not SAST. Not an AI reviewer.** It answers the one question those tools never ask: *what proof should exist for THIS diff before merge — and what's missing?*
 
-[![PatchDrill Proof Pack dashboard for a risky AI-agent PR — FAIL, risk 94/100](docs/media/patchdrill-dashboard.png)](docs/media/patchdrill-dashboard.png)
+[![PatchDrill Proof Pack for a risky AI-agent PR — FAIL, risk 94/100](docs/media/patchdrill-demo.gif)](docs/media/patchdrill-dashboard.png)
 
-*An AI agent opened this PR. PatchDrill scored it **FAIL · 94/100** — a privileged `pull_request_target` workflow checkout, a leaked secret, a disabled test script — in one offline, deterministic command. No model call. (Generate the animated version with `vhs demo/patchdrill.tape`.)*
+*An AI agent opened this PR. PatchDrill scored it **FAIL · 94/100** — a privileged `pull_request_target` workflow checkout, a leaked secret, a disabled test script — in one offline, deterministic command. No model call. (Click for the full still report; regenerate the GIF with `vhs demo/patchdrill.tape`.)*
 
 **What it catches in a diff:**
 

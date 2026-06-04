@@ -20,7 +20,9 @@ describe("documentation examples", () => {
   it("keeps the README hero demo asset wired", () => {
     const readme = readFileSync("README.md", "utf8");
 
+    expect(readme).toContain("(docs/media/patchdrill-demo.gif)");
     expect(readme).toContain("(docs/media/patchdrill-dashboard.png)");
+    expect(existsSync("docs/media/patchdrill-demo.gif")).toBe(true);
     expect(existsSync("docs/media/patchdrill-dashboard.png")).toBe(true);
     // The VHS tape that regenerates the animated demo stays committed and reproducible.
     expect(existsSync("demo/patchdrill.tape")).toBe(true);
