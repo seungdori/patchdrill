@@ -1,6 +1,6 @@
 {
   "name": "patchdrill",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A deterministic proof layer for verifying AI-generated and human patches before merge.",
   "type": "module",
   "bin": {

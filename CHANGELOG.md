@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Published the package to npm and switched README install/quickstart guidance to `npx --yes patchdrill` and `npm install -g patchdrill` (the `github:` path remains for running unreleased builds from source).
+- Added Korean, Japanese, and Simplified Chinese README translations with a language switcher.
+- Redesigned the HTML dashboard with a cleaner developer-docs aesthetic: refined typography, clearer hairline dividers, and full-width Project Signals and Review Context sections.
+- Regenerated the demo dashboard still and re-recorded the animated demo GIF as a slower, constant-speed scroll that is easier on the eyes.
+- Upgraded npm in the release workflow so OIDC trusted publishing (provenance) authenticates correctly.
+
 ## 0.1.0
 
 - Initial CLI with diff scanning, project detection, risk findings, verification planning, optional command execution, Markdown reports, JSON reports, and GitHub workflow generation.
