@@ -12,34 +12,34 @@
 
 ## AI レビュアーは LGTM と言い、CI もグリーン。それでもこの PR はマージすべきではありません。
 
-PatchDrill は、AI が生成したパッチと人間が書いたパッチの両方を対象とする、**コードレビューと CI のあいだに位置する決定論的な証明レイヤー**です。git の差分を読み取り、マージ前にどんな証跡をそろえておくべきかをはっきり示します。**モデル呼び出しなし、ネットワークなし、毎回まったく同じ答えを返します。**
+PatchDrill は、AI が生成したパッチと人間が書いたパッチのどちらにも使える、**コードレビューと CI のあいだに立つ決定論的な証明レイヤー**です。git の差分を読み取り、マージ前にどんな証跡をそろえておくべきかをはっきり示します。**モデル呼び出しなし、ネットワークなし、毎回まったく同じ答えを返します。**
 
-**Linter でも、SAST でも、AI レビュアーでもありません。** これらのツールが決して問わない、たった一つの問いに答えます。それは、*この差分に対してマージ前にどんな証跡が存在すべきか、そして何が欠けているのか?* という問いです。
+**Linter でも、SAST でも、AI レビュアーでもありません。** これらのツールが決して問わない、たった一つの問いに答えます。すなわち、*この差分に対してマージ前にどんな証跡があるべきで、いま何が欠けているのか?* です。
 
 [![リスクの高い AI エージェントの PR に対する PatchDrill Proof Pack — FAIL、リスク 94/100](docs/media/patchdrill-demo.gif)](docs/media/patchdrill-dashboard.png)
 
-*ある AI エージェントがこの PR を作成しました。PatchDrill はこれを **FAIL · 94/100** と評価しました。権限付きの `pull_request_target` ワークフローによるチェックアウト、漏洩したシークレット、無効化されたテストスクリプトを、オフラインかつ決定論的な単一コマンドで検出したのです。モデル呼び出しはありません。(クリックすると完全な静止画レポート(スクリーンショット)を表示できます。GIF は `vhs demo/patchdrill.tape` で再生成できます。)*
+*ある AI エージェントが作成した PR です。PatchDrill はこれを **FAIL · 94/100** と評価しました。権限付き `pull_request_target` ワークフローのチェックアウト、漏洩したシークレット、無効化されたテストスクリプトを、オフラインで決定論的な一つのコマンドが検出しています。モデル呼び出しはありません。(クリックで完全な静止画レポート(スクリーンショット)を表示。GIF は `vhs demo/patchdrill.tape` で再生成できます。)*
 
 **差分の中で検出する内容:**
 
 - **漏洩したシークレット** — パッチで追加された `.env` ファイル、秘密鍵、トークン形式の文字列
 - **プロンプトインジェクション** — エージェントが読み込む `AGENTS.md`・Issue テンプレート・ドキュメントに仕込まれた指示
 - **ワークフローの権限昇格** — 広範なトークン書き込み、`pull_request_target`、OIDC 交換、`secrets: inherit`、ピン留めされていないアクション、リモートスクリプトのパイプ
-- **欠けている証跡** — ソースが変更されたのにテストが変更されていない、必須チェックが計画されたのに一度も実行されていない
-- **依存関係のドリフト** — マニフェストが変更されたのに対応するロックファイルがない(およびマニフェストの意図がないロックファイルのドリフト)
-- **その差分が示唆する検証** — *変更された* パッケージと、約 25 のエコシステムにまたがる下流の依存パッケージに対する、ルートレベルのデフォルトだけにとどまらない実際のコマンド
+- **欠けている証跡** — ソースを変更したのにテストは変えていない、必須チェックを計画したのに一度も実行していない
+- **依存関係のドリフト** — マニフェストを変更したのに対応するロックファイルがない(逆に、マニフェストの意図がないロックファイルのドリフトも)
+- **その差分が示唆する検証** — *変更した* パッケージと、約 25 のエコシステムにまたがる下流の依存パッケージに対する実際のコマンド。ルートレベルのデフォルトだけでは終わりません
 
-> **AI/エージェントが作成した PR をマージするものの、もはや一つひとつの差分を目視しきれない — そんなチームのために作りました。** 設定不要、CI の変更不要、API キー不要で、ローカルで 30 秒で実行できます。
+> **AI やエージェントが書いた PR を、差分を一つずつ目視しきれない速さでマージしているチームのために作りました。** 設定も CI の変更も API キーも不要。ローカルで 30 秒です。
 >
 > ```bash
 > npx --yes patchdrill demo --scenario risky-agent-pr
 > ```
 
-出力は、ポータブルな **Proof Pack(証跡パック)** です。Markdown、JSON、SARIF、自己完結型の HTML ダッシュボード、ハッシュで刻印された証跡マニフェストからなり、人間も、CI ゲートも、監査人も、フロンティアモデルも、いずれもこれを検査できます。`--locale ko|ja|zh` でお好みの言語で実行できます。
+出力は、ポータブルな **Proof Pack(証跡パック)** です。Markdown、JSON、SARIF、自己完結型の HTML ダッシュボード、ハッシュで刻印した証跡マニフェストからなり、人間も CI ゲートも監査人もフロンティアモデルも、誰もが検査できます。`--locale ko|ja|zh` で好きな言語で実行できます。
 
 ## 30 秒デモ
 
-git リポジトリを用意することなく、リスクの高い AI エージェントの PR シナリオを生成します。
+git リポジトリがなくても、リスクの高い AI エージェントの PR シナリオを生成できます。
 
 ```bash
 npx --yes patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
@@ -52,7 +52,7 @@ cat patchdrill-risky-demo/patchdrill-demo-summary.md
 open patchdrill-risky-demo/patchdrill-demo.html
 ```
 
-PatchDrill は、権限付きワークフローの境界、シークレットらしき内容、パッケージのライフサイクルスクリプトのリスク、そしてマージ前にレビュアーが求めるべき検証計画を示すはずです。
+PatchDrill は、権限付きワークフローの境界、シークレットらしき内容、パッケージのライフサイクルスクリプトのリスク、そしてマージ前にレビュアーが求めるべき検証計画を示します。
 
 ```bash
 npx --yes patchdrill scan --base origin/main --run \
@@ -69,56 +69,56 @@ npx --yes patchdrill verify --evidence patchdrill-evidence.json
 
 ## PatchDrill を選ぶ理由
 
-- 別のモデルに最終判断を委ねることなく、AI 時代の PR をレビュー可能にします。
-- パッチごとに Proof Pack を構築します。人間向けの Markdown、必須の構造化された検証ステータスを備えたボット向けの JSON、GitHub コードスキャン向けの SARIF、自己完結型の HTML ダッシュボード、コンパクトな PR サマリー、そしてレポート・成果物・コマンド出力のハッシュを含む後から検証可能な監査マニフェストです。
-- まずローカルで、その後 CI で動作します。`scan` はリポジトリを決して変更せず、コマンドは `--run` を指定したときにのみ実行されます。
-- 回帰がよく潜むレビュー領域にフラグを立てます。認証、課金、マイグレーション、シークレット、CI ワークフローのサプライチェーン、パッケージ自動化スクリプト、インフラ、ロックファイル、大きな差分、プロンプトインジェクションの内容、欠けているテスト変更、そして計画されたのに実行されなかった必須チェックです。
-- ルートレベルのデフォルトを実行するだけでなく、パッチからレビュー可能なコマンドを推論します。
+- 別のモデルに最終判断を委ねなくても、AI 時代の PR をレビューできるようにします。
+- パッチごとに Proof Pack を組み立てます。人間向けの Markdown、必須の構造化された検証ステータスを備えたボット向けの JSON、GitHub コードスキャン向けの SARIF、自己完結型の HTML ダッシュボード、コンパクトな PR サマリー、そしてレポート・成果物・コマンド出力のハッシュを含む、後から検証できる監査マニフェストです。
+- まずローカルで、続いて CI で動きます。`scan` はリポジトリを一切変更せず、コマンドは `--run` を指定したときだけ実行します。
+- 回帰がよく潜むレビュー領域にフラグを立てます。認証、課金、マイグレーション、シークレット、CI ワークフローのサプライチェーン、パッケージ自動化スクリプト、インフラ、ロックファイル、大きな差分、プロンプトインジェクションの内容、欠けたテスト変更、そして計画したのに実行されなかった必須チェックです。
+- ルートレベルのデフォルトを流すだけでなく、パッチそのものから実行すべきコマンドを推論します。
 - すでに手元にあるツールと連携します。git、npm、pnpm、yarn、bun、pytest、Django、FastAPI、cargo、Go、Maven、Gradle、Spring Boot、Android Gradle、Ruby、Rails、RSpec、PHP、Composer、Laravel、dotnet、ASP.NET Core、Swift、Xcode、Terraform、Docker、Kubernetes、Helm、Bazel、Buck2 です。
-- `.patchdrill.yml` を通じてポリシー・アズ・コードをサポートします。default、regulated、agentic のスターターパックを含みます。
-- 本格的なオープンソースのセキュリティ姿勢を備えて出荷されます。CodeQL、OpenSSF Scorecard、Dependabot、厳格なテスト、パッケージの dry-run 検証です。
-- Node、Cargo、Go、Pants のワークスペースに加え、ネストされた Python プロジェクト、ネストされた Cargo および Go のワークスペース、Turborepo、Nx を理解し、ルートレベルのコマンドだけを盲目的に実行するのではなく、変更されたパッケージと下流の依存パッケージを対象とします。
-- Node/Turborepo、Next.js、Python、uv で管理された Python、Django、FastAPI、Rails、PHP/Composer、Terraform、Docker/Compose、Kubernetes/Helm/Kustomize、Java/Maven/Gradle、Spring Boot Maven/Gradle、Android Gradle、.NET、ASP.NET Core、SwiftPM、Xcode、Bazel、Buck2、Pants、Cargo、Go の各リポジトリ形態に対するファーストパーティのスタックフィクスチャを同梱しています。
-- 依存関係のマニフェストとロックファイルの変更を、単に「ロックファイルが変更された」と言うのではなく、package.json・go.mod・Cargo.toml・pyproject.toml など十数種類の形式について、何が追加・削除・バージョン更新されたかを具体的に説明します。（全ファイルの一覧は[依存関係のレビュー](#依存関係のレビュー)を参照してください。）
-- マニフェストのみの依存関係変更や、ロックファイルのみの解決ドリフトといった、依存関係の証跡ギャップにフラグを立てます。
-- 変更されたファイルに CODEOWNERS の所有者ヒントを付加し、レビュアーが責任を持つチームを確認できるようにします。
-- ローンチに役立つケーススタディ、公開のスタックカバレッジマトリクス、コマンドごとの検証ステータスを含み、チームが PatchDrill が実際にどのような証跡を出力するかを評価できるようにします。
+- `.patchdrill.yml` でポリシー・アズ・コードに対応します。default、regulated、agentic のスターターパックを同梱します。
+- 本格的なオープンソースのセキュリティ姿勢を備えています。CodeQL、OpenSSF Scorecard、Dependabot、厳格なテスト、パッケージの dry-run 検証です。
+- Node、Cargo、Go、Pants のワークスペースに加え、ネストした Python プロジェクト、ネストした Cargo・Go のワークスペース、Turborepo、Nx も理解します。ルートレベルのコマンドを闇雲に流すのではなく、実際に変更したパッケージと、それに依存する下流パッケージを狙い撃ちします。
+- Node/Turborepo、Next.js、Python、uv 管理の Python、Django、FastAPI、Rails、PHP/Composer、Terraform、Docker/Compose、Kubernetes/Helm/Kustomize、Java/Maven/Gradle、Spring Boot Maven/Gradle、Android Gradle、.NET、ASP.NET Core、SwiftPM、Xcode、Bazel、Buck2、Pants、Cargo、Go の各リポジトリ形態向けに、ファーストパーティのスタックフィクスチャを同梱しています。
+- 依存関係のマニフェストとロックファイルの変更を、ただ「ロックファイルが変わった」で済ませません。package.json・go.mod・Cargo.toml・pyproject.toml など十数種類の形式について、何が追加・削除・バージョン更新されたかを具体的に説明します。(全ファイルの一覧は[依存関係のレビュー](#依存関係のレビュー)を参照してください。)
+- マニフェストだけの依存変更や、ロックファイルだけの解決ドリフトといった、依存関係の証跡ギャップにフラグを立てます。
+- 変更したファイルに CODEOWNERS の所有者ヒントを添え、レビュアーが担当チームを把握できるようにします。
+- ローンチ向けのケーススタディ、公開のスタックカバレッジマトリクス、コマンドごとの検証ステータスを同梱し、PatchDrill が実際にどんな証跡を出すのかをチームが見極められるようにします。
 
 ## 何をするか
 
-PatchDrill は、すべてのレビュアーが問う 4 つの質問に答えます。
+PatchDrill は、どんなレビュアーも必ず問う 4 つの質問に答えます。
 
-1. 何が変更されたか?
-2. スタックのどの部分が影響を受けるか?
+1. 何が変わったか?
+2. スタックのどの部分に影響するか?
 3. このパッチを証明するには何を実行すべきか?
-4. ドリル実行後にどのリスクが残るか?
+4. ドリルを終えた後、どんなリスクが残るか?
 
-PatchDrill は、数ある AI コードレビュアーの一つではありません。差分が「問題なさそうか」をモデルに尋ねることはしません。決定論的な証跡を構築します。
+PatchDrill は、ありがちな AI コードレビュアーではありません。差分が「問題なさそうか」をモデルに尋ねたりはせず、決定論的な証跡を組み立てます。
 
 | レイヤー | 主な問い | 決定論的か? | コマンドを実行するか? | 出力 |
 | --- | --- | --- | --- | --- |
 | AI PR レビュアー | この差分は正しそうか? | いいえ | 通常は実行しない | コメント、提案、設計フィードバック |
-| 従来の CI | 事前設定されたチェックが通ったか? | はい | はい | ログと合否ステータス |
-| SAST/SCA スキャナー | 既知のセキュリティまたは依存関係ルールに一致するか? | はい | 場合による | アラートと脆弱性の検出結果 |
-| レビュー自動化 | 設定されたレビュー自動化が発火したか? | はい | 場合による | PR コメントとアノテーション |
-| PatchDrill | この差分に対してどんな証跡が存在すべきか? | はい | `--run` 指定時のみ | Proof Pack、リスク検出結果、コマンド計画、ポリシーゲート |
+| 従来の CI | 設定済みのチェックが通ったか? | はい | はい | ログと合否ステータス |
+| SAST/SCA スキャナー | 既知のセキュリティ・依存関係ルールに一致するか? | はい | 場合による | アラートと脆弱性の検出結果 |
+| レビュー自動化 | 設定したレビュー自動化が発火したか? | はい | 場合による | PR コメントとアノテーション |
+| PatchDrill | この差分にどんな証跡があるべきか? | はい | `--run` 指定時のみ | Proof Pack、リスク検出結果、コマンド計画、ポリシーゲート |
 
-この境界は意図的なものです。判断はモデルが得意とする領域ですが、同じパッチから毎回同じ、安全性に関するレビュー可能な証跡を生成するのは PatchDrill の役割です。まず PatchDrill を実行し、その後 Proof Pack を人間のレビュアー、CI ゲート、監査証跡、またはフロンティアモデルに引き渡してください。
+この境界は意図的なものです。判断はモデルが得意とし、同じパッチから毎回同じ、レビュー可能な安全性の証跡を出すのは PatchDrill が得意とします。まず PatchDrill を実行し、その Proof Pack を人間のレビュアー、CI ゲート、監査証跡、あるいはフロンティアモデルに渡してください。
 
 ## Proof Pack
 
-Proof Pack は、パッチに対して生成されるポータブルな証跡バンドルです。
+Proof Pack は、パッチごとに生成するポータブルな証跡バンドルです。
 
 - PR コメントやステップサマリー向けのコンパクトな Markdown サマリー。
-- 人間によるレビュー向けの完全な Markdown レポート。
+- 人間がレビューするための完全な Markdown レポート。
 - ボット、ダッシュボード、ポリシーゲート向けの JSON レポート。
 - GitHub コードスキャン向けの SARIF レポート。
-- 任意のトレンド履歴を含む、自己完結型の HTML ダッシュボード。
-- レポート・成果物・コマンド出力のダイジェストを記録する証跡マニフェスト。
+- トレンド履歴も載せられる、自己完結型の HTML ダッシュボード。
+- レポート・成果物・コマンド出力のダイジェストを記録した証跡マニフェスト。
 
-マニフェストの検証については [docs/EVIDENCE.md](docs/EVIDENCE.md) を、レビューワークフローでの Proof Pack の使い方については [docs/PROOF_PACKS.md](docs/PROOF_PACKS.md) を参照してください。
+マニフェストの検証は [docs/EVIDENCE.md](docs/EVIDENCE.md) を、レビューワークフローでの Proof Pack の使い方は [docs/PROOF_PACKS.md](docs/PROOF_PACKS.md) を参照してください。
 
-CLI から境界と推奨される最初のコマンドを表示します。
+境界と、最初に試すべきコマンドは CLI から表示できます。
 
 ```bash
 patchdrill explain
@@ -141,7 +141,7 @@ Run with --run to execute required verification commands. Add --run-optional to 
 
 ## インストール
 
-インストール不要で即座に実行できます。[npm](https://www.npmjs.com/package/patchdrill) で公開されています。
+インストール不要で、すぐに実行できます。[npm](https://www.npmjs.com/package/patchdrill) で公開しています。
 
 ```bash
 npx --yes patchdrill scan --base origin/main
@@ -154,29 +154,29 @@ npm install -g patchdrill
 patchdrill scan --base origin/main
 ```
 
-未リリースの最新ビルドをソースから直接実行するには、代わりに `github:` プレフィックスを使用します。
+未リリースの最新ビルドをソースから直接実行するには、`github:` プレフィックスを使います。
 
 ```bash
 npx --yes github:seungdori/patchdrill scan --base origin/main
 ```
 
-以下の例では、読みやすさのために `patchdrill` を使用しています。
+以下の例では、読みやすさのために `patchdrill` と表記します。
 
 ## クイックスタート
 
-git リポジトリなしで出力を試します。
+git リポジトリなしで出力を試せます。
 
 ```bash
 patchdrill demo --output patchdrill-demo
 ```
 
-エージェントが作成した PR で PatchDrill が何を検出するかを示す失敗ケースを試します。
+エージェントが書いた PR で PatchDrill が何を検出するか、その失敗ケースを試せます。
 
 ```bash
 patchdrill demo --scenario risky-agent-pr --output patchdrill-risky-demo
 ```
 
-CI を変更する前に、PatchDrill がリポジトリから何を推論できるかを診断します。
+CI を変える前に、PatchDrill がリポジトリから何を推論できるかを確かめます。
 
 ```bash
 patchdrill doctor
@@ -188,7 +188,7 @@ patchdrill doctor
 patchdrill doctor --format json
 ```
 
-コミットされていない作業を解析します。
+未コミットの作業を解析します。
 
 ```bash
 patchdrill scan
@@ -200,19 +200,19 @@ patchdrill scan
 patchdrill scan --base origin/main
 ```
 
-推論された必須コマンドを実行します。
+推論した必須コマンドを実行します。
 
 ```bash
 patchdrill scan --base origin/main --run
 ```
 
-ブラウザ/e2e や静的解析の計画などの任意チェックを含めます。
+ブラウザ/e2e や静的解析の計画といった任意チェックも含めます。
 
 ```bash
 patchdrill scan --base origin/main --run --run-optional
 ```
 
-Proof Pack を書き出して検証します。
+Proof Pack を書き出し、検証します。
 
 ```bash
 patchdrill scan --base origin/main --run \
@@ -225,30 +225,30 @@ patchdrill scan --base origin/main --run \
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-保存済みの JSON レポートから静的ダッシュボードを作成します。
+保存済みの JSON レポートから静的なダッシュボードを作ります。
 
 ```bash
 patchdrill dashboard --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
-`patchdrill dashboard` はレンダリング前に各保存済み JSON レポートの契約を検証するため、古い、または不完全なレポートから、見栄えだけ整ったダッシュボードが生成されることはありません。
+`patchdrill dashboard` はレンダリング前に保存済み JSON レポートの契約を一つずつ検証します。そのため、古かったり不完全だったりするレポートから、見栄えだけ整ったダッシュボードができてしまうことはありません。
 
-証跡マニフェストを、それが生成した成果物に対して検証します。
+証跡マニフェストを、生成元の成果物と突き合わせて検証します。
 
 ```bash
 patchdrill verify --evidence patchdrill-evidence.json
 ```
 
-このリポジトリが npm/GitHub Action のリリース準備ができているかを確認します。
+このリポジトリが npm/GitHub Action のリリースに耐えるかを確認します。
 
 ```bash
 patchdrill release-check
 patchdrill release-check --format json
 ```
 
-リリースワークフローは、必須の PatchDrill 検証も実行し、ローカルの Proof Pack スモークバンドルを生成して、`npm pack --dry-run` の前にその証跡マニフェストを検証します。
+リリースワークフローは必須の PatchDrill 検証も実行し、ローカルの Proof Pack スモークバンドルを生成して、`npm pack --dry-run` の前にその証跡マニフェストを検証します。
 
-最終的な成果物の後処理後に、証跡マニフェストを再生成します。
+成果物を最終的に後処理した後で、証跡マニフェストを再生成します。
 
 ```bash
 patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence.json \
@@ -260,17 +260,17 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
 
 `patchdrill evidence` は、マニフェストを書き出す前に、必須の構造化された検証ステータスを含め、保存済みの JSON レポート契約をまず検証します。
 
-コミット済みのデモ出力は [examples/demo](examples/demo) で確認できます。PR コメントのプレビューとして `patchdrill-demo-summary.md` を含みます。
+コミット済みのデモ出力は [examples/demo](examples/demo) で確認できます。PR コメントのプレビュー用に `patchdrill-demo-summary.md` も入っています。
 
-ローンチ向けのケーススタディは [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md) で、フィクスチャに裏付けられたサポートマトリクスは [docs/STACK_COVERAGE.md](docs/STACK_COVERAGE.md) で読めます。
+ローンチ向けのケーススタディは [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md)、フィクスチャに裏付けられたサポートマトリクスは [docs/STACK_COVERAGE.md](docs/STACK_COVERAGE.md) で読めます。
 
-実行トレンドを表示するには、古いものから新しいものの順に複数の JSON レポートを追加します。
+実行トレンドを表示するには、古いものから新しいものの順に JSON レポートを複数並べます。
 
 ```bash
 patchdrill dashboard --json previous-report.json --json patchdrill-report.json --output patchdrill-dashboard.html
 ```
 
-PR コメント付きで GitHub Action を使用します。
+PR コメント付きで GitHub Action を使います。
 
 ```yaml
 - uses: seungdori/patchdrill@v0
@@ -281,13 +281,13 @@ PR コメント付きで GitHub Action を使用します。
 
 Action はデフォルトで GitHub Checks のアノテーションを発行します。[docs/ANNOTATIONS.md](docs/ANNOTATIONS.md) を参照してください。
 
-ポリシー・アズ・コードを使用します。
+ポリシー・アズ・コードを使います。
 
 ```bash
 patchdrill scan --config .patchdrill.yml
 ```
 
-エディターやボット向けに JSON スキーマをエクスポートします。
+エディターやボット向けに JSON スキーマを書き出します。
 
 ```bash
 patchdrill schema policy > patchdrill-policy.schema.json
@@ -315,7 +315,7 @@ patchdrill init
 patchdrill init --policy
 ```
 
-より厳格なスターターポリシーパックを使用します。
+より厳格なスターターポリシーパックを使います。
 
 ```bash
 patchdrill init --policy-pack regulated
@@ -341,37 +341,37 @@ patchdrill verify --evidence <patchdrill-evidence.json>
 | オプション | 説明 |
 | --- | --- |
 | `--base <ref>` | ベース ref と比較します。例: `origin/main`。 |
-| `--head <ref>` | `--base` を使用する際の Head ref。デフォルトは `HEAD`。 |
+| `--head <ref>` | `--base` 使用時の Head ref。デフォルトは `HEAD`。 |
 | `--config <path>` | `.patchdrill.yml/json` または指定したパスからポリシーを読み込みます。 |
 | `--baseline <path>` | 以前の PatchDrill JSON レポートと比較します。 |
-| `--evidence <path>` | `scan`/`evidence` の実行中に Proof Pack の証跡マニフェストを書き出すか、`verify` 用に一つ選択します。`scan --evidence` は、マニフェストがレポート契約を検証できるよう `--json` を必要とします。 |
-| `--run` | 推論された必須の検証コマンドを実行します。 |
-| `--run-optional` | `--run` と併用して、任意の検証コマンドも実行します。 |
-| `--github-annotations` | 検出結果に対する GitHub Actions のログアノテーションを発行します。 |
+| `--evidence <path>` | `scan`/`evidence` の実行中に Proof Pack の証跡マニフェストを書き出すか、`verify` 用に一つ選びます。`scan --evidence` は、マニフェストがレポート契約を検証できるよう `--json` が必要です。 |
+| `--run` | 推論した必須の検証コマンドを実行します。 |
+| `--run-optional` | `--run` と併用し、任意の検証コマンドも実行します。 |
+| `--github-annotations` | 検出結果を GitHub Actions のログアノテーションとして発行します。 |
 | `--summary-markdown <path>` | PR コメントやステップサマリー向けのコンパクトな Markdown サマリーを書き出します。 |
 | `--markdown <path>` | Markdown レポートを書き出します。 |
 | `--json <path>` | JSON レポートを書き出します。 |
 | `--sarif <path>` | GitHub コードスキャン向けの SARIF レポートを書き出します。 |
 | `--html <path>` | 自己完結型の静的 HTML ダッシュボードを書き出します。 |
-| `--fail-on <level>` | 検出結果が次の重大度に達したとき失敗します: `info`、`low`、`medium`、`high`、`critical`。 |
-| `--max-risk <score>` | リスクスコアが 0〜100 のしきい値を超えたとき失敗します。デフォルトは `69`。 |
-| `--max-risk-delta <score>` | ベースラインからのリスク増加が 0〜100 のしきい値を超えたとき失敗します。`--baseline` が必要です。 |
-| `--max-output-chars <n>` | 各コマンド出力ストリームから末尾の `n` 文字を保持します。デフォルトは `20000`。 |
-| `--command-timeout-ms <n>` | 各検証コマンドを `n` ミリ秒後に停止します。 |
-| `--quiet` | 終了コードのみを使用します。 |
-| `--locale <lang>` | 人間向けレポート(markdown、サマリー、HTML、コンソール)の言語: `en`、`ko`、`ja`、`zh`。システムロケール(`LC_ALL`/`LANG`)、次に英語の順でデフォルトとなります。JSON と SARIF は英語のままです。 |
+| `--fail-on <level>` | 検出結果が次の重大度に達したら失敗します: `info`、`low`、`medium`、`high`、`critical`。 |
+| `--max-risk <score>` | リスクスコアが 0〜100 のしきい値を超えたら失敗します。デフォルトは `69`。 |
+| `--max-risk-delta <score>` | ベースラインからのリスク増加が 0〜100 のしきい値を超えたら失敗します。`--baseline` が必要です。 |
+| `--max-output-chars <n>` | 各コマンド出力ストリームの末尾 `n` 文字を残します。デフォルトは `20000`。 |
+| `--command-timeout-ms <n>` | 各検証コマンドを `n` ミリ秒で打ち切ります。 |
+| `--quiet` | 終了コードだけを使います。 |
+| `--locale <lang>` | 人間向けレポート(markdown、サマリー、HTML、コンソール)の言語: `en`、`ko`、`ja`、`zh`。デフォルトはシステムロケール(`LC_ALL`/`LANG`)、なければ英語です。JSON と SARIF は英語のままです。 |
 | `--policy` | `patchdrill init` と併用したとき `.patchdrill.yml` を作成します。 |
 | `--policy-pack <name>` | `patchdrill init` 用のスターターポリシーパック: `default`、`regulated`、`agentic`。 |
 | `--scenario <name>` | `patchdrill demo` 用のデモシナリオ: `review-ready`、`risky-agent-pr`。 |
 | `--format <format>` | `doctor` と `release-check` の出力形式: `text`、`json`。 |
-| `--list` | `patchdrill schema` と併用したとき、利用可能なスキーマを一覧表示します。 |
-| `--output <path>` | スキーマ/ダッシュボードファイルまたはデモ成果物ディレクトリを書き出します。 |
+| `--list` | `patchdrill schema` と併用したとき、使えるスキーマを一覧表示します。 |
+| `--output <path>` | スキーマ/ダッシュボードファイル、またはデモ成果物ディレクトリを書き出します。 |
 
-ブール型フラグは、`--run=false`、`--quiet=true`、`--github-annotations=off` のような明示的な値を受け付けます。
+ブール型フラグは、`--run=false`、`--quiet=true`、`--github-annotations=off` のように明示的な値も受け付けます。
 
 ## サポートするシグナル
 
-PatchDrill はリポジトリのマニフェストからプロジェクトの形態を検出します。
+PatchDrill はリポジトリのマニフェストからプロジェクトの形態を見分けます。
 
 | エコシステム | シグナル | 典型的なコマンド |
 | --- | --- | --- |
@@ -380,7 +380,7 @@ PatchDrill はリポジトリのマニフェストからプロジェクトの形
 | Rust | `Cargo.toml`、ルートおよびネストされた Cargo ワークスペース | `cargo test --all-targets`、`cargo test -p crate --all-targets`、`cargo test --manifest-path packages/wasm/Cargo.toml -p crate --all-targets`、`cargo clippy -p crate --all-targets -- -D warnings` |
 | Go | `go.mod`、`go.work`、ネストされた Go モジュールおよびワークスペースルート | `go test ./...`、`cd services/api && go test ./...`、`go test ./module/...`、`cd services/go && go test ./module/...`、`go vet ./module/...` |
 | Java/Kotlin | `pom.xml`、`build.gradle`、ラッパー | `mvn test`、`gradle test`、`./gradlew test`、`./gradlew bootJar` |
-| Android | `com.android.application`、`com.android.library`、`AndroidManifest.xml`、ビルドタイプ、プロダクトフレーバー、`variantFilter`、バリアントのソースセット、生成されたソースパス | `./gradlew testDebugUnitTest`、`./gradlew testReleaseUnitTest`、`./gradlew testFreeDebugUnitTest`、`./gradlew testMinApi24DemoDebugUnitTest`、`./gradlew assemble<Variant>`、`./gradlew lint<Variant>` |
+| Android | `com.android.application`、`com.android.library`、`AndroidManifest.xml`、ビルドタイプ、プロダクトフレーバー、`variantFilter`、バリアントのソースセット、生成されたソースのパス | `./gradlew testDebugUnitTest`、`./gradlew testReleaseUnitTest`、`./gradlew testFreeDebugUnitTest`、`./gradlew testMinApi24DemoDebugUnitTest`、`./gradlew assemble<Variant>`、`./gradlew lint<Variant>` |
 | Ruby/Rails | `Gemfile`、`Gemfile.lock`、`config/application.rb`、RSpec メタデータ | `bin/rails test`、`bundle exec rails test`、`bundle exec rspec`、`bundle exec rake test` |
 | PHP/Laravel | `composer.json`、`composer.lock`、`artisan`、`phpunit.xml` | `composer validate --strict`、`composer test`、`php artisan test`、`vendor/bin/phpunit`、PHP 構文 lint のフォールバック |
 | .NET | `global.json`、`.slnf`、`.sln`、`.csproj`、`ProjectReference` | `dotnet test App.slnf`、`dotnet test tests/Api.Tests/Api.Tests.csproj`、`dotnet build src/Api/Api.csproj --no-restore`、`dotnet publish src/Api/Api.csproj --no-restore` |
@@ -389,52 +389,52 @@ PatchDrill はリポジトリのマニフェストからプロジェクトの形
 | Terraform | `*.tf`、`*.tfvars` | `terraform fmt -check && terraform validate` |
 | Docker | `Dockerfile`、Compose ファイル | `docker build .`、`docker compose -f compose.yaml config` |
 | Kubernetes | `Chart.yaml`、`kustomization.yaml`、`k8s/`、`kubernetes/`、`manifests/` | `helm lint .`、`kubectl kustomize .`、`kubectl apply --dry-run=client -f k8s` |
-| Bazel | `MODULE.bazel`、`WORKSPACE`、`BUILD.bazel`、`.bazelrc` | `bazel test //path/...`、`bazel build //path/...`、`bazel query 'rdeps(//..., set(//path/...))'`、任意で下流の `tests(rdeps(...))` への昇格、ルートメタデータに対するグラフ全体のフォールバック |
-| Buck2 | `.buckconfig`、`BUCK`、`BUCK.v2` | `buck2 test //path/...`、`buck2 build //path/...`、`buck2 uquery 'rdeps(//..., set(//path/...))'`、任意で下流の `testsof(rdeps(...))` への昇格、ルートメタデータに対するグラフ全体のフォールバック |
+| Bazel | `MODULE.bazel`、`WORKSPACE`、`BUILD.bazel`、`.bazelrc` | `bazel test //path/...`、`bazel build //path/...`、`bazel query 'rdeps(//..., set(//path/...))'`、任意で下流の `tests(rdeps(...))` への昇格、ルートメタデータにはグラフ全体へのフォールバック |
+| Buck2 | `.buckconfig`、`BUCK`、`BUCK.v2` | `buck2 test //path/...`、`buck2 build //path/...`、`buck2 uquery 'rdeps(//..., set(//path/...))'`、任意で下流の `testsof(rdeps(...))` への昇格、ルートメタデータにはグラフ全体へのフォールバック |
 | Pants | `pants.toml` | `pants --changed-since=HEAD --changed-dependents=transitive test` |
 | GitHub Actions | `.github/workflows/*` | ワークフロー差分のレビュー |
 
-Node ワークスペースの場合、PatchDrill は `package.json` の workspaces と `pnpm-workspace.yaml` を検出し、直接変更されたパッケージと下流の依存パッケージに対して `pnpm --filter @acme/api run test` や `npm --workspace @acme/api run build` といったパッケージスコープのコマンドを発行します。`turbo.json` または `nx.json` が存在する場合は、`pnpm exec turbo run test --filter=@acme/api` や `npx nx run api:test` のようなネイティブのタスクランナーコマンドを計画します。[docs/MONOREPOS.md](docs/MONOREPOS.md) を参照してください。
+Node ワークスペースでは、PatchDrill が `package.json` の workspaces と `pnpm-workspace.yaml` を検出し、直接変更したパッケージと下流の依存パッケージに対して `pnpm --filter @acme/api run test` や `npm --workspace @acme/api run build` といったパッケージスコープのコマンドを発行します。`turbo.json` や `nx.json` があれば、`pnpm exec turbo run test --filter=@acme/api` や `npx nx run api:test` のようなネイティブのタスクランナーコマンドを計画します。[docs/MONOREPOS.md](docs/MONOREPOS.md) を参照してください。
 
-ネストされた Python プロジェクトの場合、PatchDrill は検出された各 `pyproject.toml`、`uv.lock`、`requirements.txt`、`manage.py` のパッケージルートをそれぞれ独自の検証スコープとして扱います。そのため、モノレポはすべての Python 変更を誤ってルートコマンドにまとめるのではなく、`cd packages/pine-engine && uv run pytest` を計画できます。
+ネストした Python プロジェクトでは、検出した `pyproject.toml`、`uv.lock`、`requirements.txt`、`manage.py` の各パッケージルートを、それぞれ独立した検証スコープとして扱います。そのためモノレポでも、すべての Python 変更を誤ってルートコマンドにまとめず、`cd packages/pine-engine && uv run pytest` を計画できます。
 
-Cargo ワークスペースの場合、JavaScript やポリグロットのモノレポルートの下にネストされたワークスペースを含め、PatchDrill は `[workspace].members`、crate 名、ワークスペース内部の依存関係を読み取り、変更された crate と下流の依存 crate に対して `cargo test -p crate --all-targets` や `cargo test --manifest-path packages/wasm/Cargo.toml -p crate --all-targets` に加え、任意で clippy 計画を発行します。
+Cargo ワークスペースでは、JavaScript やポリグロットのモノレポルートの下にネストしたものも含め、`[workspace].members`、crate 名、ワークスペース内部の依存関係を読み取ります。そして変更した crate と下流の依存 crate に対して `cargo test -p crate --all-targets` や `cargo test --manifest-path packages/wasm/Cargo.toml -p crate --all-targets`、さらに任意で clippy 計画を発行します。
 
-ネストされた Go モジュールと Go ワークスペースの場合、PatchDrill は検出された各 `go.mod` または `go.work` のルートをそれぞれ独自の検証スコープとして扱います。Go ワークスペースの場合、PatchDrill は `go.work` の `use` エントリ、モジュール名、ワークスペース内部の `require` 依存関係を読み取り、変更されたモジュールと下流の依存モジュールに対して `go test ./module/...` や `cd services/go && go test ./module/...` に加え、任意で `go vet` 計画を発行します。
+ネストした Go モジュールと Go ワークスペースでは、検出した `go.mod` または `go.work` の各ルートを、それぞれ独立した検証スコープとして扱います。Go ワークスペースなら `go.work` の `use` エントリ、モジュール名、ワークスペース内部の `require` 依存関係を読み取り、変更したモジュールと下流の依存モジュールに対して `go test ./module/...` や `cd services/go && go test ./module/...`、さらに任意で `go vet` 計画を発行します。
 
-Pants リポジトリの場合、PatchDrill は `--changed-since` と `--changed-dependents=transitive` を用いた Pants ネイティブの Git 対応の変更ターゲット選択を使用するため、Pants が言語をまたいだターゲットグラフの展開の所有権を保持します。
+Pants リポジトリでは、`--changed-since` と `--changed-dependents=transitive` を用いた Pants ネイティブの Git 対応な変更ターゲット選択を使います。これにより、言語をまたいだターゲットグラフの展開は Pants が引き続き受け持ちます。
 
 ## リスクモデル
 
-PatchDrill はパッチを 0 から 100 で採点します。高いほどリスクが大きいことを意味します。
+PatchDrill はパッチを 0 から 100 で採点します。高いほどリスクが大きいということです。
 
-現在の決定論的なルールは、次のものを探します。
+現在の決定論的なルールが探すのは、次のものです。
 
 - レビューと検証の証跡を必要とする、変更されたファイル。
-- `.env` や秘密鍵などのシークレットを含むファイル。
-- 差分の中に追加された、秘密鍵や一般的なトークン形式を含むシークレットらしき値。
-- `AGENTS.md`、Issue テンプレート、Markdown ドキュメントなど、エージェントに見えるファイルに追加されたプロンプトインジェクションの指示。
+- `.env` や秘密鍵など、シークレットを含むファイル。
+- 差分の中に追加された、秘密鍵や一般的なトークン形式といったシークレットらしき値。
+- `AGENTS.md`、Issue テンプレート、Markdown ドキュメントなど、エージェントが目にするファイルに加えられたプロンプトインジェクションの指示。
 - 影響度の高いパス: 認証、課金、セッション、マイグレーション、セキュリティ、暗号、権限。
 - インフラとリリースの挙動: Docker、Terraform、Kubernetes、GitHub Actions。
-- ワークフローのサプライチェーンリスク: 広範なトークン書き込み、`pull_request_target`、継承されたシークレット、ローカルの再利用可能ワークフローから可変なリモート再利用可能ワークフローへのファンアウト、継承されたシークレットや呼び出し元の OIDC 権限を受け取る可変な再利用可能ワークフロー、環境スコープの OIDC デプロイジョブ、環境保護のないクラウド OIDC 認証情報の交換、ピン留めされていないアクション、可変な `docker://` アクションイメージ、リモートスクリプトのパイプ、信頼できない PR メタデータの埋め込み、権限付きの PR-head チェックアウトの組み合わせ。
+- ワークフローのサプライチェーンリスク: 広範なトークン書き込み、`pull_request_target`、継承されたシークレット、ローカルの再利用可能ワークフローから可変なリモート再利用可能ワークフローへのファンアウト、継承されたシークレットや呼び出し元の OIDC 権限を受け取る可変な再利用可能ワークフロー、環境スコープの OIDC デプロイジョブ、環境保護のないクラウド OIDC 認証情報の交換、ピン留めされていないアクション、可変な `docker://` アクションイメージ、リモートスクリプトのパイプ、信頼できない PR メタデータの埋め込み、権限付き PR-head チェックアウトの組み合わせ。
 - パッケージ自動化スクリプトのリスク: install/prepare/pack/publish のライフサイクルスクリプト、削除されたり no-op コマンドに置き換えられたりした検証スクリプト、リモートダウンロードをインタープリターにパイプするパッケージスクリプト。
 - 依存関係のマニフェストとロックファイルの変更。
 - package.json、pyproject.toml、requirements.txt、NuGet の PackageReference および集中管理の PackageVersion ファイル、Maven の pom.xml、Gradle のビルドファイルおよびバージョンカタログ、Gemfile、composer.json、go.mod、Cargo.toml、npm の package-lock、pnpm-lock、yarn.lock、bun.lock、go.sum、Cargo.lock、poetry.lock、uv.lock、Pipfile.lock、Gemfile.lock、composer.lock における依存関係の追加・削除・更新。
-- 依存関係の証跡ギャップ: 対応するロックファイルの証跡を伴わない直接的な依存関係マニフェストの変更、および対応するマニフェストの依存意図を伴わないロックファイルの解決変更。
-- レガシーバイナリ `bun.lockb` の変更（テキスト形式の `bun.lock` への移行を促すガイダンス付き）。
-- 近接・ミラー・フレームワーク規約に一致するテスト変更を伴わないソース変更。
+- 依存関係の証跡ギャップ: 対応するロックファイルの証跡を伴わない直接的な依存マニフェストの変更、および対応するマニフェストの依存意図を伴わないロックファイルの解決変更。
+- レガシーバイナリ `bun.lockb` の変更(テキスト形式の `bun.lock` への移行を促すガイダンス付き)。
+- 近接・ミラー・フレームワーク規約のいずれかに一致するテスト変更を伴わないソース変更。
 - 大きな行差分とバイナリファイル。
-- 推論または設定されたが実行されなかった必須の検証コマンド。
+- 推論または設定されたものの実行されなかった必須の検証コマンド。
 - 失敗した検証コマンド。
 - `.patchdrill.yml` のカスタムポリシールール。
 
-リスクモデルは意図的に説明可能です。すべてのスコア増加は、レポート内の検出結果として表されます。
+リスクモデルは、あえて説明可能にしてあります。スコアが上がる理由は、すべてレポート内の検出結果として表れます。
 
-組み込みのルール ID と各ルールの意味については [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md) を参照してください。
+組み込みのルール ID と各ルールの意味は [docs/RULE_CATALOG.md](docs/RULE_CATALOG.md) を参照してください。
 
 ## ポリシー・アズ・コード
 
-PatchDrill はリポジトリのルートから `.patchdrill.yml`、`.patchdrill.yaml`、または `.patchdrill.json` を読み込みます。
+PatchDrill はリポジトリのルートにある `.patchdrill.yml`、`.patchdrill.yaml`、`.patchdrill.json` を読み込みます。
 
 ```yaml
 failOn: high
@@ -522,7 +522,7 @@ jobs:
             ${{ steps.patchdrill.outputs.report-sarif }}
 ```
 
-Action のブール型入力は、明示的な値を受け付けます: `"true"`、`"false"`、`"1"`、`"0"`、`"yes"`、`"no"`、`"on"`、`"off"`。実行とアノテーションのトグルは同じ CLI のブールパーサーを通じて渡されるため、`run: "false"` がリポジトリのコマンドを実行することは決してありません。
+Action のブール型入力は、明示的な値を受け付けます: `"true"`、`"false"`、`"1"`、`"0"`、`"yes"`、`"no"`、`"on"`、`"off"`。実行とアノテーションのトグルは同じ CLI のブールパーサーを通すので、`run: "false"` がリポジトリのコマンドを実行することは決してありません。
 
 ## レポートの例
 
@@ -540,7 +540,7 @@ Proof Pack のレビューワークフローについては [docs/PROOF_PACKS.md
 
 ## リリースのプロベナンス
 
-PatchDrill には、npm の信頼された公開とプロベナンスのためのリリースワークフローが含まれています。npm でパッケージを信頼された公開者として設定し、その後 GitHub Release から公開してください。[docs/RELEASE.md](docs/RELEASE.md) を参照してください。
+PatchDrill には、npm の信頼された公開とプロベナンスのためのリリースワークフローが付属します。npm でパッケージを信頼された公開者として設定し、GitHub Release から公開してください。[docs/RELEASE.md](docs/RELEASE.md) を参照してください。
 
 公開前に、次を実行します。
 
@@ -550,47 +550,47 @@ patchdrill release-check
 
 ## 依存関係のレビュー
 
-PatchDrill は、変更された `package.json`、`pyproject.toml`、`requirements.txt`、NuGet の `PackageReference` / `PackageVersion` マニフェスト、Maven の `pom.xml`、Gradle の `build.gradle` / `build.gradle.kts` / `libs.versions.toml`、`Gemfile`、`composer.json`、`go.mod`、`Cargo.toml`、npm の `package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`bun.lock`、`go.sum`、`Cargo.lock`、`poetry.lock`、`uv.lock`、`Pipfile.lock`、`Gemfile.lock`、`composer.lock` の各ファイルから依存関係の変更を要約し、パッケージ、依存関係セクションまたはロックファイルのパス、変更種別、以前のバージョン、新しいバージョンを Markdown および JSON レポートに一覧表示します。また、対応するロックファイルの証跡を伴わない直接的なマニフェスト変更や、マニフェストの意図を伴わないロックファイルのみの解決ドリフトといった、依存関係の証跡ギャップにもフラグを立てます。これは、レビュアーに見える依存関係の意図を明示することで、より重量級の SCA ツールを補完します。
+PatchDrill は、変更された `package.json`、`pyproject.toml`、`requirements.txt`、NuGet の `PackageReference` / `PackageVersion` マニフェスト、Maven の `pom.xml`、Gradle の `build.gradle` / `build.gradle.kts` / `libs.versions.toml`、`Gemfile`、`composer.json`、`go.mod`、`Cargo.toml`、npm の `package-lock.json`、`pnpm-lock.yaml`、`yarn.lock`、`bun.lock`、`go.sum`、`Cargo.lock`、`poetry.lock`、`uv.lock`、`Pipfile.lock`、`Gemfile.lock`、`composer.lock` から依存関係の変更を要約します。パッケージ、依存関係セクションまたはロックファイルのパス、変更種別、変更前のバージョン、変更後のバージョンを、Markdown と JSON のレポートに一覧表示します。対応するロックファイルの証跡を伴わない直接的なマニフェスト変更や、マニフェストの意図を伴わないロックファイルだけの解決ドリフトといった、依存関係の証跡ギャップにもフラグを立てます。レビュアーに見える形で依存関係の意図を明示し、より重量級の SCA ツールを補完します。
 
 ## パッケージスクリプトのレビュー
 
-PatchDrill は、`package.json` のスクリプトの追加・削除・更新も Markdown、JSON、HTML レポートに要約します。リスク検出結果は、install/prepare/pack/publish のライフサイクルフック、no-op の検証スクリプト、削除された test/lint/build スクリプト、リモートダウンロードをインタープリターにパイプするパッケージスクリプトを指摘します。
+PatchDrill は、`package.json` のスクリプトの追加・削除・更新も Markdown、JSON、HTML のレポートに要約します。リスク検出結果は、install/prepare/pack/publish のライフサイクルフック、no-op の検証スクリプト、削除された test/lint/build スクリプト、リモートダウンロードをインタープリターにパイプするパッケージスクリプトを指摘します。
 
 ## 設計原則
 
-- まず決定論的であること。有用な答えを得るのにモデル呼び出しは不要です。検出結果、リスクスコア、コマンド計画は、同じ差分に対して再現可能です。レポートの `generatedAt` タイムスタンプだけが意図的に可変なフィールドであり、`SOURCE_DATE_EPOCH` を尊重するため、キャッシュ、スナップショット、再現可能な監査のためにレポートをバイト単位で同一にできます。
+- まず決定論的であること。有用な答えを得るのにモデル呼び出しは要りません。検出結果、リスクスコア、コマンド計画は、同じ差分なら再現できます。意図的に可変なのはレポートの `generatedAt` タイムスタンプだけで、これも `SOURCE_DATE_EPOCH` を尊重します。だからキャッシュ、スナップショット、再現可能な監査のために、レポートをバイト単位で同一にできます。
 - 感覚頼みより Proof Pack。レビュアーは、正確なコマンド、検出結果、成果物、ダイジェストを見られるべきです。
-- デフォルトでローカル。ソースコードはあなたのチェックアウト内にとどまります。
-- 保守的な採点。PatchDrill は、リスクのあるパッチを黙って承認するよりも、証跡を求めることを選びます。
-- 後から拡張可能。ルールエンジンは、コントリビューターがエコシステムやポリシーを追加できる程度に小さく保たれています。
+- デフォルトでローカル。ソースコードは手元のチェックアウトから出ません。
+- 保守的な採点。PatchDrill は、リスクのあるパッチを黙って承認するくらいなら、証跡を求めます。
+- 後から拡張できる。ルールエンジンは、コントリビューターがエコシステムやポリシーを追加できる程度に小さく保っています。
 - 信頼できる配布。CI がビルド、テスト、SARIF 生成、npm パッケージの内容を検証します。
 
 ## ロードマップ
 
-- 一般的なオープンソーススタックに対する、より広範なファーストパーティのフィクスチャカバレッジ。
-- Turborepo、Nx、Pants、Cargo、Go、Bazel、Buck の各ワークスペースを超えた、より多くのネイティブな影響タスク統合。
-- 推論された検証コマンドをインタラクティブに受け入れ/拒否するためのローカル TUI。
+- 一般的なオープンソーススタックに対する、より広いファーストパーティのフィクスチャカバレッジ。
+- Turborepo、Nx、Pants、Cargo、Go、Bazel、Buck の各ワークスペースにとどまらない、より多くのネイティブな影響タスク統合。
+- 推論した検証コマンドをインタラクティブに採否できるローカル TUI。
 - 決定論的な検出結果を決して置き換えない、任意の LLM サマリーモード。
 
 ## FAQ
 
-**これは AI ツールですか?** いいえ。PatchDrill は **モデル呼び出しをゼロ回** 行い、API キーを必要とせず、完全にオフラインで動作します。同じ差分を入力すると、バイト単位で同一の Proof Pack が出力されます(`SOURCE_DATE_EPOCH` を尊重します)。これは、いまや AI がコードを書く *からこそ* 存在する決定論的なレイヤーであって、AI を一つ増やすものではありません。
+**これは AI ツールですか?** いいえ。PatchDrill は **モデル呼び出しをゼロ回** しか行わず、API キーも要らず、完全にオフラインで動きます。同じ差分を入力すれば、バイト単位で同一の Proof Pack が返ります(`SOURCE_DATE_EPOCH` を尊重します)。いまや AI がコードを書く *からこそ* 存在する決定論的なレイヤーであって、AI を一つ増やすものではありません。
 
-**これは単なる Linter や SAST ではないのですか?** いいえ。Linter は固定されたルールに照らしてコードをチェックし、SAST は既知の脆弱性パターンに一致させます。PatchDrill は、*この特定の差分* がどんな検証を意味するかを推論し、*存在すべきなのに* 存在しない証跡を報告します。計画されたのに一度も実行されなかった必須チェックも含みます。そのギャップを追跡する Linter や SAST はありません。
+**結局のところ Linter や SAST では?** いいえ。Linter は固定されたルールでコードをチェックし、SAST は既知の脆弱性パターンに一致させます。PatchDrill は、*この特定の差分* がどんな検証を意味するかを推論し、*あるべきなのに* ない証跡を報告します。計画したのに一度も実行されなかった必須チェックも含みます。そのギャップを追える Linter も SAST もありません。
 
-**追加しなければならない、もう一つの CI ゲートですか?** そうである必要はありません。設定なしで(`npx --yes patchdrill demo`)ローカルで 30 秒で実行できます。これは、既存のレビューと CI が差分に対してそれぞれ何をカバーすべきかを示します。`scan` はリポジトリを決して変更せず、コマンドは `--run` 指定時にのみ実行されます。
+**結局また CI ゲートを一つ増やすのでは?** その必要はありません。設定なしで(`npx --yes patchdrill demo`)、ローカルで 30 秒で実行できます。差分に対して、既存のレビューと CI がそれぞれ何をカバーすべきかを示すツールです。`scan` はリポジトリを一切変更せず、コマンドは `--run` 指定時だけ実行します。
 
-**勝手に外部と通信したりしませんか?** ネットワーク呼び出しも、テレメトリも、アカウントもありません。あなたのソースはチェックアウトから決して外に出ません。
+**勝手に外部と通信しませんか?** ネットワーク呼び出しも、テレメトリも、アカウントもありません。ソースが手元のチェックアウトから外に出ることはありません。
 
-**この新しいプロジェクトは、なぜ信頼できるのですか?** メンテナーやスター数を信頼する必要はありません。任意の Proof Pack を再実行すればバイト単位で同一の出力が得られ、すべての成果物のハッシュを自分自身で検証できます。CI は、約 25 のスタック形態のファーストパーティフィクスチャに対してツールを証明します。
+**この新しいプロジェクトを、なぜ信頼できるのですか?** メンテナーもスター数も信頼する必要はありません。どの Proof Pack も再実行すればバイト単位で同一の出力が得られ、すべての成果物のハッシュを自分の手で検証できます。CI は、約 25 のスタック形態のファーストパーティフィクスチャに対してツールを証明します。
 
 ## コントリビューション
 
-[CONTRIBUTING.md](CONTRIBUTING.md) をお読みください。最初のコントリビューションとして良いのは、新しいエコシステム検出器、リスクルール、実世界のレポートフィクスチャです。
+[CONTRIBUTING.md](CONTRIBUTING.md) をお読みください。最初のコントリビューションには、新しいエコシステム検出器、リスクルール、実世界のレポートフィクスチャが向いています。
 
 ## セキュリティ
 
-PatchDrill は、`--run` を渡したときにのみコマンドを実行します。推論された必須コマンドをリポジトリのシェルで実行します。任意コマンドには `--run` と `--run-optional` の両方が必要です。必須チェックが計画されたが実行されなかった場合、PatchDrill は、黙ってパッチを証明済みとして扱うのではなく、それを欠けている検証の証跡として報告します。Markdown、コンパクトなサマリー、HTML ダッシュボード、コンソール出力は、計画された各コマンドを passed、failed、timed out、not run、または skipped optional とラベル付けします。`patchdrill init` は、`run: "true"` とコマンドごとのタイムアウトを備えた CI ワークフローを書き出すため、プルリクエストはデフォルトでコマンドの証跡を生成します。信頼できないリポジトリをスキャンする際は、まず検証計画を確認してください。[SECURITY.md](SECURITY.md) を参照してください。
+PatchDrill は、`--run` を渡したときだけコマンドを実行します。推論した必須コマンドをリポジトリのシェルで実行し、任意コマンドには `--run` と `--run-optional` の両方が必要です。必須チェックを計画したのに実行しなかった場合、PatchDrill は黙ってパッチを証明済み扱いせず、検証の証跡が欠けていると報告します。Markdown、コンパクトなサマリー、HTML ダッシュボード、コンソール出力は、計画した各コマンドに passed、failed、timed out、not run、skipped optional のいずれかのラベルを付けます。`patchdrill init` が書き出す CI ワークフローには `run: "true"` とコマンドごとのタイムアウトが入っているので、プルリクエストはデフォルトでコマンドの証跡を残します。信頼できないリポジトリをスキャンするときは、まず検証計画を確認してください。[SECURITY.md](SECURITY.md) を参照してください。
 
 ## ライセンス
 
