@@ -22,6 +22,8 @@ List available schemas:
 patchdrill schema --list
 ```
 
+The local MCP server exposes the same contracts as resources such as `patchdrill://schema/report` and `patchdrill://schema/evidence`, so MCP clients can validate structured tool output before handing it to a model. See [MCP.md](MCP.md).
+
 ## Policy Schema
 
 Use `schemas/patchdrill-policy.schema.json` to validate `.patchdrill.yml`, `.patchdrill.yaml`, or `.patchdrill.json`. The schema covers ignored paths, risk gates, policy commands, and path-matched rules.

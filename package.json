@@ -1,6 +1,6 @@
 {
   "name": "patchdrill",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A deterministic proof layer for verifying AI-generated and human patches before merge.",
   "type": "module",
   "bin": {
@@ -48,7 +48,9 @@
     "turborepo",
     "nx",
     "supply-chain",
-    "github-actions"
+    "github-actions",
+    "mcp",
+    "model-context-protocol"
   ],
   "author": "PatchDrill contributors",
   "repository": {
@@ -75,6 +77,8 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
-    "yaml": "^2.9.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   }
 }

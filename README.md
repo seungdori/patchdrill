@@ -71,6 +71,7 @@ npx --yes patchdrill verify --evidence patchdrill-evidence.json
 
 - Makes AI-written PRs reviewable without trusting another model to be the final word.
 - Builds a Proof Pack for each patch: Markdown for humans, JSON for bots (including a required structured verification status), SARIF for GitHub code scanning, a self-contained HTML dashboard, compact PR summaries, and a later-verifiable audit manifest with report, artifact, and command-output hashes.
+- Exposes the same deterministic proof engine as a local MCP server, so AI coding tools can call `patchdrill_scan`, read schemas/resources, and use prompt templates without making PatchDrill itself probabilistic.
 - Works locally first and in CI later. `scan` never mutates the repository, and commands only run when `--run` is set.
 - Flags the parts of a diff where regressions usually slip through: auth, billing, migrations, secrets, CI workflows and their supply chain, package automation scripts, infra, lockfiles, large diffs, prompt-injection content, missing test changes, and required checks that were planned but never run.
 - Infers which commands to run from the patch itself, instead of just falling back to root-level defaults.
@@ -104,6 +105,18 @@ PatchDrill is not another AI code reviewer. It does not ask a model whether a di
 | PatchDrill | What proof should exist for this diff? | Yes | Only with `--run` | Proof Pack, risk findings, command plan, policy gate |
 
 The boundary is intentional: models are good at judgment, while PatchDrill is good at producing the same reviewable safety evidence for the same patch every time. Run PatchDrill first, then hand the Proof Pack to a human reviewer, CI gate, audit trail, or frontier model.
+
+## MCP Server
+
+PatchDrill can also run as a local MCP server for agentic coding tools:
+
+```bash
+patchdrill mcp --workspace-root /path/to/repository
+```
+
+The MCP server exposes read-only scans, explicit Proof Pack generation, evidence verification, release checks, schemas, docs, and review prompts. It preserves the deterministic boundary: no model call, no default network call, and no repository command execution unless a client calls `patchdrill_run_verification` with `allowCommandExecution: true`.
+
+See [docs/MCP.md](docs/MCP.md) for tool contracts, resources, prompts, and client configuration.
 
 ## Proof Pack
 
@@ -260,6 +273,14 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
 
 `patchdrill evidence` validates the saved JSON report contract first, including the required structured verification status, before writing the manifest.
 
+Run PatchDrill as a local MCP server for coding agents:
+
+```bash
+patchdrill mcp --workspace-root /path/to/repository
+```
+
+The MCP server exposes `patchdrill_scan`, `patchdrill_proof_pack`, `patchdrill_run_verification`, `patchdrill_doctor`, `patchdrill_verify_evidence`, and `patchdrill_release_check`. See [docs/MCP.md](docs/MCP.md).
+
 See committed demo outputs in [examples/demo](examples/demo), including `patchdrill-demo-summary.md` as the PR comment preview.
 
 Read the launch case studies in [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md) and the fixture-backed support matrix in [docs/STACK_COVERAGE.md](docs/STACK_COVERAGE.md).
@@ -330,6 +351,7 @@ patchdrill demo [--scenario <name>] [--output <directory>]
 patchdrill doctor [--format text|json]
 patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
+patchdrill mcp [--transport stdio] [--workspace-root <path>]
 patchdrill explain
 patchdrill release-check [--format text|json]
 patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
@@ -360,6 +382,8 @@ Options:
 | `--command-timeout-ms <n>` | Stop each verification command after `n` milliseconds. |
 | `--quiet` | Only use exit code. |
 | `--locale <lang>` | Language for human-facing reports (markdown, summary, HTML, console): `en`, `ko`, `ja`, `zh`. Defaults to the system locale (`LC_ALL`/`LANG`), then English. JSON and SARIF stay English. |
+| `--transport <name>` | MCP transport for `patchdrill mcp`. Currently `stdio`. |
+| `--workspace-root <path>` | Workspace root for `patchdrill mcp`. Defaults to the current directory. |
 | `--policy` | Create `.patchdrill.yml` when used with `patchdrill init`. |
 | `--policy-pack <name>` | Starter policy pack for `patchdrill init`: `default`, `regulated`, `agentic`. |
 | `--scenario <name>` | Demo scenario for `patchdrill demo`: `review-ready`, `risky-agent-pr`. |

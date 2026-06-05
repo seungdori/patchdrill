@@ -85,6 +85,11 @@ describe("cli", () => {
       flags: { format: "json" },
       positionals: []
     });
+    expect(parseArgs(["mcp", "--transport", "stdio", "--workspace-root", "/repo"])).toEqual({
+      command: "mcp",
+      flags: { transport: "stdio", "workspace-root": "/repo" },
+      positionals: []
+    });
     expect(parseArgs(["schema", "doctor"])).toEqual({
       command: "schema",
       flags: {},

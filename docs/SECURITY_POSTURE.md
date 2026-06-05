@@ -13,6 +13,7 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 | Dependabot | `.github/dependabot.yml` | Keeps npm and GitHub Actions dependencies current. |
 | Release provenance | `.github/workflows/release.yml` | Publishes through npm trusted publishing and provenance. |
 | Hardened Action inputs | `action.yml` | Passes composite Action inputs through step environment variables and a bash array so optional paths and thresholds are not re-tokenized by the shell. |
+| MCP safety contract | `src/mcp.ts`, `docs/MCP.md` | Keeps MCP scans read-only by default, constrains generated artifact paths to repository-relative locations, and requires explicit `allowCommandExecution: true` before repository commands can run. |
 
 ## Repository Rules To Enable On GitHub
 
@@ -30,3 +31,4 @@ PatchDrill is meant to be installed in CI and sometimes executed locally against
 - Publish from GitHub Actions trusted publishing with provenance.
 - Keep generated reports out of git through `.gitignore`.
 - Avoid storing any real secret-like fixture in tests; synthesize test values at runtime.
+- Keep MCP integrations local and explicit: start the server from the repository being reviewed, avoid broad `PATCHDRILL_MCP_ALLOW_ANY_CWD=1` use, and verify generated evidence manifests before trusting agent-authored summaries.

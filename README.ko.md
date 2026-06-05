@@ -71,6 +71,7 @@ npx --yes patchdrill verify --evidence patchdrill-evidence.json
 
 - 또 다른 모델을 최종 판단자로 믿지 않고도 AI가 쓴 PR을 리뷰할 수 있게 합니다.
 - 패치마다 Proof Pack을 만듭니다: 사람용 Markdown, 구조화된 필수 검증 상태를 담은 봇용 JSON, GitHub 코드 스캐닝용 SARIF, 자체 완결형 HTML 대시보드, 간결한 PR 요약, 그리고 리포트·산출물·명령 출력 해시를 담아 나중에 검증할 수 있는 감사 매니페스트.
+- 같은 결정론적 증거 엔진을 로컬 MCP 서버로 노출합니다. AI 코딩 도구가 `patchdrill_scan`을 호출하고, 스키마/문서 리소스와 프롬프트 템플릿을 사용할 수 있지만 PatchDrill 자체가 확률적 도구가 되지는 않습니다.
 - 먼저 로컬에서 쓰고, 나중에 CI에서 씁니다. `scan`은 저장소를 절대 건드리지 않으며, 명령은 `--run`을 줄 때만 실행됩니다.
 - 회귀가 자주 새어 나가는 곳을 짚어냅니다: 인증, 결제, 마이그레이션, 시크릿, CI 워크플로 공급망, 패키지 자동화 스크립트, 인프라, 락파일, 대규모 diff, 프롬프트 인젝션 내용, 빠진 테스트 변경, 계획만 되고 실행 안 된 필수 체크.
 - 루트 수준 기본값으로 때우지 않고, 패치 자체에서 실행할 명령을 추론합니다.
@@ -104,6 +105,18 @@ PatchDrill은 또 다른 AI 코드 리뷰어가 아닙니다. diff가 "괜찮아
 | PatchDrill | 이 diff에 어떤 증거가 있어야 하는가? | 예 | `--run` 줄 때만 | Proof Pack, 위험 발견, 명령 계획, 정책 게이트 |
 
 이 경계는 일부러 그어 둔 것입니다. 모델은 판단을 잘하고, PatchDrill은 같은 패치에서 매번 똑같은, 리뷰할 수 있는 안전성 증거를 뽑아내는 데 능합니다. PatchDrill을 먼저 돌린 다음, 그 Proof Pack을 사람 리뷰어든 CI 게이트든 감사 추적이든 프런티어 모델이든 원하는 곳에 넘기세요.
+
+## MCP 서버
+
+PatchDrill은 에이전트형 코딩 도구를 위한 로컬 MCP 서버로도 실행할 수 있습니다:
+
+```bash
+patchdrill mcp --workspace-root /path/to/repository
+```
+
+MCP 서버는 읽기 전용 스캔, 명시적 Proof Pack 생성, 증거 검증, 출시 점검, 스키마, 문서, 리뷰 프롬프트를 노출합니다. 결정론적 경계는 그대로입니다: 모델 호출 없음, 기본 네트워크 호출 없음, 그리고 클라이언트가 `patchdrill_run_verification`을 `allowCommandExecution: true`와 함께 호출하지 않는 한 저장소 명령 실행 없음.
+
+도구 계약, 리소스, 프롬프트, 클라이언트 설정은 [docs/MCP.md](docs/MCP.md)를 참고하세요.
 
 ## Proof Pack
 
@@ -260,6 +273,14 @@ patchdrill evidence --json patchdrill-report.json --evidence patchdrill-evidence
 
 `patchdrill evidence`는 매니페스트를 쓰기 전에, 필수 구조화 검증 상태까지 들어 있는 저장된 JSON 리포트 계약을 먼저 검증합니다.
 
+코딩 에이전트용 로컬 MCP 서버로 실행하세요:
+
+```bash
+patchdrill mcp --workspace-root /path/to/repository
+```
+
+MCP 서버는 `patchdrill_scan`, `patchdrill_proof_pack`, `patchdrill_run_verification`, `patchdrill_doctor`, `patchdrill_verify_evidence`, `patchdrill_release_check`를 노출합니다. [docs/MCP.md](docs/MCP.md)를 참고하세요.
+
 커밋된 데모 출력물은 [examples/demo](examples/demo)에서 확인하세요. PR 코멘트 미리보기용으로 `patchdrill-demo-summary.md`도 들어 있습니다.
 
 출시 사례 연구는 [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md)에서, 픽스처로 뒷받침하는 지원 매트릭스는 [docs/STACK_COVERAGE.md](docs/STACK_COVERAGE.md)에서 읽어 보세요.
@@ -330,6 +351,7 @@ patchdrill demo [--scenario <name>] [--output <directory>]
 patchdrill doctor [--format text|json]
 patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
 patchdrill init [--force] [--policy] [--policy-pack <name>]
+patchdrill mcp [--transport stdio] [--workspace-root <path>]
 patchdrill explain
 patchdrill release-check [--format text|json]
 patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
@@ -360,6 +382,8 @@ patchdrill verify --evidence <patchdrill-evidence.json>
 | `--command-timeout-ms <n>` | 각 검증 명령을 `n` 밀리초 뒤에 중단합니다. |
 | `--quiet` | 종료 코드만 씁니다. |
 | `--locale <lang>` | 사람이 읽는 리포트(markdown, summary, HTML, 콘솔)의 언어: `en`, `ko`, `ja`, `zh`. 시스템 로캘(`LC_ALL`/`LANG`)을, 없으면 영어를 기본으로 씁니다. JSON과 SARIF는 영어로 유지합니다. |
+| `--transport <name>` | `patchdrill mcp`용 MCP 전송 방식입니다. 현재는 `stdio`. |
+| `--workspace-root <path>` | `patchdrill mcp`의 작업 루트입니다. 기본값은 현재 디렉터리입니다. |
 | `--policy` | `patchdrill init`과 함께 쓰면 `.patchdrill.yml`을 만듭니다. |
 | `--policy-pack <name>` | `patchdrill init`용 스타터 정책 팩: `default`, `regulated`, `agentic`. |
 | `--scenario <name>` | `patchdrill demo`용 데모 시나리오: `review-ready`, `risky-agent-pr`. |

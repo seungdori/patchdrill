@@ -37,6 +37,8 @@ describe("documentation examples", () => {
     expect(readme).toContain("Proof Pack");
     expect(readme).toContain("[docs/PROOF_PACKS.md](docs/PROOF_PACKS.md)");
     expect(readme).toContain("[docs/RULE_CATALOG.md](docs/RULE_CATALOG.md)");
+    expect(readme).toContain("patchdrill mcp");
+    expect(readme).toContain("[docs/MCP.md](docs/MCP.md)");
   });
 
   it("keeps the public rule catalog aligned with built-in static risk rules", () => {

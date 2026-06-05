@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Added `patchdrill mcp`, a local MCP server that exposes PatchDrill as a deterministic proof backend for AI coding tools.
+- Added MCP tools for read-only scans, explicit Proof Pack generation, guarded command execution, doctor checks, evidence verification, and release-readiness checks.
+- Added MCP resources for schemas and docs plus prompt templates for merge-risk explanation, PR comments, finding triage, and verification planning.
+- Documented MCP safety rules: no model calls in PatchDrill, no default network calls, repository-relative artifact output, and `allowCommandExecution: true` required before running repository commands.
+
 ## 0.1.2
 
 - Published the package to npm and switched README install/quickstart guidance to `npx --yes patchdrill` and `npm install -g patchdrill` (the `github:` path remains for running unreleased builds from source).

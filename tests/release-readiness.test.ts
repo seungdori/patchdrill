@@ -36,6 +36,7 @@ describe("release readiness", () => {
     expect(rendered).toContain("[PASS] Release Proof Pack smoke");
     expect(rendered).toContain("[PASS] Pull request Proof Pack template");
     expect(rendered).toContain("[PASS] README Proof Pack quickstart");
+    expect(rendered).toContain("[PASS] MCP product surface");
     expect(rendered).toContain("[PASS] Case studies");
     expect(rendered).toContain("[PASS] Stack coverage matrix");
     expect(rendered).toContain("[PASS] Stack fixture corpus");
@@ -56,6 +57,7 @@ describe("release readiness", () => {
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Policy schema");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Pull request Proof Pack template");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("README Proof Pack quickstart");
+    expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("MCP product surface");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Stack coverage matrix");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Stack fixture corpus");
     expect(checks.filter((check) => check.status === "fail").map((check) => check.title)).toContain("Demo artifacts");
