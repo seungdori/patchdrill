@@ -13,6 +13,7 @@ PatchDrill is split into deterministic modules:
 | `src/dependency.ts` | Extracts package.json, pyproject.toml, requirements.txt, NuGet PackageReference/PackageVersion, Maven pom.xml, Gradle build files and version catalogs, Gemfile, composer.json, go.mod, Cargo.toml, npm, pnpm, Yarn, Bun, Go, Cargo, Poetry, uv, Pipfile, Bundler, and Composer dependency additions, removals, and version updates through a parser/diff analyzer registry. |
 | `src/doctor.ts` | Renders first-run repository readiness diagnostics without mutating the repository or running verification commands. |
 | `src/markdown-links.ts` | Checks public README, docs, and example Markdown local links so launch documentation cannot drift silently. |
+| `src/mcp.ts` | Exposes PatchDrill as a local MCP server with tools, resources, prompts, command-execution guards, and repository-relative artifact output constraints. |
 | `src/package-scripts.ts` | Extracts package.json script additions, removals, and updates so risk scoring can distinguish dependency intent from executable package automation changes. |
 | `src/evidence.ts` | Renders and verifies Proof Pack evidence manifests with tool version, report metadata, artifact, and command-output digests. |
 | `src/planner.ts` | Turns changed files, workspace package impact, project signals, nested package scopes, and platform metadata into a verification command plan through ecosystem planner handlers. |
@@ -29,6 +30,7 @@ PatchDrill is split into deterministic modules:
 | `src/scan.ts` | Orchestrates the scan pipeline. |
 | `src/stack-coverage.ts` | Defines the public fixture-backed stack coverage matrix used by launch docs and tests. |
 | `src/cli.ts` | Parses arguments and handles user output. |
+| `src/version.ts` | Reads the package version for CLI and MCP server identity surfaces. |
 
 ## Pipeline
 
@@ -68,7 +70,7 @@ git diff -> changed files + added lines -> policy filters -> CODEOWNERS hints
 ## Non-Goals
 
 - Replacing human code review.
-- Calling an LLM by default.
+- Calling an LLM by default. MCP clients may ask their host model to interpret PatchDrill output, but PatchDrill itself stays deterministic.
 - Running destructive commands.
 - Becoming a full SAST, SCA, or test selection platform.
 

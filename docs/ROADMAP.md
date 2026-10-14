@@ -10,7 +10,6 @@
 ## Later
 
 - Expand language-aware changed-test matching with more framework-specific conventions.
-- Optional MCP server for coding agents.
 - Optional LLM summarization that can only summarize deterministic findings.
 - Rule confidence calibration from anonymized fixture corpora.
 - Local TUI for interactively accepting or rejecting inferred verification commands.
@@ -144,6 +143,7 @@
 - Dependency proof-gap findings for manifest-only dependency changes and lockfile-only resolution drift.
 - Repository hygiene for default generated report artifacts after local scans.
 - Mutable `docker://` GitHub Action image findings with digest-pinned allowlisting.
+- Local MCP server for coding agents, including tool/resource/prompt discovery, read-only scans, explicit Proof Pack artifact generation, command-execution guardrails, and evidence verification.
 
 ## Contribution Targets
 

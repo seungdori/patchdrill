@@ -8,6 +8,7 @@ describe("package metadata", () => {
       scripts?: Record<string, string>;
       files?: string[];
       keywords?: string[];
+      dependencies?: Record<string, string>;
     };
 
     expect(pkg.bin?.patchdrill).toBe("./dist/cli.js");
@@ -18,7 +19,11 @@ describe("package metadata", () => {
     expect(pkg.files).toEqual(
       expect.arrayContaining(["dist", "schemas", "docs", "examples", "fixtures", ".patchdrill.yml", "README.md", "LICENSE", "action.yml", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md"])
     );
-    expect(pkg.keywords).toEqual(expect.arrayContaining(["ai-coding", "code-review", "sarif", "github-actions", "supply-chain"]));
+    expect(pkg.keywords).toEqual(expect.arrayContaining(["ai-coding", "code-review", "sarif", "github-actions", "supply-chain", "mcp", "model-context-protocol"]));
+    expect(pkg.dependencies).toMatchObject({
+      "@modelcontextprotocol/sdk": expect.any(String),
+      zod: expect.any(String)
+    });
     for (const schema of [
       "schemas/patchdrill-policy.schema.json",
       "schemas/patchdrill-report.schema.json",

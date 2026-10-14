@@ -37,6 +37,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
   const readme = readOptional(root, "README.md");
   const ci = readOptional(root, ".github/workflows/ci.yml");
   const pullRequestTemplate = readOptional(root, ".github/pull_request_template.md");
+  const mcpDocs = readOptional(root, "docs/MCP.md");
   const markdownLinks = checkMarkdownLinks(root);
   const packageFiles = readStringArray(pkg?.files);
   const keywords = readStringArray(pkg?.keywords);
@@ -86,6 +87,7 @@ export function checkReleaseReadiness(root: string): ReleaseCheck[] {
     checkReadmeProofPackQuickstart(readme),
     checkBoolean(Boolean(readme?.includes("npx --yes github:seungdori/patchdrill")), "GitHub install path", "README documents the from-source GitHub install path.", "Document npx --yes github:seungdori/patchdrill."),
     checkBoolean(Boolean(readme?.includes("npx --yes patchdrill")) && Boolean(readme?.includes("npm install -g patchdrill")), "npm install path", "README documents the published npm install path.", "Document npx --yes patchdrill and npm install -g patchdrill."),
+    checkMcpProductSurface(pkg, readme, mcpDocs),
     checkBoolean(existsSync(join(root, "docs", "CASE_STUDIES.md")), "Case studies", "docs/CASE_STUDIES.md is present for launch evaluation.", "Add docs/CASE_STUDIES.md with representative Proof Pack cases."),
     checkStackCoverageMatrix(root),
     checkStackFixtureCorpus(root),
@@ -171,6 +173,7 @@ function readPackageJson(root: string):
       scripts?: Record<string, string>;
       files?: unknown;
       keywords?: unknown;
+      dependencies?: Record<string, string>;
     }
   | undefined {
   try {
@@ -181,6 +184,7 @@ function readPackageJson(root: string):
       scripts?: Record<string, string>;
       files?: unknown;
       keywords?: unknown;
+      dependencies?: Record<string, string>;
     };
   } catch {
     return undefined;
@@ -215,7 +219,7 @@ function checkPackageFiles(files: string[]): ReleaseCheck {
 }
 
 function checkKeywords(keywords: string[]): ReleaseCheck {
-  const required = ["ai-coding", "code-review", "sarif", "github-actions", "supply-chain"];
+  const required = ["ai-coding", "code-review", "sarif", "github-actions", "supply-chain", "mcp", "model-context-protocol"];
   const missing = required.filter((keyword) => !keywords.includes(keyword));
   return {
     status: missing.length === 0 ? "pass" : "fail",
@@ -225,6 +229,34 @@ function checkKeywords(keywords: string[]): ReleaseCheck {
         ? `package.json keywords include launch-critical discovery terms: ${required.join(", ")}.`
         : `package.json keywords is missing ${missing.join(", ")}.`,
     ...(missing.length > 0 ? { remediation: `Add ${missing.join(", ")} to package.json keywords.` } : {})
+  };
+}
+
+function checkMcpProductSurface(pkg: ReturnType<typeof readPackageJson>, readme: string | undefined, mcpDocs: string | undefined): ReleaseCheck {
+  const missing = [
+    pkg?.dependencies?.["@modelcontextprotocol/sdk"] ? "" : "package dependency @modelcontextprotocol/sdk",
+    pkg?.dependencies?.zod ? "" : "package dependency zod",
+    readme?.includes("patchdrill mcp") ? "" : "README patchdrill mcp",
+    readme?.includes("--workspace-root") ? "" : "README MCP workspace-root option",
+    readme?.includes("[docs/MCP.md](docs/MCP.md)") ? "" : "README docs/MCP.md link",
+    mcpDocs?.includes("patchdrill_scan") ? "" : "MCP docs patchdrill_scan",
+    mcpDocs?.includes("patchdrill_run_verification") ? "" : "MCP docs patchdrill_run_verification",
+    mcpDocs?.includes("--workspace-root") ? "" : "MCP docs workspace-root option",
+    mcpDocs?.includes("allowCommandExecution: true") ? "" : "MCP docs command execution guard",
+    mcpDocs?.includes("patchdrill://schema/report") ? "" : "MCP docs schema resources"
+  ].filter((entry) => entry.length > 0);
+  return {
+    status: missing.length === 0 ? "pass" : "fail",
+    title: "MCP product surface",
+    detail:
+      missing.length === 0
+        ? "README, docs/MCP.md, and package dependencies expose the local MCP server with tool/resource/prompt safety contracts."
+        : `MCP product surface is missing ${missing.join(", ")}.`,
+    ...(missing.length > 0
+      ? {
+          remediation: "Document patchdrill mcp, command-execution guardrails, schema resources, and keep MCP runtime dependencies in package.json."
+        }
+      : {})
   };
 }
 

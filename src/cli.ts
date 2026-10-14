@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDemoReport, demoScenarioNames, isDemoScenario, type DemoScenario } from "./demo.js";
@@ -8,12 +8,14 @@ import { gitRoot } from "./git.js";
 import { isLocale, LOCALES, resolveLocale, t, type Locale } from "./i18n.js";
 import { isPolicyPackName, policyPackNames, writeGitHubWorkflow, writeOnboardingGuide, writePolicyFile, type PolicyPackName } from "./init.js";
 import { inspectDoctor, renderDoctor } from "./doctor.js";
+import { startPatchDrillMcpServer } from "./mcp.js";
 import { checkReleaseReadiness, createReleaseReadinessReport, renderReleaseReadiness, summarizeReleaseReadiness } from "./release-readiness.js";
 import { reportContractFailures } from "./report-contract.js";
 import { renderGitHubAnnotations, renderHtml, renderMarkdown, renderSarif, renderSummaryMarkdown, shouldFail, verificationEvidencePhrase, type GateOptions } from "./report.js";
 import { isSchemaName, readSchema, schemaNames } from "./schema.js";
 import { scan } from "./scan.js";
 import type { PatchReport, Severity } from "./types.js";
+import { readVersion } from "./version.js";
 import { verificationSummary } from "./verification.js";
 
 const severities: Severity[] = ["info", "low", "medium", "high", "critical"];
@@ -59,6 +61,10 @@ async function main(): Promise<void> {
   }
   if (command === "init") {
     initCommand(parsed);
+    return;
+  }
+  if (command === "mcp") {
+    await mcpCommand(parsed);
     return;
   }
   if (command === "explain") {
@@ -284,6 +290,18 @@ function initCommand(parsed: ParsedArgs): void {
   console.log(`Created ${guidePath}`);
 }
 
+async function mcpCommand(parsed: ParsedArgs): Promise<void> {
+  const transport = flagString(parsed, "transport") ?? "stdio";
+  const workspaceRoot = flagString(parsed, "workspace-root") ?? process.cwd();
+  if (transport !== "stdio") {
+    throw new Error(`Unsupported MCP transport "${transport}". PatchDrill currently supports stdio.`);
+  }
+  await startPatchDrillMcpServer({
+    workspaceRoot,
+    allowAnyCwd: process.env.PATCHDRILL_MCP_ALLOW_ANY_CWD === "1"
+  });
+}
+
 export function explainCommand(): void {
   console.log(renderExplainText());
 }
@@ -430,7 +448,7 @@ export function parseArgs(args: string[]): ParsedArgs {
     if (
       !arg.startsWith("-") &&
       command === "scan" &&
-      ["scan", "dashboard", "demo", "doctor", "evidence", "init", "explain", "release-check", "schema", "verify", "help"].includes(arg)
+      ["scan", "dashboard", "demo", "doctor", "evidence", "init", "mcp", "explain", "release-check", "schema", "verify", "help"].includes(arg)
     ) {
       command = arg;
       continue;
@@ -499,7 +517,9 @@ function takesValue(flag: string): boolean {
     "scenario",
     "format",
     "output",
-    "locale"
+    "locale",
+    "transport",
+    "workspace-root"
   ].includes(flag);
 }
 
@@ -604,17 +624,6 @@ function readDemoScenario(value: string | undefined): DemoScenario {
   return value;
 }
 
-function readVersion(): string {
-  const packagePath = join(new URL("..", import.meta.url).pathname, "package.json");
-  if (!existsSync(packagePath)) return "0.1.0";
-  try {
-    const parsed = JSON.parse(readFileSync(packagePath, "utf8")) as { version?: string };
-    return parsed.version ?? "0.1.0";
-  } catch {
-    return "0.1.0";
-  }
-}
-
 function printHelp(): void {
   console.log(`PatchDrill - deterministic proof layer for AI-era patches
 
@@ -625,6 +634,7 @@ Usage:
   patchdrill doctor [--format text|json]
   patchdrill evidence --json <report.json> --evidence <evidence.json> [artifact options]
   patchdrill init [--force] [--policy] [--policy-pack <name>]
+  patchdrill mcp [--transport stdio] [--workspace-root <path>]
   patchdrill explain
   patchdrill release-check [--format text|json]
   patchdrill schema [policy|report|evidence|doctor|release-check] [--output <path>]
@@ -667,6 +677,9 @@ Options:
   --scenario <name>   Demo scenario: ${demoScenarioNames.join(", ")}
   --format <format>   Output format for doctor and release-check: text, json
   --locale <lang>     Language for human-facing reports: ${LOCALES.join(", ")} (default: system locale, else en)
+  --transport <name>  MCP transport for patchdrill mcp: stdio
+  --workspace-root <path>
+                      Workspace root for patchdrill mcp (default: current directory)
   --list              List schemas when used with schema
   --output <path>     Write a schema/dashboard file or demo artifact directory
   --version           Print version
